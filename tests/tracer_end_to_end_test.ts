@@ -59,7 +59,11 @@ Deno.test("verified Security Lab completes sign-in, handshake, and continuing re
   const messages: Array<RelayEventMessage | RelayEoseMessage> = [];
   const subscription = bridge.subscribeRelay(
     fixture.envelopes.relaySubscribe as RelaySubscribeMessage,
-    (message) => messages.push(message),
+    (message) => {
+      if (message.type === "relay.event" || message.type === "relay.eose") {
+        messages.push(message);
+      }
+    },
   );
   runtime.relay.emitLive(fixture.events.live);
 

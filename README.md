@@ -20,13 +20,14 @@ deno task build
 deno task start
 ```
 
-`deno task dev` cannot serve the `/api/runtime` WebSocket with the current latest
-Fresh releases, `@fresh/core` 2.3.3 and `@fresh/plugin-vite` 1.1.2. Fresh runs
-the app as a Node middleware under the Vite dev server, where upgrade requests
-are never routed, so the portal stays on "Preparing secure signer connection..."
-until it times out. Exercise the runtime with `deno task build && deno task
-start` until a Fresh release with Vite dev-server WebSocket upgrade support is
-available.
+`deno task dev` cannot serve the `/api/runtime` WebSocket with the current
+latest Fresh releases, `@fresh/core` 2.3.3 and `@fresh/plugin-vite` 1.1.2. Fresh
+runs the app as a Node middleware under the Vite dev server, where upgrade
+requests are never routed, so the portal stays on "Preparing secure signer
+connection..." until it times out. Exercise the runtime with
+`deno task build && deno task
+start` until a Fresh release with Vite dev-server
+WebSocket upgrade support is available.
 
 Development and production tasks bind to `127.0.0.1` unless `PORTAL_BIND` is
 explicitly set to another valid host address. Both tasks resolve the address
@@ -109,6 +110,21 @@ committed and must keep placeholder values only.
 
 NAP errors stay inside the napplet. Portal notices are reserved for connection,
 session, iframe, integrity, and capability failures.
+
+## Contract drift diagnostics
+
+Pinned npm packages are the executable contract authority. Sibling `../kehto`
+and `../napplet` checkouts are optional, mutable reference inputs only. Generate
+the non-blocking diagnostic report with:
+
+```sh
+deno run -A runtime/contract_report.ts
+```
+
+The report records exact pinned versions, sibling revision availability,
+per-contract status, missing public markers, and the portal adapters covered by
+blocking tests. A `mismatch` or `unavailable` entry is review evidence, not a
+runtime, check, test, or release failure.
 
 ## Deliberate deferrals
 

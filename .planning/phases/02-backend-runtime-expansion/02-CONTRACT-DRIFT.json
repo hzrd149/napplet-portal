@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-07-30T21:04:13.539Z",
+  "authority": "pinned-packages",
+  "blocking": false,
+  "pinned": {
+    "@kehto/runtime": "0.20.1",
+    "@napplet/core": "0.31.0",
+    "@napplet/nap": "0.31.0"
+  },
+  "siblingRevision": null,
+  "entries": [
+    {
+      "contract": "kehto-runtime-relay",
+      "status": "matching",
+      "detail": "available",
+      "pinnedPackages": {
+        "@kehto/runtime": "0.20.1",
+        "@napplet/core": "0.31.0",
+        "@napplet/nap": "0.31.0"
+      },
+      "siblingRevision": "3a4d71a8f8860890cdcbf8fa25a11780fbe7a55f",
+      "missingMarkers": [],
+      "adapterCoverage": [
+        "runtime/relay_adapter.ts",
+        "tests/end_to_end_test.ts"
+      ]
+    },
+    {
+      "contract": "napplet-core-nostr",
+      "status": "matching",
+      "detail": "available",
+      "pinnedPackages": {
+        "@napplet/core": "0.31.0"
+      },
+      "siblingRevision": "03ad65b66413e5798536ef48695ffc4c2508f2c3",
+      "missingMarkers": [],
+      "adapterCoverage": [
+        "runtime/transport.ts",
+        "tests/runtime_contract_test.ts"
+      ]
+    },
+    {
+      "contract": "napplet-nap-relay-outbox",
+      "status": "matching",
+      "detail": "available",
+      "pinnedPackages": {
+        "@napplet/core": "0.31.0",
+        "@napplet/nap": "0.31.0"
+      },
+      "siblingRevision": "03ad65b66413e5798536ef48695ffc4c2508f2c3",
+      "missingMarkers": [],
+      "adapterCoverage": [
+        "runtime/relay_adapter.ts",
+        "runtime/outbox.ts"
+      ]
+    }
+  ]
+}

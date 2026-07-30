@@ -20,21 +20,32 @@ const baseInput: ContractDriftInput = {
       contract: "relay",
       siblingPath: "relay/types.ts",
       expectedMarkers: ["RelaySubscribeMessage", "RelayClosedMessage"],
-      adapterCoverage: ["runtime/relay_adapter.ts", "tests/runtime_contract_test.ts"],
+      adapterCoverage: [
+        "runtime/relay_adapter.ts",
+        "tests/runtime_contract_test.ts",
+      ],
     },
   ],
 };
 
 Deno.test("contract drift report records matching and mismatching references without throwing", async () => {
-  const matching = await generateContractDriftReport(baseInput, async () =>
-    "interface RelaySubscribeMessage {} interface RelayClosedMessage {}"
+  const matching = await generateContractDriftReport(
+    baseInput,
+    () =>
+      Promise.resolve(
+        "interface RelaySubscribeMessage {} interface RelayClosedMessage {}",
+      ),
   );
-  const mismatching = await generateContractDriftReport(baseInput, async () =>
-    "interface RelaySubscribeMessage {}"
+  const mismatching = await generateContractDriftReport(
+    baseInput,
+    () => Promise.resolve("interface RelaySubscribeMessage {}"),
   );
 
   assert(matching.entries[0]?.status === "matching", "markers should match");
-  assert(mismatching.entries[0]?.status === "mismatch", "missing marker is drift");
+  assert(
+    mismatching.entries[0]?.status === "mismatch",
+    "missing marker is drift",
+  );
   assert(
     mismatching.entries[0]?.missingMarkers[0] === "RelayClosedMessage",
     "report must name the missing contract marker",
@@ -46,10 +57,12 @@ Deno.test("contract drift report records matching and mismatching references wit
 });
 
 Deno.test("contract drift report converts missing and unreadable siblings into stable entries", async () => {
-  for (const error of [
-    new Deno.errors.NotFound("missing"),
-    new Deno.errors.PermissionDenied("unreadable"),
-  ]) {
+  for (
+    const error of [
+      new Deno.errors.NotFound("missing"),
+      new Deno.errors.PermissionDenied("unreadable"),
+    ]
+  ) {
     const report = await generateContractDriftReport(baseInput, () => {
       throw error;
     });
@@ -64,12 +77,16 @@ Deno.test("contract drift report converts missing and unreadable siblings into s
 
 Deno.test("parallel drift generation is deterministic and isolated", async () => {
   const [one, two] = await Promise.all([
-    generateContractDriftReport(baseInput, async () => ""),
-    generateContractDriftReport(baseInput, async () =>
-      "RelaySubscribeMessage RelayClosedMessage"
+    generateContractDriftReport(baseInput, () => Promise.resolve("")),
+    generateContractDriftReport(
+      baseInput,
+      () => Promise.resolve("RelaySubscribeMessage RelayClosedMessage"),
     ),
   ]);
   assert(one.entries[0]?.status === "mismatch", "first run keeps its input");
   assert(two.entries[0]?.status === "matching", "second run keeps its input");
-  assert(JSON.stringify(one.pinned) === JSON.stringify(two.pinned), "pins stable");
+  assert(
+    JSON.stringify(one.pinned) === JSON.stringify(two.pinned),
+    "pins stable",
+  );
 });
