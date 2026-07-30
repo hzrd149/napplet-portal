@@ -1,10 +1,12 @@
 # Phase 01 Multi-Source Coverage Audit
 
+Timeline decision D-47 is covered by Plan 01's executable sign-in → supplied verified napplet → initial-plus-updating stream checkpoint and Plan 06's complete acceptance. It changes scheduling only: all previously covered D-01–D-46 decisions and Phase 1 requirements remain in this phase.
+
 All required source items are covered; deferred/out-of-scope items are excluded by rule.
 
 | SOURCE | ID | Feature / requirement | Plan | Status | Notes |
 |---|---|---|---|---|---|
-| GOAL | — | Trusted operator signs in and runs one verified napplet backed by server-owned streams | 01–06 | COVERED | Compatibility through final supplied-napplet acceptance |
+| GOAL | — | Trusted operator signs in and runs one verified napplet backed by server-owned streams | 01–06 | COVERED | Plan 01 proves the executable narrow vertical path; Plans 02–06 expand and complete it |
 | REQ | MVP-01..MVP-05 | Shell, verified iframe, compatible adapter, backend boundary, correlated results | 01,03,04,06 | COVERED | Exact requirements fields enumerate each ID |
 | REQ | AUTH-01..AUTH-06 | Three sign-in modes, isolation, active account, documented read-only deferral | 02,04,06 | COVERED | Complete signer persistence is delivered |
 | REQ | STREAM-01..STREAM-07 | Stream-first Applesauce/RxJS, partial states, local endpoint seams | 01,03,04,05,06 | COVERED | RELAY EOSE remains nonterminal |
@@ -17,8 +19,9 @@ All required source items are covered; deferred/out-of-scope items are excluded 
 | CONTEXT | D-31..D-35 | Transport/shared runtime | 01,03,04,05,06 | COVERED | Assumption delta recorded as no-change |
 | CONTEXT | D-36..D-40 | Signing/publishing | 05 | COVERED | Signed RELAY vs unsigned OUTBOX explicit |
 | CONTEXT | D-41..D-46 | Configuration/cache/startup | 01,03,06 | COVERED | Loopback and sanitized summary included |
+| CONTEXT | D-47 | One-day-targeted sign-in → supplied verified napplet → live stream tracer is first checkpoint; full locked Phase 1 has no one-day deadline | 01,03,06 | COVERED | Plan 01 crosses every real layer without an authored or synthetic napplet |
 | RESEARCH | — | Coherent pinned package line and legitimacy gate | 01 | COVERED | Blocking human checkpoint |
 | RESEARCH | — | Sensitive snapshot, verified artifact, singleton runtime, ownership registry | 02,03,05 | COVERED | No ORM/schema task |
-| RESEARCH | — | Contract-first tests and supplied srcdoc compatibility seam | 01,03,06 | COVERED | Supplied artifact is a final precondition |
+| RESEARCH | — | Contract-first tests and supplied srcdoc compatibility seam | 01,03,06 | COVERED | A blocking input checkpoint is immediately followed by executable fixture derivation and the vertical tracer |
 | RESEARCH | — | ASVS L1 primary-boundary mitigations | 01–06 | COVERED | Every plan includes STRIDE and block-on-high mitigations |
 | CONTEXT | Deferred | Catalog, durable caches, multi-user auth, approvals, broad NAP, example napplet, production hardening | NONE | EXCLUDED | Explicitly deferred by user |

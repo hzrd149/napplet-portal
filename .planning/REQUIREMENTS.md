@@ -6,13 +6,13 @@
 
 ## v1 Requirements
 
-v1 is a one-day MVP. It should prove the smallest complete vertical slice: sign in, load one sandboxed napplet, and proxy a minimal stream-oriented runtime API through the backend. It should not attempt full Nostr-client completeness, full NAP coverage, production-grade persistence, or all settings/approval surfaces.
+v1 is the complete Phase 1 MVP. Its original one-day vertical tracer remains the first delivery checkpoint, but every Phase 1 requirement remains in scope with no one-day completion deadline per D-47. It proves the locked vertical slice: sign in, load one sandboxed napplet, and proxy the specified stream-oriented runtime API through the backend.
 
-### One-Day Vertical Slice
+### Phase 1 Vertical Slice
 
 - [ ] **MVP-01**: User can open a Napplet Portal shell that has replaced the Fresh starter UI with a simple mobile-first product shell.
 - [ ] **MVP-02**: User can load one known/test napplet in a sandboxed iframe from the portal shell.
-- [ ] **MVP-03**: The iframe host uses `../napplet-web` where practical, or a minimal compatible adapter if full integration is too large for the one-day MVP.
+- [ ] **MVP-03**: The iframe host uses `../napplet-web` where practical, or the canonical minimal source-bound adapter when the executable Deno import probe requires it.
 - [ ] **MVP-04**: The backend has a minimal runtime boundary that receives napplet messages and routes them through server-owned TypeScript code.
 - [ ] **MVP-05**: Napplet messages include correlation IDs and return success/error responses without the napplet directly accessing relays, signers, storage, or server internals.
 
@@ -22,7 +22,7 @@ v1 is a one-day MVP. It should prove the smallest complete vertical slice: sign 
 - [ ] **AUTH-02**: MVP sign-in supports NIP-46 bunker URI input.
 - [ ] **AUTH-03**: MVP sign-in supports Nostr Connect QR-code display or handoff flow.
 - [ ] **AUTH-04**: MVP sign-in supports `nsec` dev mode for fast local testing, with key material isolated from napplets and excluded from URLs/logs/browser-accessible storage.
-- [ ] **AUTH-05**: MVP explicitly documents read-only `npub` mode as a supported near-term sign-in mode, but it may be implemented after the one-day vertical slice if needed.
+- [ ] **AUTH-05**: MVP explicitly documents read-only `npub` mode as deferred beyond the locked Phase 1 account modes; the former one-day deadline is not the reason for this boundary.
 - [ ] **AUTH-06**: User can see the active account/pubkey state in the shell after sign-in.
 
 ### Stream-First Applesauce Runtime
@@ -51,7 +51,7 @@ v1 is a one-day MVP. It should prove the smallest complete vertical slice: sign 
 
 ## v2 Requirements
 
-Deferred beyond the one-day MVP. These should guide future phases without bloating the first implementation.
+Deferred beyond the complete locked Phase 1 MVP. These guide future phases and are excluded by the phase boundary, not by a one-day deadline.
 
 ### Backend Nostr Runtime Expansion
 
@@ -87,7 +87,7 @@ Deferred beyond the one-day MVP. These should guide future phases without bloati
 
 ## Out of Scope
 
-Explicitly excluded from the one-day MVP.
+Explicitly excluded from the locked Phase 1 MVP.
 
 | Feature | Reason |
 |---------|--------|

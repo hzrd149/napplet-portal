@@ -6,13 +6,13 @@
 
 Napplet Portal is a Deno Fresh server-side runtime for napplets. It serves lightweight web pages that primarily mount sandboxed napplet iframes while the backend runtime owns complex Nostr logic, application state, relay/blossom operations, account handling, storage, and NAP API execution.
 
-The immediate goal is a one-day MVP: sign in, load one known sandboxed napplet, and prove a backend-proxied stream-oriented runtime seam. The project should stay simple and functional first, then expand into the broader backend Nostr runtime and NAP API surface after the vertical slice works.
+The immediate goal is the complete Phase 1 MVP: sign in, load one known sandboxed napplet, and prove a backend-proxied stream-oriented runtime seam. The first vertical tracer checkpoint is targeted for one day; completing the full locked Phase 1 scope has no one-day deadline. The project should stay simple and functional first, then expand into the broader backend Nostr runtime and NAP API surface after the vertical slice works.
 
 **Core Value:** A napplet can run in a mobile browser while a server-side Deno runtime handles the heavy Nostr/runtime work.
 
 ### Constraints
 
-- **Timeline**: The MVP must be functional in one day; plans should optimize for the smallest vertical slice.
+- **Timeline**: The first vertical tracer checkpoint is targeted for one day; completing the full locked Phase 1 scope has no one-day deadline.
 - **Runtime**: Use Deno and Fresh as the server-side web/runtime foundation because the existing project is a Deno Fresh app.
 - **Frontend architecture**: Use Fresh routes for server-rendered pages and islands only for browser-side interactivity; avoid moving backend runtime logic into islands.
 - **Nostr libraries**: Use Applesauce packages as much as possible for Nostr primitives, networking, relay connections, database integration, event storage, and relay workflows.

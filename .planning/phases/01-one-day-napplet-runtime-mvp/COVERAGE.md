@@ -1,5 +1,7 @@
 # Kehto / NAP Capability Coverage
 
+Timeline: D-47 keeps this exact coverage in Phase 1 without a one-day completion deadline. The first delivery checkpoint, targeted for one day, proves sign-in → supplied verified napplet → Kehto handshake → initial-plus-updating backend RELAY stream; no integrated capability below moves to a later phase.
+
 Phase 1 injects only mandatory shell plus supported/granted domains. Sibling packages are canonical read-only references.
 
 | Capability | Decision | Phase 1 behavior |

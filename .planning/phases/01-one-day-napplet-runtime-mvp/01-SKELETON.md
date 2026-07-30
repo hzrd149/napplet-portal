@@ -1,5 +1,7 @@
 # Walking Skeleton: Napplet Portal
 
+Per D-47, this production-quality skeleton makes the sign-in → supplied verified napplet → initial-plus-updating backend stream path Phase 1's first delivery checkpoint, targeted for one day. Every locked Phase 1 behavior remains in this phase, and full completion has no one-day deadline.
+
 ## User Story
 
 **As a** trusted single operator, **I want to** sign in and run one verified sandboxed napplet backed by live Nostr streams, **so that** a mobile browser can stay lightweight while the Deno server owns runtime authority.
@@ -25,6 +27,8 @@
 ## Proven Vertical Path
 
 Configured environment → singleton backend runtime → restored or newly active account → verified NIP-5D artifact → source-bound iframe/WebSocket session → exact Kehto NAP envelope → Applesauce store/live relay stream → napplet result/event.
+
+The Plan 01 checkpoint executes this entire path with the actual user-supplied artifact, `sandbox="allow-scripts"`, a minimal lead sign-in path, the Kehto handshake, one initial event, and one later live update. Plans 02–06 expand the same production files to every remaining locked behavior.
 
 ## Deliberate Phase 1 Limits
 

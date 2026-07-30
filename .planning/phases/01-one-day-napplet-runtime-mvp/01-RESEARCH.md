@@ -1,4 +1,4 @@
-# Phase 01: One-Day Napplet Runtime MVP - Research
+# Phase 01: Napplet Runtime MVP - Research
 
 **Researched:** 2026-07-30
 **Domain:** Deno Fresh, server-owned Nostr/Applesauce runtime, NIP-5D iframe hosting, Kehto NAP dispatch
@@ -92,7 +92,7 @@ The shortest credible plan is a server-first vertical slice with three narrow bo
 
 There is a current version seam that must be settled before feature work: the checked-out Kehto manifests are `@kehto/runtime` 0.19.0, shell 0.18.0, services 0.17.0 with `@napplet/* >=0.29 <0.30`, while the sibling `../napplet-web` source is 0.31.0. The npm registry's latest coherent line is runtime 0.20.1, shell 0.19.1, services 0.18.1, nip 0.5.1 with `@napplet/core` and `@napplet/nap >=0.31 <0.32`. Use that single coherent published line and use sibling sources as canonical contract/reference code; do not mix the older local Kehto build with napplet 0.31. [VERIFIED: npm registry and codebase package manifests]
 
-The largest planning risk is breadth, not unclear architecture. The locked decisions require real verified napplet loading, three sign-in mechanisms, sensitive account persistence, reconnectable per-window live subscriptions, exact provenance, NIP-65 outbox routing, encryption/signing, and settled publishing. Plan this as sequential vertical waves with contract tests first; a one-day time box cannot tolerate late discovery of envelope or package drift. [VERIFIED: `.planning/phases/01-one-day-napplet-runtime-mvp/01-CONTEXT.md`]
+The largest planning risk is breadth, not unclear architecture. The locked decisions require real verified napplet loading, three sign-in mechanisms, sensitive account persistence, reconnectable per-window live subscriptions, exact provenance, NIP-65 outbox routing, encryption/signing, and settled publishing. Plan this as sequential vertical waves with contract tests first. Per D-47, the first executable checkpoint must cross sign-in, the actual supplied verified iframe, Kehto handshake, and initial-plus-updating backend stream; it is targeted for one day, while full locked Phase 1 completion has no one-day deadline. [VERIFIED: `.planning/phases/01-one-day-napplet-runtime-mvp/01-CONTEXT.md`]
 
 **Primary recommendation:** Pin the coherent current Kehto/napplet line, prove Deno import/runtime compatibility in Wave 0, then implement one end-to-end slice in dependency order: configuration/runtime singleton → account persistence → verified artifact → iframe/WebSocket bridge → identity → relay/outbox streams and publish. [VERIFIED: npm registry; codebase contracts]
 
@@ -143,7 +143,7 @@ The largest planning risk is breadth, not unclear architecture. The locked decis
 
 ## Project Constraints (from AGENTS.md)
 
-- Optimize for the smallest functional one-day vertical slice; do not preserve Fresh starter behavior unnecessarily. [VERIFIED: AGENTS.md]
+- Preserve the sign-in → actual supplied verified napplet → Kehto handshake → initial-plus-updating backend stream tracer as the first executable checkpoint, targeted for one day; then complete all locked Phase 1 scope without a one-day deadline and do not preserve Fresh starter behavior unnecessarily. [VERIFIED: D-47 and AGENTS.md]
 - Use Deno/Fresh; use routes for SSR/API boundaries and islands only for browser interaction. [VERIFIED: AGENTS.md]
 - Prefer Applesauce for Nostr primitives, networking, relay connections, event storage, and workflows; preserve RxJS stream composition with no nested subscriptions or completeness waits. [VERIFIED: AGENTS.md]
 - Keep persistent state, signing, relay connections, event stores, and complex Nostr logic on the backend. [VERIFIED: AGENTS.md]
@@ -401,7 +401,7 @@ Write the whole snapshot via a temporary sibling file followed by rename and res
 ### Pitfall 7: `srcdoc` Asset References Break
 **What goes wrong:** Verified HTML loads but relative scripts/styles are absent.
 **Why it happens:** `resolveNapplet()` returns all verified files plus HTML; a bare `srcdoc` does not automatically serve sibling paths from the in-memory artifact map.
-**How to avoid:** Confirm the user-provided napplet is a single-file artifact for the one-day slice or implement the exact Kehto artifact assembly mechanism; make this an early contract test. [VERIFIED: `ResolvedNapplet.files` and `indexHtml`; implementation detail remains open]
+**How to avoid:** At the mandatory Wave 0 artifact checkpoint, determine whether the user-provided napplet is single-file or requires the exact Kehto artifact assembly mechanism, then capture that behavior in the real fixture before implementation. [VERIFIED: `ResolvedNapplet.files` and `indexHtml`; resolution path locked]
 **Warning signs:** iframe console 404s or authored script never sends `shell.ready`.
 
 ## Code Examples
@@ -474,22 +474,24 @@ const identity = {
 | A2 | The user-provided test napplet can be rendered from the verified artifact assembly without a broader asset-serving protocol. | Pitfall 7 | Handshake fails; may require a small verified in-memory asset URL strategy. |
 | A3 | A 15-second reconnect grace is a suitable “short” default. | Configuration | Mobile network transitions may need tuning; make it configurable. |
 
-## Open Questions
+## Open Questions (RESOLUTION PATH LOCKED)
+
+These are governed prerequisites, not open design choices. The package-only Deno import question is resolved by the executable Wave 0 probe in Plan 01. The two supplied-napplet questions remain blocked until the user provides the actual coordinate/artifact; Plan 01 has a mandatory blocking checkpoint that requires the captured fixture before any artifact-dependent plan can execute. No authored example or invented fixture may substitute.
 
 1. **Can the user-provided napplet run from the chosen `srcdoc` assembly path?**
    - What we know: `resolveNapplet()` returns verified `indexHtml` and a map of all verified files. [VERIFIED: Kehto source]
    - What's unclear: whether its scripts/styles are fully inlined or require relative resource resolution.
-   - Recommendation: make the supplied artifact an explicit Wave 0 fixture/contract checkpoint before UI work.
+   - Locked resolution: capture and verify the actual supplied artifact at the mandatory Plan 01 checkpoint before artifact, UI, stream, or integration plans execute.
 
 2. **Which exact NAP-RELAY 0.31 publish wire shape does the supplied napplet emit?**
    - What we know: locked D-37 requires an already-signed event; checked-out older Kehto docs describe historical drift.
    - What's unclear: whether the supplied test napplet already targets the current 0.31 contract.
-   - Recommendation: freeze a JSON contract fixture from the napplet and assert it against installed 0.31 types.
+   - Locked resolution: freeze the actual napplet's RELAY/OUTBOX JSON fixture at the mandatory Plan 01 checkpoint and assert it against installed 0.31 types; do not invent the fixture.
 
 3. **Does current `@kehto/shell` import cleanly in Deno server code for prelude-only helpers?**
    - What we know: package is browser-specific; runtime is browser-agnostic. [VERIFIED: Kehto docs]
    - What's unclear: whether tree-shaking prevents browser-global evaluation during a server import.
-   - Recommendation: Wave 0 import spike; if it fails, copy no behavior—build the minimal source-bound bridge against canonical napplet types and contract tests.
+   - Locked resolution: the package-only Wave 0 import probe must execute before feature work; if server import evaluates browser globals, use the canonical napplet types and a minimal source-bound bridge without copying package behavior.
 
 ## Environment Availability
 

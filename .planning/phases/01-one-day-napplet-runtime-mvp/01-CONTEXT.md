@@ -1,4 +1,4 @@
-# Phase 1: One-Day Napplet Runtime MVP - Context
+# Phase 1: Napplet Runtime MVP - Context
 
 **Gathered:** 2026-07-30
 **Status:** Ready for planning
@@ -6,7 +6,7 @@
 <domain>
 ## Phase Boundary
 
-Deliver a one-day vertical slice in which one single-user Deno/Fresh backend runtime owns Nostr identity, Applesauce relay/event state, napplet resolution, and Kehto NAP execution. Lightweight browser tabs render a mobile shell, load one verified sandboxed napplet, and proxy NAP-SHELL, NAP-IDENTITY, NAP-RELAY, and NAP-OUTBOX traffic over a live backend connection. Full catalog, durable cache, approval policy, multi-user isolation, and broad NAP coverage remain later-phase work.
+Deliver the full locked Phase 1 vertical slice in which one single-user Deno/Fresh backend runtime owns Nostr identity, Applesauce relay/event state, napplet resolution, and Kehto NAP execution. Lightweight browser tabs render a mobile shell, load one verified sandboxed napplet, and proxy NAP-SHELL, NAP-IDENTITY, NAP-RELAY, and NAP-OUTBOX traffic over a live backend connection. The original one-day tracer remains the first delivery checkpoint; completing every D-01–D-47 behavior and Phase 1 requirement has no one-day deadline. Full catalog, durable cache, approval policy, multi-user isolation, and broad NAP coverage remain later-phase work.
 
 </domain>
 
@@ -72,6 +72,7 @@ Deliver a one-day vertical slice in which one single-user Deno/Fresh backend run
 - **D-44:** Normalize, validate, and deduplicate endpoint URLs with Applesauce helpers where available. Warn about rejected values and continue with valid/default endpoints.
 - **D-45:** Leave the shared Phase 1 in-memory event/artifact cache unbounded until backend restart.
 - **D-46:** Print a sanitized startup summary containing the napplet coordinate, endpoint counts, account-restoration state, and runtime readiness. Never print credentials or signer material.
+- **D-47:** Keep the original one-day vertical tracer as Phase 1's first delivery checkpoint, but remove the one-day deadline from full Phase 1 completion. All D-01–D-46 decisions and all Phase 1 requirements remain in Phase 1; none may move to a later phase to satisfy the former time box.
 
 ### the agent's Discretion
 - Exact visual styling, icon set, spacing, colors, and animation duration within the locked mobile-shell behavior.
@@ -175,5 +176,5 @@ Deliver a one-day vertical slice in which one single-user Deno/Fresh backend run
 
 ---
 
-*Phase: 1-One-Day Napplet Runtime MVP*
+*Phase: 1-Napplet Runtime MVP*
 *Context gathered: 2026-07-30*

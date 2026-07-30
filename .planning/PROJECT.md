@@ -4,7 +4,7 @@
 
 Napplet Portal is a Deno Fresh server-side runtime for napplets. It serves lightweight web pages that primarily mount sandboxed napplet iframes while the backend runtime owns complex Nostr logic, application state, relay/blossom operations, account handling, storage, and NAP API execution.
 
-The immediate goal is a one-day MVP: sign in, load one known sandboxed napplet, and prove a backend-proxied stream-oriented runtime seam. The project should stay simple and functional first, then expand into the broader backend Nostr runtime and NAP API surface after the vertical slice works.
+The immediate goal is the complete Phase 1 MVP: sign in, load one known sandboxed napplet, and prove a backend-proxied stream-oriented runtime seam with every locked Phase 1 behavior. The sign-in → supplied verified napplet → initial-plus-updating backend stream tracer is the first delivery checkpoint and is targeted for one day, but full Phase 1 completion has no one-day deadline. The project should stay simple and functional first, then expand into broader explicitly deferred runtime work after the locked slice works.
 
 ## Core Value
 
@@ -18,9 +18,9 @@ A napplet can run in a mobile browser while a server-side Deno runtime handles t
 
 ### Active
 
-- [ ] Ship a one-day MVP that loads one sandboxed napplet from a simple Fresh mobile shell.
+- [ ] Ship the complete Phase 1 MVP that loads one sandboxed napplet from a simple Fresh mobile shell; first deliver the one-day-targeted sign-in → supplied verified napplet → initial-plus-updating stream tracer.
 - [ ] Support MVP Nostr sign-in through NIP-46 bunker URI, Nostr Connect QR/handoff, and isolated `nsec` dev mode.
-- [ ] Keep read-only `npub` mode in scope as a near-term sign-in/identity path, but do not let it block the one-day vertical slice.
+- [ ] Document read-only `npub` mode as explicitly deferred beyond the locked Phase 1 account modes; do not use the former time box to alter locked scope.
 - [ ] Proxy napplet messages and minimal NAP/runtime calls to backend-owned TypeScript code.
 - [ ] Use Applesauce and RxJS in a stream-first style for Nostr/runtime flows where practical.
 - [ ] Support local Nostr relays and local Blossom servers as cache backends for events, blobs, and napplet artifacts.
@@ -46,11 +46,11 @@ The larger project has two categories of future features. The first is the backe
 
 For the MVP, these categories should be represented by a thin working seam rather than complete implementations. The frontend should be more than a static iframe wrapper, but only enough to prove the shell: sign-in entry points, active account state, one napplet viewport, and simple runtime/error states.
 
-Local-first caching is part of the long-term runtime value. The runtime should be able to connect to local Nostr relays and local Blossom servers so loaded napplet events, manifests, and blobs can be cached near the server instead of repeatedly fetching from public relays or public blob servers. For the one-day MVP, this can be represented as configuration shape, a mocked/local endpoint, or a documented adapter seam; durable caching and synchronization belong in the backend runtime expansion phase.
+Local-first caching is part of the long-term runtime value. The runtime should be able to connect to local Nostr relays and local Blossom servers so loaded napplet events, manifests, and blobs can be cached near the server instead of repeatedly fetching from public relays or public blob servers. Phase 1 delivers the locked ordinary-endpoint and in-memory adapter seams; durable caching and synchronization belong in the backend runtime expansion phase.
 
 ## Constraints
 
-- **Timeline**: The MVP must be functional in one day; plans should optimize for the smallest vertical slice.
+- **Timeline**: The first vertical tracer checkpoint is targeted for one day; completing the full locked Phase 1 scope has no one-day deadline.
 - **Runtime**: Use Deno and Fresh as the server-side web/runtime foundation because the existing project is a Deno Fresh app.
 - **Frontend architecture**: Use Fresh routes for server-rendered pages and islands only for browser-side interactivity; avoid moving backend runtime logic into islands.
 - **Nostr libraries**: Use Applesauce packages as much as possible for Nostr primitives, networking, relay connections, database integration, event storage, and relay workflows.
@@ -67,7 +67,7 @@ Local-first caching is part of the long-term runtime value. The runtime should b
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Build the first milestone as a one-day vertical MVP | The project needs a simple functional proof before broad runtime expansion. | - Pending |
+| Keep the original one-day tracer as the first Phase 1 checkpoint, then complete all locked Phase 1 scope without a one-day deadline (D-47) | The project needs an early functional proof without dropping or postponing locked functionality. | 2026-07-30 |
 | Prove one sandboxed napplet before generalized catalog/runtime breadth | Loading one napplet validates the core iframe/backend seam fastest. | - Pending |
 | Support NIP-46 bunker URI, Nostr Connect QR/handoff, and isolated `nsec` dev mode in MVP sign-in | These modes make the MVP useful for real testing while keeping production key custody deferred. | - Pending |
 | Treat Nostr data as streams rather than complete loads | Relay data is open-ended; the UI and backend should update incrementally. | - Pending |
