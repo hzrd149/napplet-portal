@@ -6,6 +6,8 @@ const debug = rootDebug.extend("signer");
 
 export interface SignerAccountsPort {
   startNostrConnect(abort?: AbortSignal): Promise<NostrConnectResult>;
+  signInBunker?(uri: string): Promise<IdentitySnapshot>;
+  signInNsec?(privateKey: string): Promise<IdentitySnapshot>;
   signOut?(): Promise<void>;
 }
 
@@ -69,6 +71,44 @@ export class SignerConnectionService {
     debug("retry requested status=%s", this.state.status);
     this.cancel();
     this.start();
+  }
+
+  async signInBunker(uri: string): Promise<IdentitySnapshot> {
+    if (!this.#accounts.signInBunker) {
+      throw new Error("Bunker sign-in unavailable");
+    }
+    this.cancel();
+    try {
+      const identity = await this.#accounts.signInBunker(uri);
+      this.state$.next(Object.freeze({ status: "active", identity }));
+      return identity;
+    } catch (error) {
+      this.state$.next(Object.freeze({
+        status: "error",
+        message: error instanceof Error
+          ? error.message
+          : "Bunker sign-in failed",
+      }));
+      throw error;
+    }
+  }
+
+  async signInNsec(privateKey: string): Promise<IdentitySnapshot> {
+    if (!this.#accounts.signInNsec) {
+      throw new Error("nsec sign-in unavailable");
+    }
+    this.cancel();
+    try {
+      const identity = await this.#accounts.signInNsec(privateKey);
+      this.state$.next(Object.freeze({ status: "active", identity }));
+      return identity;
+    } catch (error) {
+      this.state$.next(Object.freeze({
+        status: "error",
+        message: error instanceof Error ? error.message : "nsec sign-in failed",
+      }));
+      throw error;
+    }
   }
 
   cancel(): void {

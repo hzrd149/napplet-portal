@@ -1,4 +1,3 @@
-import { qrcode } from "@libs/qrcode";
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { HomeView } from "../components/HomeView.tsx";
 import {
@@ -18,21 +17,6 @@ const debug = rootDebug.extend("shell");
 
 interface NappletShellProps {
   readonly coordinate: string;
-}
-
-export function createSignerLaunch(uri: string): {
-  readonly href: string;
-  readonly qrSvg: string;
-  readonly qrDataUrl: string;
-} {
-  const qrSvg = uri
-    ? qrcode(uri, { output: "svg", ecl: "MEDIUM", border: 2 })
-    : "";
-  return {
-    href: uri,
-    qrSvg,
-    qrDataUrl: qrSvg ? `data:image/svg+xml,${encodeURIComponent(qrSvg)}` : "",
-  };
 }
 
 type View = "napplet" | "home" | "profile";
@@ -57,17 +41,11 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
   const [view, setView] = useState<View>("home");
   const [notice, setNotice] = useState<Notice>(null);
   const [connecting, setConnecting] = useState(false);
-  const [awaitingSigner, setAwaitingSigner] = useState(false);
-  const [canRestartSigner, setCanRestartSigner] = useState(false);
-  const [connectionUri, setConnectionUri] = useState("");
-  const [copied, setCopied] = useState(false);
-  const [signInError, setSignInError] = useState("");
+  const [runtimeError, setRuntimeError] = useState("");
   const socket = useRef<WebSocket | null>(null);
   const iframe = useRef<HTMLIFrameElement | null>(null);
   const owner = useRef<{ connectionId: string; windowId: string } | null>(null);
   const reconnectToken = useRef<string | null>(null);
-  const signInMethod = useRef<"connect" | "bunker" | "nsec">("connect");
-  const copyTimer = useRef<number | null>(null);
   const connectTimer = useRef<number | null>(null);
   const signOutDialog = useRef<HTMLDialogElement | null>(null);
   const registered = useRef<
@@ -130,30 +108,27 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
       setView(next === "profile" || next === "napplet" ? next : "home");
     };
     globalThis.addEventListener("popstate", back);
-    openSocket("connect");
+    openSocket();
     return () => {
       debug("shell unmounting");
       globalThis.removeEventListener("message", receive);
       globalThis.removeEventListener("popstate", back);
-      if (copyTimer.current !== null) clearTimeout(copyTimer.current);
       if (connectTimer.current !== null) clearTimeout(connectTimer.current);
       socket.current?.close();
     };
   }, []);
 
-  function openSocket(method: "connect" | "bunker" | "nsec" = "connect"): void {
+  function openSocket(): void {
     if (!coordinate) {
       debug("open socket skipped empty coordinate");
       return;
     }
     debug(
-      "open socket started method=%s reconnect=%s",
-      method,
+      "open socket started reconnect=%s",
       Boolean(reconnectToken.current),
     );
     setConnecting(true);
-    signInMethod.current = method;
-    setSignInError("");
+    setRuntimeError("");
     setNotice(null);
     socket.current?.close();
     const protocol = location.protocol === "https:" ? "wss:" : "ws:";
@@ -167,15 +142,13 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
     if (connectTimer.current !== null) clearTimeout(connectTimer.current);
     connectTimer.current = setTimeout(() => {
       if (socket.current !== ws || ws.readyState === WebSocket.OPEN) return;
-      debug("socket connect timeout method=%s", method);
+      debug("socket connect timeout");
       ws.close();
       setConnecting(false);
-      setAwaitingSigner(false);
-      setCanRestartSigner(true);
-      setSignInError(CONNECT_FAILED);
+      setRuntimeError(CONNECT_FAILED);
     }, CONNECT_TIMEOUT_MS);
     ws.addEventListener("open", () => {
-      debug("socket open method=%s", method);
+      debug("socket open");
       if (connectTimer.current !== null) clearTimeout(connectTimer.current);
       connectTimer.current = null;
     });
@@ -183,13 +156,13 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
     ws.addEventListener("error", () => {
       // A superseded socket must not report failure for its replacement.
       if (socket.current !== ws) return;
-      debug("socket error method=%s", method);
+      debug("socket error");
       setConnecting(false);
-      setSignInError(CONNECT_FAILED);
+      setRuntimeError(CONNECT_FAILED);
     });
     ws.addEventListener("close", () => {
       if (socket.current !== ws) return;
-      debug("socket close method=%s", method);
+      debug("socket close");
       if (connectTimer.current !== null) clearTimeout(connectTimer.current);
       connectTimer.current = null;
       setConnecting(false);
@@ -231,7 +204,6 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
       socket.current?.send(JSON.stringify({
         type: "runtime.start",
         coordinate,
-        method: signInMethod.current,
       }));
       return;
     }
@@ -240,48 +212,16 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
       iframe.current?.contentWindow?.postMessage(message.message, "*");
       return;
     }
-    if (
-      message.type === "runtime.signer.pending" &&
-      typeof message.uri === "string" &&
-      message.uri.startsWith("nostrconnect://")
-    ) {
-      setConnectionUri(message.uri);
-      debug("signer pending uri=present");
+    if (message.type === "runtime.auth.required") {
+      debug("runtime auth required");
       setConnecting(false);
-      setAwaitingSigner(true);
-      setCanRestartSigner(false);
-      return;
-    }
-    if (message.type === "runtime.signer.preparing") {
-      debug("signer preparing");
-      setConnectionUri("");
-      setConnecting(true);
-      setAwaitingSigner(false);
-      setCanRestartSigner(false);
-      return;
-    }
-    if (message.type === "runtime.signer.idle") {
-      debug("signer idle");
-      setConnectionUri("");
-      setConnecting(false);
-      setAwaitingSigner(false);
-      setCopied(false);
-      setCanRestartSigner(true);
-      return;
-    }
-    if (message.type === "runtime.signer.error") {
-      debug("signer error");
-      setConnecting(false);
-      setAwaitingSigner(false);
-      setCanRestartSigner(true);
-      setSignInError(
-        "Remote signer connection failed or timed out. Try again.",
-      );
+      setRuntimeError("Sign in before opening this napplet.");
       return;
     }
     if (message.type === "runtime.error") {
       debug("runtime integrity error");
       setConnecting(false);
+      if (typeof message.error === "string") setRuntimeError(message.error);
       setNotice("integrity");
       return;
     }
@@ -312,8 +252,6 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
       setProfile({ pubkey: account.pubkey, status: "active" });
     }
     setConnecting(false);
-    setAwaitingSigner(false);
-    setCanRestartSigner(false);
     navigate("napplet");
   }
 
@@ -321,14 +259,6 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
     debug("navigate view=%s", next);
     setView(next);
     history.pushState({ view: next }, "", location.href);
-  }
-
-  async function copyUri(): Promise<void> {
-    await navigator.clipboard.writeText(connectionUri);
-    debug("copied signer URI");
-    setCopied(true);
-    if (copyTimer.current !== null) clearTimeout(copyTimer.current);
-    copyTimer.current = setTimeout(() => setCopied(false), 2_000);
   }
 
   function signOut(): void {
@@ -339,58 +269,25 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
     navigate("home");
   }
 
-  function cancelSigner(): void {
-    debug("cancel signer requested");
-    socket.current?.send(JSON.stringify({ type: "runtime.signer.cancel" }));
-  }
-
-  function restartSigner(): void {
-    const ws = socket.current;
-    if (ws?.readyState === WebSocket.OPEN) {
-      debug("restart signer over existing socket");
-      ws.send(JSON.stringify({
-        type: "runtime.start",
-        coordinate,
-        method: "connect",
-      }));
-    } else {
-      debug("restart signer opening socket");
-      openSocket("connect");
-    }
-  }
-
   const signedIn = profile !== null;
   const configured = Boolean(coordinate);
-  // Without a coordinate there is nothing to sign in to, so Home's setup
-  // guidance replaces the sign-in panel instead of hiding behind it.
-  const homeVisible = configured ? signedIn && view === "home" : true;
+  const homeVisible = !configured || view === "home";
   return (
     <section class="portal-shell">
       <main class="shell-content">
-        {configured && !signedIn && (
-          <SignInPanel
-            uri={connectionUri}
-            connecting={connecting}
-            awaitingSigner={awaitingSigner}
-            canRestartSigner={canRestartSigner}
-            error={signInError}
-            copied={copied}
-            onCopy={copyUri}
-            onConnect={openSocket}
-            onCancel={cancelSigner}
-            onRestart={restartSigner}
-          />
-        )}
         <div
           class={`shell-view ${homeVisible ? "" : "shell-view-hidden"}`}
           inert={!homeVisible}
         >
           <HomeView
             configured={configured}
+            signedIn={signedIn}
             title="Security Lab"
             active={Boolean(srcdoc)}
             onOpen={() => navigate("napplet")}
           />
+          {runtimeError && <p class="form-error" role="alert">{runtimeError}
+          </p>}
         </div>
         <div
           class={`shell-view ${
@@ -424,7 +321,9 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
             onFrame={(frame) => iframe.current = frame}
           />
           {!srcdoc && (
-            <p class="stream-status" aria-live="polite">Waiting for updates</p>
+            <p class="stream-status" aria-live="polite">
+              {connecting ? "Waiting for updates" : "Open a signed-in session"}
+            </p>
           )}
         </div>
       </main>
@@ -452,91 +351,6 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
           </button>
         </div>
       </dialog>
-    </section>
-  );
-}
-
-interface SignInPanelProps {
-  readonly uri: string;
-  readonly connecting: boolean;
-  readonly awaitingSigner: boolean;
-  readonly canRestartSigner: boolean;
-  readonly error: string;
-  readonly copied: boolean;
-  readonly onCopy: () => void;
-  readonly onConnect: (method?: "connect" | "bunker" | "nsec") => void;
-  readonly onCancel: () => void;
-  readonly onRestart: () => void;
-}
-
-function SignInPanel(props: SignInPanelProps) {
-  const launch = createSignerLaunch(props.uri);
-  return (
-    <section class="sign-in-view" aria-labelledby="sign-in-title">
-      <div class="sign-in-panel">
-        <h1 id="sign-in-title">Connect signer</h1>
-        <p>
-          Scan this QR code with your signer app, or copy the connection URI.
-        </p>
-        <div class="qr-code" role="img" aria-label="Nostr Connect QR code">
-          {launch.qrDataUrl && <img src={launch.qrDataUrl} alt="" />}
-        </div>
-        <label for="connect-uri">Connection URI</label>
-        <div class="uri-row">
-          <input id="connect-uri" value={props.uri} readOnly />
-          <button type="button" onClick={props.onCopy} disabled={!props.uri}>
-            {props.copied ? "Copied" : "Copy URI"}
-          </button>
-        </div>
-        <a
-          class="primary-button"
-          href={launch.href || undefined}
-          aria-disabled={!launch.href}
-          onClick={(event) => {
-            if (!launch.href) {
-              event.preventDefault();
-            }
-          }}
-        >
-          Connect signer
-        </a>
-        {(props.connecting || props.awaitingSigner) && (
-          <p class="stream-status" aria-live="polite">
-            {props.awaitingSigner
-              ? "Awaiting remote signer connection…"
-              : "Preparing secure signer connection…"}
-          </p>
-        )}
-        {(props.connecting || props.awaitingSigner) && (
-          <button type="button" onClick={props.onCancel}>
-            Cancel
-          </button>
-        )}
-        {props.canRestartSigner && (
-          <button type="button" onClick={props.onRestart}>
-            Start new signer connection
-          </button>
-        )}
-        <details>
-          <summary>Use bunker URI</summary>
-          <label for="bunker-uri">Bunker URI</label>
-          <input id="bunker-uri" type="password" autoComplete="off" />
-          <button type="button" onClick={() => props.onConnect("bunker")}>
-            Connect bunker
-          </button>
-        </details>
-        <details>
-          <summary>
-            Use nsec <span class="warning-badge">Not recommended</span>
-          </summary>
-          <label for="nsec">Private key</label>
-          <input id="nsec" type="password" autoComplete="off" />
-          <button type="button" onClick={() => props.onConnect("nsec")}>
-            Use nsec
-          </button>
-        </details>
-        {props.error && <p class="form-error" role="alert">{props.error}</p>}
-      </div>
     </section>
   );
 }

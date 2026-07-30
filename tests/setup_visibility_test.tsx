@@ -15,7 +15,7 @@ function enclosingViewClass(html: string, needle: string): string {
   return /class="([^"]*)"/.exec(before.slice(start))?.[1] ?? "";
 }
 
-Deno.test("unconfigured portal shows setup guidance instead of a dead sign-in", () => {
+Deno.test("unconfigured portal shows setup guidance instead of embedded sign-in", () => {
   const html = renderToString(<NappletShell coordinate="" />);
   assert(
     !enclosingViewClass(html, "No napplet configured").includes(
@@ -25,19 +25,21 @@ Deno.test("unconfigured portal shows setup guidance instead of a dead sign-in", 
   );
   assert(
     !html.includes('id="sign-in-title"'),
-    "sign-in cannot be offered when there is nothing to sign in to",
+    "sign-in must live on its dedicated route",
   );
 });
 
-Deno.test("configured portal offers sign-in and defers Home until signed in", () => {
+Deno.test("configured portal links to sign-in and keeps Home independent", () => {
   const html = renderToString(<NappletShell coordinate="naddr1example" />);
   assert(
-    html.includes('id="sign-in-title"'),
-    "a configured portal must offer sign-in",
+    html.includes('href="/signin"'),
+    "a configured portal must link to dedicated sign-in",
   );
   assert(
-    enclosingViewClass(html, 'aria-label="Home"').includes("shell-view-hidden"),
-    "Home stays hidden until an account is connected",
+    !enclosingViewClass(html, 'aria-label="Home"').includes(
+      "shell-view-hidden",
+    ),
+    "Home remains visible without coupling to runtime startup",
   );
 });
 
@@ -61,7 +63,7 @@ Deno.test("runtime transport upgrades through Fresh and cannot hang silently", a
     shell.indexOf('ws.addEventListener("open"'),
   );
   assert(
-    timeoutBranch.includes("setSignInError(CONNECT_FAILED)"),
+    timeoutBranch.includes("setRuntimeError(CONNECT_FAILED)"),
     "a timed-out transport must report failure to the operator",
   );
 });

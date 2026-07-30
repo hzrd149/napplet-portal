@@ -4,7 +4,7 @@ function assert(condition: unknown, message: string): asserts condition {
 
 Deno.test("signer launch and QR encode the exact same Nostr Connect URI", async () => {
   const { qrcode } = await import("@libs/qrcode");
-  const { createSignerLaunch } = await import("../islands/NappletShell.tsx");
+  const { createSignerLaunch } = await import("../islands/SignInFlow.tsx");
   const uri = "nostrconnect://napplet-portal?relay=wss%3A%2F%2Frelay.example";
   const launch = createSignerLaunch(uri);
   assert(launch.href === uri, "signer target must preserve the exact URI");
@@ -14,7 +14,7 @@ Deno.test("signer launch and QR encode the exact same Nostr Connect URI", async 
     "QR and signer target must encode the same URI",
   );
 
-  const shell = await Deno.readTextFile("islands/NappletShell.tsx");
+  const shell = await Deno.readTextFile("islands/SignInFlow.tsx");
   assert(
     shell.includes("href={launch.href || undefined}"),
     "launch must be a link",
@@ -26,9 +26,9 @@ Deno.test("signer launch and QR encode the exact same Nostr Connect URI", async 
 });
 
 Deno.test("shell receives the server-owned remote signer URI", async () => {
-  const shell = await Deno.readTextFile("islands/NappletShell.tsx");
+  const shell = await Deno.readTextFile("islands/SignInFlow.tsx");
   assert(
-    shell.includes('message.type === "runtime.signer.pending"'),
+    shell.includes('message.type === "signer.pending"'),
     "shell must wait for the server-owned Nostr Connect URI",
   );
   assert(
@@ -37,35 +37,31 @@ Deno.test("shell receives the server-owned remote signer URI", async () => {
   );
 });
 
-Deno.test("shell requests signer initiation after runtime session handshake", async () => {
-  const shell = await Deno.readTextFile("islands/NappletShell.tsx");
-  const connectedBranch = shell.slice(
-    shell.indexOf('message.type === "runtime.connected"'),
-    shell.indexOf('message.type === "runtime.event"'),
+Deno.test("sign-in flow starts one QR signer session on load", async () => {
+  const shell = await Deno.readTextFile("islands/SignInFlow.tsx");
+  assert(
+    shell.includes("/api/signin/connect"),
+    "QR sign-in must use the signer-only WebSocket route",
   );
   assert(
-    connectedBranch.includes('type: "runtime.start"'),
-    "signer initiation must follow runtime.connected",
-  );
-  const openBranch = shell.slice(
-    shell.indexOf('ws.addEventListener("open"'),
-    shell.indexOf('ws.addEventListener("message"'),
+    shell.includes('type: "signer.start"'),
+    "sign-in flow must start the remote signer session",
   );
   assert(
-    !openBranch.includes('type: "runtime.start"'),
-    "transport open must not race the runtime session handshake",
+    shell.includes("started.current"),
+    "sign-in flow must guard against duplicate signer sessions",
   );
 });
 
 Deno.test("awaiting signer exposes explicit accessible cancellation", async () => {
-  const shell = await Deno.readTextFile("islands/NappletShell.tsx");
+  const shell = await Deno.readTextFile("islands/SignInFlow.tsx");
   assert(shell.includes("Cancel"), "awaiting view must expose Cancel");
   assert(
-    shell.includes('type: "runtime.signer.cancel"'),
+    shell.includes('type: "signer.cancel"'),
     "Cancel must dispatch an explicit runtime command",
   );
   assert(
-    shell.includes("Start new signer connection"),
+    shell.includes("Start QR sign-in"),
     "cancelled state must allow a fresh attempt",
   );
 });
@@ -116,6 +112,7 @@ Deno.test("shell structure reserves content and safe-area navigation rows", asyn
 
 Deno.test("approved sign-in, Home, Profile, notice, and sign-out copy is present", async () => {
   const shell = await Deno.readTextFile("islands/NappletShell.tsx");
+  const signin = await Deno.readTextFile("islands/SignInFlow.tsx");
   const home = await Deno.readTextFile("components/HomeView.tsx");
   const profile = await Deno.readTextFile("components/ProfileView.tsx");
   for (
@@ -124,6 +121,10 @@ Deno.test("approved sign-in, Home, Profile, notice, and sign-out copy is present
       "Use bunker URI",
       "Use nsec",
       "Not recommended",
+    ]
+  ) assert(signin.includes(copy), `missing approved copy: ${copy}`);
+  for (
+    const copy of [
       "Retry Connection",
       "Retry Napplet",
       "Waiting for updates",

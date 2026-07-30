@@ -70,7 +70,6 @@ export const handler = define.handlers({
       );
     }
     const { windowId, bridge } = session;
-    let signerProjection: { unsubscribe(): void } | undefined;
     socket.addEventListener("open", () => {
       debug(
         "socket open connection=%s window=%s resumed=%s",
@@ -85,37 +84,6 @@ export const handler = define.handlers({
         windowId,
         resumed: connection.resumed,
       }));
-      signerProjection = signer.state$.subscribe((state) => {
-        if (socket.readyState !== WebSocket.OPEN) return;
-        debug(
-          "project signer state connection=%s status=%s",
-          shortId(connection.connectionId),
-          state.status,
-        );
-        if (state.status === "idle" || state.status === "preparing") {
-          socket.send(JSON.stringify({
-            type: `runtime.signer.${state.status}`,
-          }));
-          return;
-        }
-        if (state.status === "awaiting") {
-          socket.send(JSON.stringify({
-            type: "runtime.signer.pending",
-            uri: state.uri,
-          }));
-          return;
-        }
-        if (state.status === "error") {
-          socket.send(JSON.stringify({
-            type: "runtime.signer.error",
-            error: state.message,
-          }));
-          return;
-        }
-        if (state.status === "active" && state.identity.pubkey) {
-          void sendActiveSigner(state.identity.pubkey);
-        }
-      });
     });
     socket.addEventListener("close", () => {
       debug(
@@ -123,7 +91,6 @@ export const handler = define.handlers({
         shortId(connection.connectionId),
         shortId(windowId),
       );
-      signerProjection?.unsubscribe();
       connections.detach(connection.connectionId);
     });
     socket.addEventListener("message", async (event) => {
@@ -155,33 +122,29 @@ export const handler = define.handlers({
               shortId(connection.connectionId),
             );
             socket.send(JSON.stringify({
-              type: "runtime.signer.error",
+              type: "runtime.error",
               error: "Configured napplet is not available in this tracer",
             }));
             return;
           }
-          if (message.method !== "connect") {
-            debug("rejected runtime start method=%s", String(message.method));
+          const signerState = signer.state;
+          if (signerState.status !== "active" || !signerState.identity.pubkey) {
+            debug(
+              "rejected runtime start connection=%s signer=%s",
+              shortId(connection.connectionId),
+              signerState.status,
+            );
             socket.send(JSON.stringify({
-              type: "runtime.signer.error",
-              error: "This sign-in method is not available in the tracer",
+              type: "runtime.auth.required",
+              error: "Sign in before opening this napplet",
             }));
             return;
           }
           debug(
-            "runtime start command connection=%s coordinate=matched method=%s",
-            shortId(connection.connectionId),
-            String(message.method),
-          );
-          signer.start();
-          return;
-        }
-        if (message.type === "runtime.signer.cancel") {
-          debug(
-            "runtime signer cancel command connection=%s",
+            "runtime start command connection=%s coordinate=matched signer=active",
             shortId(connection.connectionId),
           );
-          signer.cancel();
+          await sendActiveSigner(signerState.identity.pubkey);
           return;
         }
         if (message.type === "runtime.signout") {

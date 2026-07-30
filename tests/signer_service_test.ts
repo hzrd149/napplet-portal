@@ -66,8 +66,11 @@ Deno.test("signer service replays URI before approval and survives projection cl
   );
 });
 
-Deno.test("runtime endpoint only dispatches and projects signer service state", async () => {
-  const endpoint = await Deno.readTextFile("routes/api/runtime.ts");
+Deno.test("sign-in endpoint dispatches and projects signer service state", async () => {
+  const endpoint = await Deno.readTextFile("routes/api/signin/connect.ts");
+  const runtimeEndpoint = await Deno.readTextFile("routes/api/runtime.ts");
+  const bunkerEndpoint = await Deno.readTextFile("routes/api/signin/bunker.ts");
+  const nsecEndpoint = await Deno.readTextFile("routes/api/signin/nsec.ts");
   for (
     const forbidden of [
       "RelayPool",
@@ -80,19 +83,35 @@ Deno.test("runtime endpoint only dispatches and projects signer service state", 
   }
   assert(
     endpoint.includes("signer.state$.subscribe"),
-    "endpoint must project state",
+    "sign-in endpoint must project state",
   );
   assert(endpoint.includes("signer.start()"), "endpoint must dispatch start");
   assert(
-    endpoint.includes("Configured napplet is not available in this tracer") &&
-      endpoint.indexOf('message.type === "runtime.start"') <
-        endpoint.indexOf("const decoded = decodeClientMessage"),
+    !runtimeEndpoint.includes("signer.start()"),
+    "runtime endpoint must not start sign-in",
+  );
+  assert(
+    runtimeEndpoint.includes(
+      "Configured napplet is not available in this tracer",
+    ) &&
+      runtimeEndpoint.indexOf('message.type === "runtime.start"') <
+        runtimeEndpoint.indexOf("const decoded = decodeClientMessage"),
     "endpoint must reject unsupported runtime.start before NAP decoding",
   );
   assert(
-    endpoint.includes('message.type === "runtime.signer.cancel"') &&
+    endpoint.includes('message.type === "signer.cancel"') &&
       endpoint.includes("signer.cancel()"),
     "endpoint must route explicit cancellation",
+  );
+  assert(
+    bunkerEndpoint.includes("signInBunker") &&
+      !bunkerEndpoint.includes("ctx.upgrade()"),
+    "bunker sign-in must be an HTTP submission flow",
+  );
+  assert(
+    nsecEndpoint.includes("signInNsec") &&
+      !nsecEndpoint.includes("ctx.upgrade()"),
+    "nsec sign-in must be an HTTP submission flow",
   );
 });
 

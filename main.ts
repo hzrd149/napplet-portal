@@ -36,6 +36,16 @@ export const signerService = new SignerConnectionService({
     debug("starting signer accounts nostr connect");
     return await signerAccounts.startNostrConnect(abort);
   },
+  signInBunker: async (uri) => {
+    debug("restoring signer accounts before bunker sign-in");
+    await (restoredSignerAccounts ??= signerAccounts.restore());
+    return await signerAccounts.signInBunker(uri);
+  },
+  signInNsec: async (privateKey) => {
+    debug("restoring signer accounts before nsec sign-in");
+    await (restoredSignerAccounts ??= signerAccounts.restore());
+    return await signerAccounts.signInNsec(privateKey);
+  },
   signOut: () => {
     debug("signing out signer accounts");
     return signerAccounts.signOut();
