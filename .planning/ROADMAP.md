@@ -1,303 +1,109 @@
-# Roadmap: Napplet Portal
+# Roadmap: Napplet Portal v1.1
 
 ## Overview
 
-Napplet Portal starts with a complete Phase 1 MVP: load one sandboxed napplet in a mobile Fresh shell, support the locked Nostr sign-in paths, and prove the complete locked backend stream-runtime seam. The sign-in → supplied verified napplet → initial-plus-updating backend stream tracer is the first delivery checkpoint and is targeted for one day; full Phase 1 completion has no one-day deadline and retains every locked decision and requirement.
-
-The roadmap intentionally avoids building everything at once. Phase 1 is the MVP. Phases 2 and 3 are expansion tracks for future work after the vertical slice proves the runtime direction.
+Milestone v1.1 expands the proven backend runtime into a resilient mobile napplet platform. Work continues at Phase 3 and orders shared shell, catalog, transport-policy, state, and orchestration foundations before cross-tab media and final integrated hardening.
 
 ## Phases
 
-**Phase Numbering:**
-
-- Integer phases (1, 2, 3): Planned milestone work
-- Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
-
-Decimal phases appear between their surrounding integers in numeric order.
-
-- [x] **Phase 1: Napplet Runtime MVP** - User can sign in, load one sandboxed napplet, and use the complete locked backend-proxied stream runtime seam. (completed 2026-07-30)
-- [ ] **Phase 2: Backend Runtime Expansion** - Backend grows from MVP seam into durable Applesauce relay/event/account runtime with local relay/blob caching and Kehto contract integration.
-- [ ] **Phase 3: NAP Coverage, Policy, and Production Hardening** - Runtime expands NAP domains, approval persistence, mobile diagnostics, and deployment/security controls.
+- [ ] **Phase 3: Mobile Shell Resilience** — Polish the shell and make runtime connectivity legible and recoverable on mobile.
+- [ ] **Phase 4: Installed Napplet Discovery** — Install, synchronize, search, and launch trusted napplets from the home catalog.
+- [ ] **Phase 5: Resource and Blossom Transfer** — Add bounded resource resolution and explicit multi-server uploads.
+- [ ] **Phase 6: Common Data and Durable Storage** — Expose stream-oriented common Nostr helpers and isolated persistent napplet state.
+- [ ] **Phase 7: Intent Navigation** — Route declared intents to trusted installed handlers across shell surfaces.
+- [ ] **Phase 8: Cross-Tab Media Sessions** — Coordinate one ownership-aware media session across mobile browser tabs.
+- [ ] **Phase 9: Runtime Expansion Hardening** — Verify contract parity, security boundaries, failure behavior, and real-device flows end to end.
 
 ## Phase Details
 
-### Phase 1: Napplet Runtime MVP
+### Phase 3: Mobile Shell Resilience
 
-**Goal:** As a mobile napplet user, I want to sign in, open the supplied verified sandboxed napplet in the mobile shell, and use the complete locked backend-proxied stream-first runtime seam, so that a mobile browser can run the napplet while the Deno server runtime owns the heavy Nostr work; the sign-in → supplied napplet → initial-plus-updating stream tracer is the one-day-targeted first checkpoint, while full completion has no one-day deadline (D-47).
-**Mode:** mvp
-**Depends on**: Nothing (first phase)
-**Requirements**: MVP-01, MVP-02, MVP-03, MVP-04, MVP-05, AUTH-01, AUTH-02, AUTH-03, AUTH-04, AUTH-05, AUTH-06, STREAM-01, STREAM-02, STREAM-03, STREAM-04, STREAM-05, STREAM-06, STREAM-07, NAP-01, NAP-02, NAP-03, NAP-04, QUAL-01, QUAL-02, QUAL-03, QUAL-04
-**Success Criteria** (what must be TRUE):
+**Goal:** Users can understand and recover the mobile shell's backend connection while using coherent portal navigation and branding.
+**Requirements:** SHL-01, SHL-02, SHL-03, CON-01, CON-02, CON-03, CON-04
 
-  1. User can open a non-starter Fresh shell on mobile, sign in with NIP-46 bunker URI, Nostr Connect QR/handoff, or isolated `nsec` dev mode, and see active account/pubkey state.
-  2. User can launch one known/test napplet in a sandboxed iframe using pinned npm packages aligned with the reference-only `../napplet` contracts, or a minimal compatible iframe adapter where necessary.
-  3. Napplet can complete a minimal shell/runtime handshake, send correlated messages to the backend, and receive typed success/error responses without direct relay, signer, storage, or server access.
-  4. Backend exposes at least one napplet-facing identity or Nostr-derived stream that can emit partial/empty/updating values without waiting for all relay data to finish loading.
-  5. Runtime code follows pragmatic Applesauce/RxJS stream composition: avoid nested subscriptions, avoid blocking on complete data, and reserve `async`/`await` for one-shot setup or commands.
-  6. MVP leaves an explicit seam for local Nostr relay and local Blossom cache backends so future phases can avoid always refetching napplet events/blobs from public relays and servers.
-  7. `deno task check` passes, and MVP docs clearly mark mocked, incomplete, and deferred behavior.
+**Success Criteria:**
 
-**Plans**: 6/6 plans executed
+1. Theme, branding, and account/navigation chrome remain consistent across home and napplet views.
+2. Connection, bootstrapping, ready, retry, and failure produce truthful accessible states with reduced-motion support.
+3. A suspended or disconnected mobile tab reconnects with capped jittered backoff through the existing token/grace boundary.
+4. Offline, hidden, repeatedly failing, or intentionally closed tabs do not create duplicate sockets or retry storms.
 
-Plans:
-**Wave 1**
+### Phase 4: Installed Napplet Discovery
 
-- [x] 01-01-PLAN.md — One-day sign-in → supplied verified napplet → live backend stream tracer
-- [x] 01-02-PLAN.md — Backend account persistence, sign-in, and global identity lifecycle
-- [x] 01-03-PLAN.md — Verified artifact resolution and reconnectable WebSocket window ownership
+**Goal:** Users can build and navigate a trusted installed-napplet catalog from the portal home page.
+**Requirements:** CAT-01, CAT-02, CAT-03, CAT-04
 
-**Wave 2** *(blocked on Wave 1 completion)*
+**Success Criteria:**
 
-- [x] 01-04-PLAN.md — Approved mobile shell and persistent opaque iframe bridge
-- [x] 01-05-PLAN.md — Applesauce relay/outbox streams, publishing, and singleton runtime
+1. A user can submit a valid `naddr`, review its verified manifest, approve installation, and see it appear without reloading.
+2. Empty, loading, partial, stale, and failed synchronization remain usable and visibly distinct.
+3. Search filters installed napplets by meaningful metadata while synchronization continues.
+4. Launch uses the accepted manifest event identity and rejects unresolved or superseded entries.
 
-**Wave 3** *(blocked on Wave 2 completion)*
+### Phase 5: Resource and Blossom Transfer
 
-- [x] 01-06-PLAN.md — Fresh composition, documentation, and supplied-napplet acceptance
+**Goal:** Napplets can resolve bounded resources and upload blobs through backend-owned Blossom policy.
+**Requirements:** RES-01, RES-02, RES-03, UPL-01, UPL-02, UPL-03
 
-**UI hint**: yes
+**Success Criteria:**
 
-### Phase 2: Backend Runtime Expansion
+1. A napplet can inspect RESOURCE/UPLOAD availability and limits through pinned contract envelopes.
+2. HTTP(S), Blossom, and BUD-10 reads enforce scheme, redirect, destination, MIME, size, timeout, and integrity policy.
+3. Blossom reads try configured local cache endpoints before upstream sources without trusting cached executable bytes prematurely.
+4. Uploads use the reviewed pinned SDK and return explicit required-success, partial-failure, and optional-local-copy outcomes.
 
-**Goal:** Developers can evolve the MVP seam into durable backend-owned Nostr/account/runtime foundations using Applesauce, local cache backends, and the sibling napplet packages.
-**Mode:** mvp
-**Depends on**: Phase 1
-**Requirements**: V2-01, V2-02, V2-03, V2-04, V2-05, V2-06, V2-07, V2-08, V2-09, V2-10
-**Success Criteria** (what must be TRUE):
+### Phase 6: Common Data and Durable Storage
 
-  1. Backend runtime uses Applesauce event stores, relay pools, loaders, accounts, signers, and observable models where practical.
-  2. Runtime persists Nostr events with dedupe, relay provenance, replaceable/addressable/delete semantics, bounded sync, and teardown.
-  3. Runtime can use local Nostr relays as event cache/read-through backends and local Blossom servers as blob/artifact cache backends for loaded napplets.
-  4. User can configure relays and Blossom servers while runtime keeps portal login, signer authority, cache trust, and relay AUTH separate.
-  5. Developer can verify `../kehto`, `../napplet`, and `@napplet/*` contracts through documented adapters and tests.
+**Goal:** Napplets can use common Nostr helpers and durable isolated key-value state without taking backend authority into the browser.
+**Requirements:** COM-01, COM-02, STO-01, STO-02, STO-03
 
-**Plans**: 7/7 plans executed
+**Success Criteria:**
 
-Plans:
+1. A napplet can use canonical NIP-19 and common helper actions through NAP-COMMON.
+2. Other-user profile/common data appears as partial and updating Applesauce-backed projections.
+3. A napplet can set, get, list, and remove values in shared and supported per-instance scopes.
+4. Storage survives reconnects/restarts and remains isolated by account and verified napplet identity with enforced quotas.
 
-**Wave 1**
+### Phase 7: Intent Navigation
 
-- [x] 02-01-PLAN.md — Persisted settings through a process-wide Applesauce runtime tracer
+**Goal:** Napplets can discover and invoke trusted archetype handlers using shell-controlled navigation behavior.
+**Requirements:** INT-01, INT-02, INT-03
 
-**Wave 2**
+**Success Criteria:**
 
-- [x] 02-02-PLAN.md — Policy-safe NIP-65/NIP-42 routing and local-relay read-through cache
-- [x] 02-03-PLAN.md — Local Blossom proxy fallback with preserved artifact integrity
+1. Available handlers derive only from installed verified manifest contracts.
+2. Intent invocation returns canonical handled, unavailable, denied, and failed results.
+3. Shell policy can focus/reuse, open a new tab, or stack an iframe without breaking sandbox, history, or runtime state.
 
-**Wave 3**
+### Phase 8: Cross-Tab Media Sessions
 
-- [x] 02-04-PLAN.md — Signed NIP-78 installed catalog and runtime-attested identity
-- [x] 02-05-PLAN.md — Backend-owned runtime settings UI and cache health
+**Goal:** Napplets can participate in one backend-coordinated media session with deterministic playback ownership across tabs.
+**Requirements:** MED-01, MED-02, MED-03, MED-04
 
-**Wave 4**
+**Success Criteria:**
 
-- [x] 02-06-PLAN.md — Responsive installed catalog, update approval, and uninstall UX
+1. A napplet can create and control an ownership-aware session through canonical NAP-MEDIA messages.
+2. Starting or transferring playback selects exactly one active owner and stops the prior owner deterministically.
+3. Every connected tab reflects current media state and can transfer or stop it from shell navigation.
+4. Origin closure ends its session, and generation checks prevent stale tabs from reclaiming ownership.
 
-**Wave 5**
+### Phase 9: Runtime Expansion Hardening
 
-- [x] 02-07-PLAN.md — Pinned contract coverage and non-blocking sibling drift report
+**Goal:** The full v1.1 expansion is contract-compatible, secure at every proxy boundary, and verified on mobile devices.
+**Requirements:** QLT-01, QLT-02, QLT-03, QLT-04
 
-**UI hint**: yes
+**Success Criteria:**
 
-### Phase 3: NAP Coverage, Policy, and Production Hardening
+1. Contract and dispatcher tests demonstrate parity with every pinned NAP domain used by v1.1.
+2. Adversarial tests cannot bypass URL policy, capabilities, storage isolation, signer separation, catalog authority, or sandboxing.
+3. Automated coverage exercises normal, empty, partial, denied, stale, reconnect, and failure paths and `deno task check` passes.
+4. Real-device UAT validates themes, navigation, reconnect recovery, intent surfaces, and cross-tab media ownership.
 
-**Goal:** Users can run more capable napplets with broader NAP APIs, persistent approvals, mobile diagnostics, and production security controls.
-**Mode:** mvp
-**Depends on**: Phase 2
-**Requirements**: V2-11, V2-12, V2-13, V2-14, V2-15, V2-16, V2-17, V2-18, V2-19, V2-20
-**Success Criteria** (what must be TRUE):
+## Coverage
 
-  1. Runtime supports additional NAP domains only as real napplet needs justify them.
-  2. User can approve, deny, remember, inspect, and revoke per-napplet capability grants.
-  3. Mobile shell handles real-device UX concerns, diagnostics, failures, and permission flows.
-  4. Production deployment has documented Deno permissions, CSP, Permissions-Policy, privacy model, sensitive log redaction, and security tests.
+- v1.1 requirements: 33
+- Mapped exactly once: 33
+- Unmapped: 0
 
-**Plans**: TBD
-**UI hint**: yes
-
-## Progress
-
-**Execution Order:**
-Phases execute in numeric order: 1 -> 2 -> 3
-
-| Phase | Plans Complete | Status | Completed |
-|-------|----------------|--------|-----------|
-| 1. Napplet Runtime MVP | 6/6 | Complete    | 2026-07-30 |
-| 2. Backend Runtime Expansion | 7/7 | In Progress|  |
-| 3. NAP Coverage, Policy, and Production Hardening | 0/TBD | Future expansion | - |
-
-## Requirement Coverage
-
-| Requirement | Phase |
-|-------------|-------|
-| MVP-01 | Phase 1 |
-| MVP-02 | Phase 1 |
-| MVP-03 | Phase 1 |
-| MVP-04 | Phase 1 |
-| MVP-05 | Phase 1 |
-| AUTH-01 | Phase 1 |
-| AUTH-02 | Phase 1 |
-| AUTH-03 | Phase 1 |
-| AUTH-04 | Phase 1 |
-| AUTH-05 | Phase 1 |
-| AUTH-06 | Phase 1 |
-| STREAM-01 | Phase 1 |
-| STREAM-02 | Phase 1 |
-| STREAM-03 | Phase 1 |
-| STREAM-04 | Phase 1 |
-| STREAM-05 | Phase 1 |
-| STREAM-06 | Phase 1 |
-| STREAM-07 | Phase 1 |
-| NAP-01 | Phase 1 |
-| NAP-02 | Phase 1 |
-| NAP-03 | Phase 1 |
-| NAP-04 | Phase 1 |
-| QUAL-01 | Phase 1 |
-| QUAL-02 | Phase 1 |
-| QUAL-03 | Phase 1 |
-| QUAL-04 | Phase 1 |
-
-**Coverage:** 26/26 v1 requirements mapped exactly once.
-
-## Planning Guidance
-
-When executing Phase 1, deliver the one-day-targeted sign-in → supplied verified napplet → initial-plus-updating stream tracer as the first working checkpoint, then complete every locked decision and requirement without a one-day deadline:
-
-- Prefer a simple known/test napplet over a generalized catalog.
-- Prefer one backend-proxied stream over complete relay sync.
-- Prefer observable pipelines and partial updates over complete-data loading states.
-- Deliver the locked local relay/local Blossom endpoint and in-memory adapter seams; defer only durable cache policy and synchronization beyond Phase 1.
-- Prefer explicit TODO/deferred notes over building broad settings, approvals, NAP domains, or production storage immediately.
-- Treat `nsec` as dev mode, not a production key-custody decision.
-
-## Backlog
-
-### Phase 999.1: Installed napplets launchable from home via naddr (BACKLOG)
-
-**Goal:** Users can maintain an installed list of napplets, launch them from the home page, and initially install a napplet by pasting its `naddr` so the portal can fetch and add it.
-**Requirements:** TBD
-**Plans:** 0 plans
-
-Plans:
-
-- [ ] TBD (promote with $gsd-review-backlog when ready)
-
-### Phase 999.2: App shell dark and light themes (BACKLOG)
-
-**Goal:** The app shell supports dark and light themes.
-**Requirements:** TBD
-**Plans:** 0 plans
-
-Plans:
-
-- [ ] TBD (promote with $gsd-review-backlog when ready)
-
-### Phase 999.3: NAP-RESOURCE resolution for HTTP, Blossom, and BUD-10 URLs (BACKLOG)
-
-**Goal:** Runtime supports NAP-RESOURCE resolution for HTTP URLs, Blossom URLs, and BUD-10 URIs, trying configured local Blossom servers first for Blossom-backed resources.
-**Requirements:** TBD
-**Plans:** 0 plans
-
-Plans:
-
-- [ ] TBD (promote with $gsd-review-backlog when ready)
-
-### Phase 999.4: NAP-UPLOAD API with configured Blossom servers (BACKLOG)
-
-**Goal:** Investigate and support the NAP-UPLOAD API using the user's configured Blossom servers and the `blossom-client-sdk` library, with optional upload to a local Blossom server after successful upload to the configured remote servers.
-**Requirements:** TBD
-**Plans:** 0 plans
-
-Plans:
-
-- [ ] TBD (promote with $gsd-review-backlog when ready)
-
-### Phase 999.5: Searchable installed napplets on the home page (BACKLOG)
-
-**Goal:** The home page can search installed napplets so users can quickly find a napplet when many are installed.
-**Requirements:** TBD
-**Plans:** 0 plans
-
-Plans:
-
-- [ ] TBD (promote with $gsd-review-backlog when ready)
-
-### Phase 999.6: Full NAP-COMMON support with Applesauce APIs (BACKLOG)
-
-**Goal:** Runtime fully supports NAP-COMMON so other users' profiles and common Nostr data can be easily loaded, using Applesauce packages' simple APIs where available and reviewing examples and documentation before writing custom implementation.
-**Requirements:** TBD
-**Plans:** 0 plans
-
-Plans:
-
-- [ ] TBD (promote with $gsd-review-backlog when ready)
-
-### Phase 999.7: Custom SVG vector app icon (BACKLOG)
-
-**Goal:** The app uses a proper simple SVG vector icon instead of the default Deno Fresh icon.
-**Requirements:** TBD
-**Plans:** 0 plans
-
-Plans:
-
-- [ ] TBD (promote with $gsd-review-backlog when ready)
-
-### Phase 999.8: NAP-INTENT cross-napplet navigation (BACKLOG)
-
-**Goal:** Runtime supports NAP-INTENT for cross-napplet navigation, including decisions for replacing the current napplet, opening a new browser tab, or stacking a new iframe napplet on top when launching a new napplet archetype.
-**Requirements:** TBD
-**Plans:** 0 plans
-
-Plans:
-
-- [ ] TBD (promote with $gsd-review-backlog when ready)
-
-### Phase 999.9: Home header account card and compact bottom nav (BACKLOG)
-
-**Goal:** Move the sign-in button and account card into a header card on the home page so account controls are visible only when the user is not viewing a napplet, then reduce bottom nav height to two simple icon buttons: home on the left and the current account avatar on the right.
-**Requirements:** TBD
-**Plans:** 0 plans
-
-Plans:
-
-- [ ] TBD (promote with $gsd-review-backlog when ready)
-
-### Phase 999.10: Cyberpunk backend connection loading sequence (BACKLOG)
-
-**Goal:** Add a polished cyberpunk-style loading animation for the browser tab's backend runtime connection flow, covering connection pending, connected, and bootup sequence states.
-**Requirements:** TBD
-**Plans:** 0 plans
-
-Plans:
-
-- [ ] TBD (promote with $gsd-review-backlog when ready)
-
-### Phase 999.11: Backend runtime backoff reconnection for mobile tabs (BACKLOG)
-
-**Goal:** Browser tabs reconnect to the backend runtime with backoff when the runtime WebSocket disconnects, so a mobile session can recover automatically when the phone is opened again.
-**Requirements:** TBD
-**Plans:** 0 plans
-
-Plans:
-
-- [ ] TBD (promote with $gsd-review-backlog when ready)
-
-### Phase 999.12: NAP-STORAGE key-value API support (BACKLOG)
-
-**Goal:** Runtime supports the `NAP-STORAGE` API so napplets can store and retrieve scoped key-value data through the backend runtime boundary.
-**Requirements:** TBD
-**Plans:** 0 plans
-
-Plans:
-
-- [ ] TBD (promote with $gsd-review-backlog when ready)
-
-### Phase 999.13: NAP-MEDIA shared cross-tab media sessions (BACKLOG)
-
-**Goal:** Research and implement a backend-coordinated `NAP-MEDIA` interface where napplets can create one shared media session across browser tabs: only one tab plays media at a time, starting media in one tab stops competing sessions in other tabs, all open tabs reflect active media state in the bottom nav, playback can be switched to another open tab, closing the origin tab closes its media session, and the bottom nav can close/stop the current media session.
-**Requirements:** TBD
-**Plans:** 0 plans
-
-Plans:
-
-- [ ] TBD (promote with $gsd-review-backlog when ready)
+---
+*Roadmap created: 2026-07-30 for milestone v1.1*

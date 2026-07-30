@@ -3,10 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Runtime & UX Expansion
 status: planning
+current_phase: 3
+current_phase_name: Mobile Shell Resilience
 last_updated: "2026-07-30T21:20:53.268Z"
 last_activity: 2026-07-30
 progress:
-  total_phases: 0
+  total_phases: 7
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -20,14 +22,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-30)
 
 **Core value:** A napplet can run in a mobile browser while a server-side Deno runtime handles the heavy Nostr/runtime work.
-**Current focus:** Phase 2 — Backend Runtime Expansion
+**Current focus:** Phase 3 — Mobile Shell Resilience
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 3 — Mobile Shell Resilience
 Plan: —
-Status: Defining requirements
-Last activity: 2026-07-30 — Milestone v1.1 started
+Status: Roadmap created — ready to discuss or plan
+Last activity: 2026-07-30 — Milestone v1.1 roadmap created
 
 ## Performance Metrics
 

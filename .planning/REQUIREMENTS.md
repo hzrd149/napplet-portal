@@ -76,17 +76,25 @@
 
 ## Traceability
 
-Populated during roadmap creation. Every v1.1 requirement must map to exactly one phase.
-
 | Requirement | Phase | Status |
 |-------------|-------|--------|
+| SHL-01, SHL-02, SHL-03 | Phase 3 | Pending |
+| CON-01, CON-02, CON-03, CON-04 | Phase 3 | Pending |
+| CAT-01, CAT-02, CAT-03, CAT-04 | Phase 4 | Pending |
+| RES-01, RES-02, RES-03 | Phase 5 | Pending |
+| UPL-01, UPL-02, UPL-03 | Phase 5 | Pending |
+| COM-01, COM-02 | Phase 6 | Pending |
+| STO-01, STO-02, STO-03 | Phase 6 | Pending |
+| INT-01, INT-02, INT-03 | Phase 7 | Pending |
+| MED-01, MED-02, MED-03, MED-04 | Phase 8 | Pending |
+| QLT-01, QLT-02, QLT-03, QLT-04 | Phase 9 | Pending |
 
 **Coverage:**
 
 - v1.1 requirements: 33 total
-- Mapped to phases: 0
-- Unmapped: 33
+- Mapped to phases: 33
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-07-30*
-*Last updated: 2026-07-30 after v1.1 scope definition*
+*Last updated: 2026-07-30 after v1.1 roadmap creation*
