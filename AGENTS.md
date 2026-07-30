@@ -6,18 +6,22 @@
 
 Napplet Portal is a Deno Fresh server-side runtime for napplets. It serves lightweight web pages that primarily mount sandboxed napplet iframes while the backend runtime owns complex Nostr logic, application state, relay/blossom operations, account handling, storage, and NAP API execution.
 
-The project is for running napplets comfortably from mobile web browsers without requiring the browser page to perform the heavy Nostr and runtime work locally. The frontend is still a real app shell, but its primary job is fullscreen sandboxed napplet presentation plus UX flows such as sign-in, settings, approval modals, mobile navigation, and API/message proxying.
+The immediate goal is a one-day MVP: sign in, load one known sandboxed napplet, and prove a backend-proxied stream-oriented runtime seam. The project should stay simple and functional first, then expand into the broader backend Nostr runtime and NAP API surface after the vertical slice works.
 
-**Core Value:** Napplets can run in a mobile browser while a server-side Deno runtime safely handles Nostr state, networking, persistence, and NAP API behavior on their behalf.
+**Core Value:** A napplet can run in a mobile browser while a server-side Deno runtime handles the heavy Nostr/runtime work.
 
 ### Constraints
 
+- **Timeline**: The MVP must be functional in one day; plans should optimize for the smallest vertical slice.
 - **Runtime**: Use Deno and Fresh as the server-side web/runtime foundation because the existing project is a Deno Fresh app.
 - **Frontend architecture**: Use Fresh routes for server-rendered pages and islands only for browser-side interactivity; avoid moving backend runtime logic into islands.
 - **Nostr libraries**: Use Applesauce packages as much as possible for Nostr primitives, networking, relay connections, database integration, event storage, and relay workflows.
-- **Local dependencies**: Integrate with sibling packages `../kehto` and `../napplet-web`; planning and implementation must account for their existing APIs rather than inventing parallel runtime contracts.
+- **Local cache backends**: Runtime design must allow local Nostr relay and local Blossom server connections for event/blob/artifact caching.
+- **Reactive style**: Applesauce usage should respect RxJS/functional stream patterns. Avoid nested subscriptions and avoid unnecessary `async`/`await` flows that wait for all data to load.
+- **Nostr loading model**: Nostr data is a stream, not a finished request. UI should handle partial, empty, stale, and updating states rather than waiting for completeness.
+- **Local dependencies**: Integrate with sibling packages `../kehto` and `../napplet-web`; for MVP, use the smallest compatible subset instead of solving every contract concern at once.
 - **Sandboxing**: Napplets run in sandboxed iframes, and NAP API access crosses an explicit proxy/message boundary.
-- **Mobile web**: The app shell must work well in mobile browsers, especially fullscreen napplet usage and bottom navigation.
+- **Mobile web**: The app shell must work acceptably in mobile browsers, especially fullscreen napplet usage.
 - **State ownership**: Persistent application state and complex Nostr processing belong to the backend runtime.
 - **Existing codebase**: Current Fresh starter files are scaffolding; new work should evolve the structure without preserving starter demo behavior unnecessarily.
 
