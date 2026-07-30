@@ -9,6 +9,8 @@ import { type State } from "./utils.ts";
 import { debug as rootDebug } from "./debug.ts";
 import { RuntimeSettingsService } from "./runtime/settings.ts";
 import { SettingsStore } from "./runtime/settings_store.ts";
+import { discoverLocalBlossom } from "./runtime/blossom_cache.ts";
+import type { CacheHealthState } from "./utils.ts";
 
 const debug = rootDebug.extend("backend");
 
@@ -27,6 +29,22 @@ export const runtimeSettings = await RuntimeSettingsService.create(
   new SettingsStore(".data/settings.json"),
   runtimeConfig,
 );
+let cacheHealthState: CacheHealthState = {
+  relay: runtimeSettings.settings.localRelay ? "checking" : "degraded",
+  blossom: "checking",
+};
+runtimeSettings.settings$.subscribe((settings) => {
+  cacheHealthState = {
+    ...cacheHealthState,
+    relay: settings.localRelay ? "checking" : "degraded",
+  };
+});
+void discoverLocalBlossom().then((endpoint) => {
+  cacheHealthState = {
+    ...cacheHealthState,
+    blossom: endpoint ? "healthy" : "degraded",
+  };
+});
 const signerAccounts = new PortalAccounts(
   new AccountStore(".data/accounts.json"),
   {
@@ -113,7 +131,7 @@ app.use((ctx) => {
   ctx.state.runtime = portalRuntime;
   ctx.state.signer = signerService;
   ctx.state.settings = runtimeSettings;
-  ctx.state.cacheHealth = { relay: "checking", blossom: "checking" };
+  ctx.state.cacheHealth = cacheHealthState;
   return ctx.next();
 });
 app.fsRoutes();
