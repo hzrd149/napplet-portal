@@ -45,6 +45,7 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
   const [notice, setNotice] = useState<Notice>(null);
   const [connecting, setConnecting] = useState(false);
   const [awaitingSigner, setAwaitingSigner] = useState(false);
+  const [canRestartSigner, setCanRestartSigner] = useState(false);
   const [connectionUri, setConnectionUri] = useState("");
   const [copied, setCopied] = useState(false);
   const [signInError, setSignInError] = useState("");
@@ -172,11 +173,28 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
       setConnectionUri(message.uri);
       setConnecting(false);
       setAwaitingSigner(true);
+      setCanRestartSigner(false);
+      return;
+    }
+    if (message.type === "runtime.signer.preparing") {
+      setConnectionUri("");
+      setConnecting(true);
+      setAwaitingSigner(false);
+      setCanRestartSigner(false);
+      return;
+    }
+    if (message.type === "runtime.signer.idle") {
+      setConnectionUri("");
+      setConnecting(false);
+      setAwaitingSigner(false);
+      setCopied(false);
+      setCanRestartSigner(true);
       return;
     }
     if (message.type === "runtime.signer.error") {
       setConnecting(false);
       setAwaitingSigner(false);
+      setCanRestartSigner(true);
       setSignInError(
         "Remote signer connection failed or timed out. Try again.",
       );
@@ -209,6 +227,7 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
     }
     setConnecting(false);
     setAwaitingSigner(false);
+    setCanRestartSigner(false);
     navigate("napplet");
   }
 
@@ -231,6 +250,23 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
     navigate("home");
   }
 
+  function cancelSigner(): void {
+    socket.current?.send(JSON.stringify({ type: "runtime.signer.cancel" }));
+  }
+
+  function restartSigner(): void {
+    const ws = socket.current;
+    if (ws?.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({
+        type: "runtime.start",
+        coordinate,
+        method: "connect",
+      }));
+    } else {
+      openSocket("connect");
+    }
+  }
+
   const signedIn = profile !== null;
   return (
     <section class="portal-shell">
@@ -240,10 +276,13 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
             uri={connectionUri}
             connecting={connecting}
             awaitingSigner={awaitingSigner}
+            canRestartSigner={canRestartSigner}
             error={signInError}
             copied={copied}
             onCopy={copyUri}
             onConnect={openSocket}
+            onCancel={cancelSigner}
+            onRestart={restartSigner}
           />
         )}
         <div
@@ -327,10 +366,13 @@ interface SignInPanelProps {
   readonly uri: string;
   readonly connecting: boolean;
   readonly awaitingSigner: boolean;
+  readonly canRestartSigner: boolean;
   readonly error: string;
   readonly copied: boolean;
   readonly onCopy: () => void;
   readonly onConnect: (method?: "connect" | "bunker" | "nsec") => void;
+  readonly onCancel: () => void;
+  readonly onRestart: () => void;
 }
 
 function SignInPanel(props: SignInPanelProps) {
@@ -370,6 +412,16 @@ function SignInPanel(props: SignInPanelProps) {
               ? "Awaiting remote signer connection…"
               : "Preparing secure signer connection…"}
           </p>
+        )}
+        {(props.connecting || props.awaitingSigner) && (
+          <button type="button" onClick={props.onCancel}>
+            Cancel
+          </button>
+        )}
+        {props.canRestartSigner && (
+          <button type="button" onClick={props.onRestart}>
+            Start new signer connection
+          </button>
         )}
         <details>
           <summary>Use bunker URI</summary>

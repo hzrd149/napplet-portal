@@ -30,6 +30,7 @@ const connections = new ConnectionRegistry({
 export const handler = define.handlers({
   GET(ctx) {
     const runtime = ctx.state.runtime;
+    const signer = ctx.state.signer;
     if (ctx.req.headers.get("upgrade")?.toLowerCase() !== "websocket") {
       return new Response("WebSocket upgrade required", { status: 426 });
     }
@@ -63,9 +64,14 @@ export const handler = define.handlers({
         windowId,
         resumed: connection.resumed,
       }));
-      const signer = ctx.state.signer;
       signerProjection = signer.state$.subscribe((state) => {
         if (socket.readyState !== WebSocket.OPEN) return;
+        if (state.status === "idle" || state.status === "preparing") {
+          socket.send(JSON.stringify({
+            type: `runtime.signer.${state.status}`,
+          }));
+          return;
+        }
         if (state.status === "awaiting") {
           socket.send(JSON.stringify({
             type: "runtime.signer.pending",
@@ -111,12 +117,16 @@ export const handler = define.handlers({
             }));
             return;
           }
-          ctx.state.signer.start();
+          signer.start();
+          return;
+        }
+        if (message.type === "runtime.signer.cancel") {
+          signer.cancel();
           return;
         }
         if (message.type === "runtime.signout") {
           runtime.signOut();
-          await ctx.state.signer.signOut();
+          await signer.signOut();
           socket.send(
             JSON.stringify({ type: "runtime.identity", account: null }),
           );
