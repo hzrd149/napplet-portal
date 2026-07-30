@@ -35,6 +35,16 @@ export function createSignerLaunch(uri: string): {
 type View = "napplet" | "home" | "profile";
 type Notice = "connection" | "handshake" | "integrity" | null;
 
+/**
+ * A transport that never opens must still surface a failure. Fresh cannot
+ * serve WebSocket upgrades under the Vite dev server before 2.4, where the
+ * request hangs without an open, error, or close event.
+ */
+const CONNECT_TIMEOUT_MS = 10_000;
+
+const CONNECT_FAILED =
+  "Napplet Portal could not connect. Check the server and try again.";
+
 export default function NappletShell({ coordinate }: NappletShellProps) {
   const [srcdoc, setSrcdoc] = useState("");
   const [identity, setIdentity] = useState<VerifiedNappletIdentity | null>(
@@ -55,6 +65,7 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
   const reconnectToken = useRef<string | null>(null);
   const signInMethod = useRef<"connect" | "bunker" | "nsec">("connect");
   const copyTimer = useRef<number | null>(null);
+  const connectTimer = useRef<number | null>(null);
   const signOutDialog = useRef<HTMLDialogElement | null>(null);
   const registered = useRef<
     {
@@ -99,6 +110,7 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
       globalThis.removeEventListener("message", receive);
       globalThis.removeEventListener("popstate", back);
       if (copyTimer.current !== null) clearTimeout(copyTimer.current);
+      if (connectTimer.current !== null) clearTimeout(connectTimer.current);
       socket.current?.close();
     };
   }, []);
@@ -118,14 +130,30 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
       `${protocol}//${location.host}/api/runtime${token}`,
     );
     socket.current = ws;
+    if (connectTimer.current !== null) clearTimeout(connectTimer.current);
+    connectTimer.current = setTimeout(() => {
+      if (socket.current !== ws || ws.readyState === WebSocket.OPEN) return;
+      ws.close();
+      setConnecting(false);
+      setAwaitingSigner(false);
+      setCanRestartSigner(true);
+      setSignInError(CONNECT_FAILED);
+    }, CONNECT_TIMEOUT_MS);
+    ws.addEventListener("open", () => {
+      if (connectTimer.current !== null) clearTimeout(connectTimer.current);
+      connectTimer.current = null;
+    });
     ws.addEventListener("message", (event) => receiveRuntimeMessage(event));
     ws.addEventListener("error", () => {
+      // A superseded socket must not report failure for its replacement.
+      if (socket.current !== ws) return;
       setConnecting(false);
-      setSignInError(
-        "Napplet Portal could not connect. Check the server and try again.",
-      );
+      setSignInError(CONNECT_FAILED);
     });
     ws.addEventListener("close", () => {
+      if (socket.current !== ws) return;
+      if (connectTimer.current !== null) clearTimeout(connectTimer.current);
+      connectTimer.current = null;
       setConnecting(false);
       if (profile) {
         setProfile((current) =>
@@ -268,10 +296,14 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
   }
 
   const signedIn = profile !== null;
+  const configured = Boolean(coordinate);
+  // Without a coordinate there is nothing to sign in to, so Home's setup
+  // guidance replaces the sign-in panel instead of hiding behind it.
+  const homeVisible = configured ? signedIn && view === "home" : true;
   return (
     <section class="portal-shell">
       <main class="shell-content">
-        {!signedIn && (
+        {configured && !signedIn && (
           <SignInPanel
             uri={connectionUri}
             connecting={connecting}
@@ -286,13 +318,11 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
           />
         )}
         <div
-          class={`shell-view ${
-            signedIn && view === "home" ? "" : "shell-view-hidden"
-          }`}
-          inert={!signedIn || view !== "home"}
+          class={`shell-view ${homeVisible ? "" : "shell-view-hidden"}`}
+          inert={!homeVisible}
         >
           <HomeView
-            configured={Boolean(coordinate)}
+            configured={configured}
             title="Security Lab"
             active={Boolean(srcdoc)}
             onOpen={() => navigate("napplet")}

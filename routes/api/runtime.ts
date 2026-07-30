@@ -31,14 +31,13 @@ export const handler = define.handlers({
   GET(ctx) {
     const runtime = ctx.state.runtime;
     const signer = ctx.state.signer;
-    if (ctx.req.headers.get("upgrade")?.toLowerCase() !== "websocket") {
-      return new Response("WebSocket upgrade required", { status: 426 });
-    }
     const requestedToken = new URL(ctx.req.url).searchParams.get("reconnect");
     if (requestedToken && requestedToken.length > 256) {
       return new Response("Invalid reconnect token", { status: 400 });
     }
-    const { socket, response } = Deno.upgradeWebSocket(ctx.req);
+    // Bare mode: the session owns reconnect identity and per-socket teardown,
+    // so events are wired here rather than handed to Fresh's managed handlers.
+    const { socket, response } = ctx.upgrade();
     const connection = connections.attach(
       (message) => socket.send(message),
       requestedToken ?? undefined,

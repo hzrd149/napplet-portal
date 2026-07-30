@@ -56,7 +56,7 @@ The immediate goal is the complete Phase 1 MVP: sign in, load one known sandboxe
 - Deno lint/check tooling - `deno.json` defines `deno task check` as `deno fmt --check . && deno lint . && deno check`.
 - Test runner: Not detected. No `*.test.*`, `*.spec.*`, `jest.config.*`, or `vitest.config.*` files detected during stack scan.
 - Vite 7.3.6 (`npm:vite@^7.1.3`) - Development server and production builder; tasks in `deno.json` run `vite` and `vite build`.
-- @fresh/plugin-vite 1.1.2 (`jsr:@fresh/plugin-vite@^1.1.2`) - Fresh integration for Vite; configured in `vite.config.ts` as `fresh()`.
+- @fresh/plugin-vite 1.1.2 (`jsr:@fresh/plugin-vite@^1.1.2`) - Fresh integration for Vite; configured in `vite.config.ts` as `fresh()`. It serves the app through a Node connect middleware, which never receives WebSocket upgrades, so `/api/runtime` is unreachable under `deno task dev`; Fresh documents dev-server upgrades as requiring 2.4 with Deno 2.8 or newer. Use `deno task build && deno task start` to exercise the runtime transport.
 - Tailwind CSS 4.3.2 (`npm:tailwindcss@^4.1.10`) - Utility-first styling; imported in `assets/styles.css` and used through class attributes in `routes/index.tsx`, `components/Button.tsx`, and `islands/Counter.tsx`.
 - @tailwindcss/vite 4.3.2 (`npm:@tailwindcss/vite@^4.1.12`) - Tailwind Vite plugin; configured in `vite.config.ts` as `tailwindcss()`.
 - Deno fmt and Deno lint - Formatting and linting are driven by the `check` task in `deno.json`.
