@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import {
-  type CatalogCardCommand,
+  type CatalogMutationCommand,
   type CatalogStreamStatus,
   type CatalogViewEntry,
   type CatalogViewProjection,
@@ -68,6 +68,9 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
       identity: VerifiedNappletIdentity;
     } | null
   >(null);
+  const catalogCommands = useRef(
+    new Map<string, (accepted: boolean) => void>(),
+  );
 
   const registry = useMemo<FrameIdentityRegistry>(() => ({
     register(source, nextIdentity) {
@@ -118,6 +121,7 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
     const receive = (event: MessageEvent) => bridge.receive(event);
     globalThis.addEventListener("message", receive);
     const back = (event: PopStateEvent) => {
+      closeCatalogDialog();
       const next = (event.state as { view?: View } | null)?.view;
       setView(
         next === "profile" || next === "napplet" || next === "settings"
@@ -243,6 +247,15 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
       }
       return;
     }
+    if (
+      message.type === "runtime.catalog.result" &&
+      typeof message.id === "string"
+    ) {
+      const resolve = catalogCommands.current.get(message.id);
+      catalogCommands.current.delete(message.id);
+      resolve?.(message.ok === true);
+      return;
+    }
     if (message.type === "runtime.auth.required") {
       debug("runtime auth required");
       setConnecting(false);
@@ -318,8 +331,33 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
     navigate("napplet");
   }
 
-  function sendCatalogCommand(command: CatalogCardCommand): void {
-    debug("catalog command requested type=%s", command.type);
+  function closeCatalogDialog(): void {
+    globalThis.dispatchEvent(new Event("catalog-dialog-close"));
+  }
+
+  function sendCatalogCommand(
+    command: CatalogMutationCommand,
+  ): Promise<boolean> {
+    const ws = socket.current;
+    if (ws?.readyState !== WebSocket.OPEN) return Promise.resolve(false);
+    const id = crypto.randomUUID();
+    return new Promise((resolve) => {
+      catalogCommands.current.set(id, resolve);
+      ws.send(JSON.stringify(
+        command.type === "catalog.approve"
+          ? {
+            type: "catalog.approve",
+            id,
+            coordinate: command.coordinate,
+            manifestEventId: command.manifestEventId,
+          }
+          : {
+            type: "catalog.uninstall",
+            id,
+            coordinate: command.coordinate,
+          },
+      ));
+    });
   }
 
   const signedIn = profile !== null;

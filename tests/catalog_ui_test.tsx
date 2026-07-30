@@ -1,8 +1,4 @@
-import {
-  assert,
-  assertEquals,
-  assertStringIncludes,
-} from "jsr:@std/assert@1.0.16";
+import { assertEquals, assertStringIncludes } from "jsr:@std/assert@1.0.16";
 import { renderToString } from "npm:preact-render-to-string@^6.6.3";
 import {
   capabilityChanges,
@@ -43,7 +39,7 @@ function render(
       status={status}
       signedIn
       onOpen={() => undefined}
-      onCommand={() => undefined}
+      onCommand={() => Promise.resolve(true)}
     />,
   );
 }
@@ -101,7 +97,7 @@ Deno.test("accepted manifest identity is the only launch authority", () => {
       status="ready"
       signedIn
       onOpen={(candidate) => launched = candidate}
-      onCommand={() => undefined}
+      onCommand={() => Promise.resolve(true)}
     />,
   );
   assertStringIncludes(html, `data-manifest-id="${acceptedManifestEventId}"`);

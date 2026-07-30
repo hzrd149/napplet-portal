@@ -366,6 +366,100 @@ svg {
   min-height: 20rem;
 }
 
+.catalog-signer-support {
+  color: #9a3412;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.catalog-dialog {
+  width: min(calc(100% - 32px), 36rem);
+  max-height: calc(100dvh - 32px);
+  padding: 24px;
+  overflow: hidden;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  color: #0f172a;
+  background: #fff;
+}
+
+.catalog-dialog[open] {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  gap: 16px;
+}
+
+.catalog-dialog h2,
+.catalog-dialog h3,
+.catalog-dialog p,
+.catalog-dialog dl {
+  margin: 0;
+}
+
+.dialog-comparison {
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.comparison-field {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+  padding: 8px 0;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.comparison-field dt {
+  font-weight: 600;
+}
+
+.comparison-field dd {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  min-width: 0;
+  margin: 0;
+}
+
+.comparison-field code {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.comparison-field button {
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.capability-changes {
+  padding-left: 24px;
+}
+
+.dialog-error {
+  color: #9a3412;
+}
+
+@media (min-width: 640px) {
+  .comparison-pair {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .comparison-pair dt {
+    grid-column: 1 / -1;
+  }
+}
+
 @media (min-width: 640px) {
   .catalog-grid {
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
