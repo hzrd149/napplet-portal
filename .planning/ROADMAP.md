@@ -33,7 +33,15 @@ Decimal phases appear between their surrounding integers in numeric order.
   5. Runtime code follows pragmatic Applesauce/RxJS stream composition: avoid nested subscriptions, avoid blocking on complete data, and reserve `async`/`await` for one-shot setup or commands.
   6. MVP leaves an explicit seam for local Nostr relay and local Blossom cache backends so future phases can avoid always refetching napplet events/blobs from public relays and servers.
   7. `deno task check` passes, and MVP docs clearly mark mocked, incomplete, and deferred behavior.
-**Plans**: TBD
+**Plans**: 6 plans
+
+Plans:
+- [ ] 01-01-PLAN.md — Compatibility tracer, exact contracts, configuration, and package legitimacy gate
+- [ ] 01-02-PLAN.md — Backend account persistence, sign-in, and global identity lifecycle
+- [ ] 01-03-PLAN.md — Verified artifact resolution and reconnectable WebSocket window ownership
+- [ ] 01-04-PLAN.md — Approved mobile shell and persistent opaque iframe bridge
+- [ ] 01-05-PLAN.md — Applesauce relay/outbox streams, publishing, and singleton runtime
+- [ ] 01-06-PLAN.md — Fresh composition, documentation, and supplied-napplet acceptance
 **UI hint**: yes
 
 ### Phase 2: Backend Runtime Expansion
