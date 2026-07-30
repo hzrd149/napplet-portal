@@ -3,7 +3,7 @@
   "tasks": {
     "check": "deno fmt --check main.ts client.ts utils.ts vite.config.ts deno.json assets routes components islands runtime tests && deno lint main.ts client.ts utils.ts vite.config.ts routes components islands runtime tests && deno check",
     "test": "deno test -A",
-    "dev": "sh -c 'vite --host \"${PORTAL_BIND:-127.0.0.1}\"'",
+    "dev": "vite",
     "build": "vite build",
     "start": "sh -c 'deno serve -A --host=\"${PORTAL_BIND:-127.0.0.1}\" _fresh/server.js'",
     "update": "deno run -A -r jsr:@fresh/update ."
