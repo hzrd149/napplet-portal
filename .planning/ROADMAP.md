@@ -23,7 +23,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 ### Phase 1: Napplet Runtime MVP
 
-**Goal:** User can sign in, open the supplied verified sandboxed napplet in the mobile shell, and use the complete locked backend-proxied stream-first runtime seam; the sign-in → supplied napplet → initial-plus-updating stream tracer is the one-day-targeted first checkpoint, while full completion has no one-day deadline (D-47).
+**Goal:** As a mobile napplet user, I want to sign in, open the supplied verified sandboxed napplet in the mobile shell, and use the complete locked backend-proxied stream-first runtime seam, so that a mobile browser can run the napplet while the Deno server runtime owns the heavy Nostr work; the sign-in → supplied napplet → initial-plus-updating stream tracer is the one-day-targeted first checkpoint, while full completion has no one-day deadline (D-47).
 **Mode:** mvp
 **Depends on**: Nothing (first phase)
 **Requirements**: MVP-01, MVP-02, MVP-03, MVP-04, MVP-05, AUTH-01, AUTH-02, AUTH-03, AUTH-04, AUTH-05, AUTH-06, STREAM-01, STREAM-02, STREAM-03, STREAM-04, STREAM-05, STREAM-06, STREAM-07, NAP-01, NAP-02, NAP-03, NAP-04, QUAL-01, QUAL-02, QUAL-03, QUAL-04
