@@ -88,6 +88,7 @@ export class RuntimeServiceHub {
     send: (message: ServiceMessage) => void,
     connectionId = "runtime",
   ) {
+    this.#closeWindow(windowId);
     this.#windows.set(windowId, send);
     const cleanups = new Set<() => void>();
     this.#windowCleanups.set(windowId, cleanups);

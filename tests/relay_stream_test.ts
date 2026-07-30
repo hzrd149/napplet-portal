@@ -108,6 +108,32 @@ Deno.test("same subId stays independently owned and close is immediate", () => {
   assert(adapter.subscriptionCount === 1, "only closed ownership is removed");
 });
 
+Deno.test("reconnect replay dedupes cached and live copies within the new owner", () => {
+  const live = new Subject<RawRelayItem>();
+  const stored = [fixture.events.live];
+  const adapter = new BackendRelayAdapter({
+    store: { query: () => stored, add: () => {} },
+    pool: { req: () => live },
+  });
+  const messages: string[] = [];
+  adapter.subscribe(
+    { connectionId: "resumed", windowId: "same-window" },
+    {
+      type: "relay.subscribe",
+      id: "retry",
+      subId: "same",
+      relay: "wss://relay",
+      filters: [],
+    },
+    (message) => messages.push(message.type),
+  );
+  live.next({ type: "EVENT", event: fixture.events.live, from: "wss://relay" });
+  assert(
+    messages.filter((type) => type === "relay.event").length === 1,
+    "replay must not duplicate event",
+  );
+});
+
 Deno.test("RELAY forwards signed events unchanged and encrypts before backend signing", async () => {
   const published: unknown[] = [];
   const adapter = new BackendRelayAdapter({

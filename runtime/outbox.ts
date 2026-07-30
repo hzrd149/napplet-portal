@@ -108,8 +108,11 @@ export class OutboxAdapter {
     } else {
       stream.unsubscribe();
     }
+    let closed = false;
     return {
       close: () => {
+        if (closed) return;
+        closed = true;
         this.#close(subscriptionKey);
         listener({ type: "outbox.closed", subId: request.subId });
       },
