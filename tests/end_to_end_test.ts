@@ -79,7 +79,9 @@ Deno.test("supplied Security Lab traverses verified mount, handshake, identity, 
   const subscription = window.subscribeRelay(
     fixture.envelopes.relaySubscribe as RelaySubscribeMessage,
     (message) => {
-      if (message.type === "relay.event") messages.push(message);
+      if (message.type === "relay.event" || message.type === "relay.closed") {
+        messages.push(message);
+      }
     },
   );
   runtime.relay.emitLive(fixture.events.live);

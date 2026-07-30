@@ -78,9 +78,9 @@ Deno.test("canonical NAP 0.31 relay envelopes retain correlation and ownership",
 
 Deno.test("pinned Kehto and NAP types compile across portal adapter boundaries", () => {
   const adapter = {} as RuntimeAdapter;
-  const subscribe: RelaySubscribeMessage = fixture.envelopes.relaySubscribe;
-  const close: RelayCloseMessage = fixture.envelopes.relayClose;
-  const outbox: OutboxSubscribeMessage = fixture.envelopes.outboxSubscribe;
+  const subscribe = fixture.envelopes.relaySubscribe as RelaySubscribeMessage;
+  const close = fixture.envelopes.relayClose as RelayCloseMessage;
+  const outbox = fixture.envelopes.outboxSubscribe as OutboxSubscribeMessage;
   assert(adapter !== null, "pinned Kehto RuntimeAdapter must be importable");
   assert(subscribe.id === fixture.correlation.success, "relay id must compile");
   assert(close.subId === subscribe.subId, "close must retain stream identity");
@@ -94,7 +94,7 @@ Deno.test("serialized pinned fixtures round-trip correlation, errors, and termin
     | RelayClosedMessage
     | OutboxEventMessage
     | OutboxClosedMessage
-  > = fixture.lifecycleFrames;
+  > = fixture.lifecycleFrames as typeof frames;
   const roundTrip = JSON.parse(JSON.stringify(frames)) as typeof frames;
 
   assert(

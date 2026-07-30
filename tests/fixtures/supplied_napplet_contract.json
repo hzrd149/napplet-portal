@@ -80,8 +80,56 @@
       "id": "security-lab-stream-request",
       "subId": "security-lab-stream",
       "filters": [{ "kinds": [1], "limit": 2 }]
+    },
+    "relayClose": {
+      "type": "relay.close",
+      "id": "security-lab-close-request",
+      "subId": "security-lab-stream"
+    },
+    "outboxSubscribe": {
+      "type": "outbox.subscribe",
+      "id": "security-lab-outbox-request",
+      "subId": "security-lab-outbox-stream",
+      "filters": [{ "kinds": [1], "limit": 2 }]
     }
   },
+  "correlation": {
+    "success": "security-lab-stream-request",
+    "error": "security-lab-error-request",
+    "outbox": "security-lab-outbox-request"
+  },
+  "typedError": "relay query rejected by portal policy",
+  "lifecycleFrames": [
+    {
+      "type": "relay.query.result",
+      "id": "security-lab-stream-request",
+      "events": []
+    },
+    {
+      "type": "relay.query.result",
+      "id": "security-lab-error-request",
+      "events": [],
+      "error": "relay query rejected by portal policy"
+    },
+    { "type": "relay.eose", "subId": "security-lab-stream" },
+    { "type": "relay.closed", "subId": "security-lab-stream" },
+    {
+      "type": "outbox.event",
+      "subId": "security-lab-outbox-stream",
+      "result": {
+        "event": {
+          "id": "1111111111111111111111111111111111111111111111111111111111111111",
+          "pubkey": "e771af0b05c8e95fcdf6feb3500544d2fb1ccd384788e9f490bb3ee28e8ed66f",
+          "created_at": 1784885404,
+          "kind": 1,
+          "tags": [],
+          "content": "initial stored tracer event",
+          "sig": "11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111"
+        }
+      }
+    },
+    { "type": "outbox.closed", "subId": "security-lab-outbox-stream" }
+  ],
   "events": {
     "initial": {
       "id": "1111111111111111111111111111111111111111111111111111111111111111",

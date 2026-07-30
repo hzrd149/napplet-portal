@@ -298,7 +298,7 @@ export class BackendRelayAdapter {
   }
 }
 
-type TracerEnvelope = RelayEventMessage | RelayEoseMessage;
+type TracerEnvelope = RelayStreamMessage;
 type TracerListener = (message: TracerEnvelope) => void;
 
 /** Compatibility adapter retained for the supplied-fixture tracer. */
@@ -335,8 +335,10 @@ export class TracerRelayAdapter {
         return closed;
       },
       close: () => {
+        if (closed) return;
         closed = true;
         listeners.delete(listener);
+        listener({ type: "relay.closed", subId: message.subId, message: "" });
         debug(
           "tracer close sub=%s listeners=%d",
           message.subId,
