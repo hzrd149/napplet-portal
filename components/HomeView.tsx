@@ -31,6 +31,7 @@ export interface CatalogViewProjection {
 export type CatalogStreamStatus = "loading" | "ready" | "stale" | "error";
 
 interface HomeViewProps {
+  readonly configured?: boolean;
   readonly catalog: CatalogViewProjection;
   readonly status: CatalogStreamStatus;
   readonly signedIn: boolean;
@@ -52,6 +53,7 @@ export type CatalogMutationCommand =
 
 export function HomeView({
   catalog,
+  configured = true,
   status,
   signedIn,
   onOpen,
@@ -114,6 +116,82 @@ export function HomeView({
   }
   return (
     <section class="portal-view catalog-view" aria-label="Home">
+      {!configured
+        ? (
+          <div class="empty-state">
+            <UserWindowIcon />
+            <h1>No napplet configured</h1>
+            <p>
+              Add a napplet coordinate to the server configuration, then restart
+              Napplet Portal.
+            </p>
+          </div>
+        )
+        : (
+          <CatalogContent
+            catalog={catalog}
+            status={status}
+            signedIn={signedIn}
+            announcement={announcement}
+            hasEntries={hasEntries}
+            onOpen={onOpen}
+            onCommand={openDialog}
+          />
+        )}
+      <UpdateReviewDialog
+        entry={dialog?.type === "review" ? dialog.entry : null}
+        open={dialog?.type === "review"}
+        pending={pending}
+        error={error}
+        onClose={closeDialog}
+        onApprove={() => {
+          const entry = dialog?.entry;
+          if (!entry?.update) return;
+          void mutate({
+            type: "catalog.approve",
+            coordinate: entry.coordinate,
+            manifestEventId: entry.update.manifestEventId,
+          });
+        }}
+      />
+      <UninstallDialog
+        entry={dialog?.type === "uninstall" ? dialog.entry : null}
+        open={dialog?.type === "uninstall"}
+        pending={pending}
+        error={error}
+        onClose={closeDialog}
+        onConfirm={() => {
+          const entry = dialog?.entry;
+          if (!entry) return;
+          void mutate({
+            type: "catalog.uninstall",
+            coordinate: entry.coordinate,
+          });
+        }}
+      />
+    </section>
+  );
+}
+
+function CatalogContent({
+  catalog,
+  status,
+  signedIn,
+  announcement,
+  hasEntries,
+  onOpen,
+  onCommand,
+}: {
+  catalog: CatalogViewProjection;
+  status: CatalogStreamStatus;
+  signedIn: boolean;
+  announcement: string;
+  hasEntries: boolean;
+  onOpen: (entry: CatalogViewEntry) => void;
+  onCommand: (command: CatalogCardCommand) => void;
+}) {
+  return (
+    <>
       <p class="visually-hidden" role="status" aria-live="polite">
         {announcement}
       </p>
@@ -150,43 +228,12 @@ export function HomeView({
                 entry={entry}
                 signedIn={signedIn}
                 onOpen={onOpen}
-                onCommand={openDialog}
+                onCommand={onCommand}
               />
             ))}
           </div>
         )}
-      <UpdateReviewDialog
-        entry={dialog?.type === "review" ? dialog.entry : null}
-        open={dialog?.type === "review"}
-        pending={pending}
-        error={error}
-        onClose={closeDialog}
-        onApprove={() => {
-          const entry = dialog?.entry;
-          if (!entry?.update) return;
-          void mutate({
-            type: "catalog.approve",
-            coordinate: entry.coordinate,
-            manifestEventId: entry.update.manifestEventId,
-          });
-        }}
-      />
-      <UninstallDialog
-        entry={dialog?.type === "uninstall" ? dialog.entry : null}
-        open={dialog?.type === "uninstall"}
-        pending={pending}
-        error={error}
-        onClose={closeDialog}
-        onConfirm={() => {
-          const entry = dialog?.entry;
-          if (!entry) return;
-          void mutate({
-            type: "catalog.uninstall",
-            coordinate: entry.coordinate,
-          });
-        }}
-      />
-    </section>
+    </>
   );
 }
 

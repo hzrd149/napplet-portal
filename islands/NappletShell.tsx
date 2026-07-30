@@ -371,6 +371,7 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
           inert={!homeVisible}
         >
           <HomeView
+            configured={configured}
             catalog={catalog}
             status={catalogStatus}
             signedIn={signedIn}
