@@ -1,7 +1,7 @@
 ---
 phase: 1
 slug: one-day-napplet-runtime-mvp
-status: draft
+status: approved
 shadcn_initialized: false
 preset: none
 created: 2026-07-30
@@ -75,13 +75,13 @@ Primary text is `#0F172A`; secondary text/icons are `#475569`; borders are `#CBD
 | nsec secondary action | `Use nsec` with adjacent badge `Not recommended` |
 | Napplet empty state heading | `No napplet configured` |
 | Napplet empty state body | `Add a napplet coordinate to the server configuration, then restart Napplet Portal.` |
-| Generic shell error | `Napplet Portal could not connect. Check the server and try again.` Action: `Retry` |
-| Iframe/handshake error | `The napplet did not start correctly.` Action: `Retry` |
-| Integrity error | `The napplet could not be verified and was not opened.` Action: `Retry` |
-| Missing capability error | `This napplet requires {capability}, which is not available.` |
+| Generic shell error | `Napplet Portal could not connect. Check the server and try again.` Action: `Retry Connection` |
+| Iframe/handshake error | `The napplet did not start correctly.` Action: `Retry Napplet` |
+| Integrity error | `The napplet could not be verified and was not opened.` Action: `Retry Napplet` |
+| Missing capability error | `This napplet requires {capability}. The configured runtime must support this capability before the napplet can open.` Actions: `Return Home`, and `Retry Napplet` when retry can resolve the missing capability |
 | Offline account status | `Signer offline` with support text `Public data can continue updating while Napplet Portal reconnects.` |
 | Active stream, initially empty | `Waiting for updates` — do not describe the stream as complete or “no results” |
-| Destructive confirmation | `Sign out`: `Sign out of this account? Public data will keep updating, but signing actions will stop.` Actions: `Cancel`, `Sign out` |
+| Destructive confirmation | `Sign out`: `Sign out of this account? Public data will keep updating, but signing actions will stop.` Actions: `Keep account`, `Sign out` |
 
 Use sentence case. Action labels are verb-first and no longer than three words. Never expose `nsec`, bunker secrets, signer material, raw transport errors, or correlation IDs in ordinary shell copy.
 
@@ -105,8 +105,8 @@ Use sentence case. Action labels are verb-first and no longer than three words. 
 | Profile destination | Shows active avatar when available; otherwise a neutral user outline; the label remains `Profile` |
 | Napplet tile | Full-width button/card with 48px app icon, one-line name, and a small labeled or accessible active indicator; selecting it reveals the existing iframe |
 | Sign-in panel | Nostr Connect is visually primary with QR and copy URI together; bunker URI and nsec are secondary disclosure/options |
-| Shell notice | Slim 40–48px notice directly above the visible iframe, in content flow, with one-line message and `Retry`; it reduces iframe height rather than overlaying it |
-| Confirmation dialog | Centered modal for Sign out only; focus trapped, Escape/Cancel closes, destructive action uses destructive color |
+| Shell notice | Slim 40–48px notice directly above the visible iframe, in content flow, with one-line message and noun-bearing action `Retry Connection` or `Retry Napplet`; it reduces iframe height rather than overlaying it |
+| Confirmation dialog | Centered modal for Sign out only; focus trapped, Escape/`Keep account` closes, destructive action uses destructive color |
 
 All controls use native `button`, `a`, `input`, and `dialog` semantics where practical. Disabled controls retain readable labels and expose `disabled`, not only reduced opacity.
 
@@ -129,7 +129,7 @@ Applicable state considerations resolved: 16 covered, 2 backstop, 0 unresolved.
 |----------|------------|--------|---------------------|
 | empty | Home napplet grid | ✅ covered | When no coordinate is configured, render the documented configuration empty state instead of an empty grid |
 | loading | Napplet viewport | ✅ covered | No portal loading state exists; render the iframe immediately and allow empty/partial/updating stream content |
-| error | Napplet viewport / shell connection | ✅ covered | Retain the iframe and render the documented slim in-flow notice with Retry for shell-owned failures |
+| error | Napplet viewport / shell connection | ✅ covered | Retain the iframe and render the documented slim in-flow notice with `Retry Connection` or `Retry Napplet` for shell-owned failures |
 | populated | Home napplet grid | ✅ covered | Phase 1 renders exactly one full-width configured napplet tile with icon, name, and active state |
 | partial | Account and stream data | ✅ covered | Missing display name/avatar falls back to shortened pubkey/user icon; empty streams show `Waiting for updates` without implying completion |
 | overflow | Home grid / Profile | ✅ covered | Shell views scroll vertically inside the content row; iframe manages its own internal overflow |
@@ -142,7 +142,7 @@ Applicable state considerations resolved: 16 covered, 2 backstop, 0 unresolved.
 | empty | Profile avatar/name | ✅ covered | Use user-outline fallback and shortened pubkey; do not reserve a blank image box |
 | populated | Profile | ✅ covered | Show only active account identity, signer status, and Sign out |
 | overflow | Nostr Connect URI / bunker URI | ✅ covered | URI is not printed as wrapping body text; input is horizontally scrollable and Copy remains visible |
-| long-text | Error notice | ✅ covered | Message truncates to one line at mobile width; accessible full text remains on the notice and Retry never shrinks below 44px |
+| long-text | Error notice | ✅ covered | Message truncates to one line at mobile width; accessible full text remains on the notice and the noun-bearing retry action never shrinks below 44px |
 | error | Integrity/capability verification | ✅ covered | Refuse launch and show the documented named shell error; unverifiable content is never displayed |
 | partial | Restored offline signer | ✅ covered | Show `Signer offline`, retain the account as active, and communicate continued public updates |
 
@@ -168,11 +168,11 @@ Do not add an installed-app catalog, multiple-account UI, profile editing, relay
 
 ## Checker Sign-Off
 
-- [ ] Dimension 1 Copywriting: PASS
-- [ ] Dimension 2 Visuals: PASS
-- [ ] Dimension 3 Color: PASS
-- [ ] Dimension 4 Typography: PASS
-- [ ] Dimension 5 Spacing: PASS
-- [ ] Dimension 6 Registry Safety: PASS
+- [x] Dimension 1 Copywriting: PASS
+- [x] Dimension 2 Visuals: PASS
+- [x] Dimension 3 Color: PASS
+- [x] Dimension 4 Typography: PASS
+- [x] Dimension 5 Spacing: PASS
+- [x] Dimension 6 Registry Safety: PASS
 
-**Approval:** pending
+**Approval:** approved
