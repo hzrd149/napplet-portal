@@ -331,6 +331,8 @@ Use these entry points:
 - `/gsd-debug` for investigation and bug fixing
 - `/gsd-execute-phase` for planned phase work
 
+After making code changes, documentation updates, or adding features, agents must commit the completed work before handing control back to the user. Run the relevant verification first, inspect the diff, and commit only the files intentionally changed for the task.
+
 Do not make direct repo edits outside a GSD workflow unless the user explicitly asks to bypass it.
 <!-- GSD:workflow-end -->
 
