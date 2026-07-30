@@ -119,3 +119,38 @@ Deno.test("integrity failures and unsupported capabilities fail closed", async (
       fetchBytes: () => Promise.resolve(new TextEncoder().encode("altered")),
     }).resolve());
 });
+
+Deno.test("valid executable HTML can traverse local Blossom without bypassing verification", async () => {
+  const networkFetch = fetch;
+  const remoteUrl = `${fixture.artifact.servers[0].replace(/\/$/, "")}/${fixture.manifest.paths[0].sha256}`;
+  const remote = await networkFetch(remoteUrl);
+  assert(remote.ok, "fixture blob must be available");
+  const fixtureBytes = new Uint8Array(await remote.arrayBuffer());
+  const calls: string[] = [];
+  const resolver = new PortalArtifactResolver({
+    coordinate: fixture.coordinate,
+    relays: [],
+    blossomServers: fixture.artifact.servers,
+    resolveManifest: () => Promise.resolve(fixture.manifestEvent),
+    blossomFetch: (input, init) => {
+      calls.push(`${init?.method ?? "GET"} ${String(input)}`);
+      if (init?.method === "HEAD") return Promise.resolve(new Response(null, { status: 204 }));
+      return Promise.resolve(new Response(fixtureBytes));
+    },
+  });
+
+  const result = await resolver.resolve();
+  assert(result.state === "ready" && result.srcdoc.includes("Security Lab"), "verified local bytes must resolve");
+  assert(calls.some((call) => call.startsWith("GET http://127.0.0.1:24242/")), "blob must traverse local cache");
+  assert(calls.some((call) => call.includes("as=" + fixture.manifestEvent.pubkey)), "manifest signer must attest the author hint");
+
+  await expectCode("blob-hash-mismatch", () => new PortalArtifactResolver({
+    coordinate: fixture.coordinate,
+    relays: [],
+    blossomServers: fixture.artifact.servers,
+    resolveManifest: () => Promise.resolve(fixture.manifestEvent),
+    blossomFetch: (_input, init) => init?.method === "HEAD"
+      ? Promise.resolve(new Response(null, { status: 204 }))
+      : Promise.resolve(new Response("malformed cache bytes")),
+  }).resolve());
+});
