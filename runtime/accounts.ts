@@ -68,6 +68,7 @@ export class PortalAccounts {
   readonly #store: AccountStore;
   readonly #factories: PortalAccountFactories;
   readonly #manager = new AccountManager();
+  readonly #connectedAccountIds = new Set<string>();
   readonly identity$ = new BehaviorSubject<IdentitySnapshot>(UNAVAILABLE);
   readonly publicReadsEnabled = true;
 
@@ -79,6 +80,9 @@ export class PortalAccounts {
     NostrConnectSigner.pool = factories.pool;
     this.#manager.registerType(Accounts.NostrConnectAccount);
     this.#manager.registerType(Accounts.PrivateKeyAccount);
+    this.#manager.active$.subscribe((account) => {
+      this.identity$.next(this.#identityForActive(account));
+    });
     debug(
       "initialized remoteSignerRelays=%d",
       factories.remoteSignerRelays.length,
@@ -110,11 +114,7 @@ export class PortalAccounts {
     const account = this.#manager.getAccount(snapshot.activeAccountId);
     if (!account) throw new Error("Active account record is unavailable");
     this.#manager.setActive(account);
-    const status = account.type === Accounts.NostrConnectAccount.type
-      ? "offline"
-      : "active";
-    const identity = publicIdentity(account, status);
-    this.identity$.next(identity);
+    const identity = this.identity;
     debug(
       "restore complete account=%s status=%s",
       shortId(identity.accountId),
@@ -158,7 +158,8 @@ export class PortalAccounts {
       debug("offline retry started account=%s", shortId(account.id));
       await (this.#factories.reconnectNostrConnect?.(account) ??
         this.#reconnectNostrConnect(account));
-      const identity = publicIdentity(account, "active");
+      this.#connectedAccountIds.add(account.id);
+      const identity = this.#identityForActive(account);
       this.identity$.next(identity);
       debug("offline retry active account=%s", shortId(account.id));
       return identity;
@@ -173,7 +174,6 @@ export class PortalAccounts {
   async signOut(): Promise<void> {
     debug("signout started active=%s", shortId(this.#manager.active?.id));
     this.#manager.clearActive();
-    this.identity$.next(UNAVAILABLE);
     await this.#persist();
     debug("signout complete");
   }
@@ -189,8 +189,9 @@ export class PortalAccounts {
   async #activate(account: IAccount): Promise<IdentitySnapshot> {
     debug("activate account=%s type=%s", shortId(account.id), account.type);
     this.#manager.addAccount(account);
+    this.#connectedAccountIds.add(account.id);
     this.#manager.setActive(account);
-    const identity = publicIdentity(account, "active");
+    const identity = this.#identityForActive(account);
     this.identity$.next(identity);
     await this.#persist();
     debug(
@@ -214,6 +215,15 @@ export class PortalAccounts {
     };
     await this.#store.write(snapshot);
     debug("persist complete");
+  }
+
+  #identityForActive(account: IAccount | undefined): IdentitySnapshot {
+    if (!account) return UNAVAILABLE;
+    const status = account.type === Accounts.NostrConnectAccount.type &&
+        !this.#connectedAccountIds.has(account.id)
+      ? "offline"
+      : "active";
+    return publicIdentity(account, status);
   }
 
   async #createNostrConnect(abort?: AbortSignal): Promise<PendingNostrConnect> {

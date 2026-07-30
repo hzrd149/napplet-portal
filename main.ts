@@ -1,7 +1,7 @@
 import { App, staticFiles } from "fresh";
 import { RelayPool } from "applesauce-relay";
 import { AccountStore } from "./runtime/account_store.ts";
-import { PortalAccounts } from "./runtime/accounts.ts";
+import { type IdentitySnapshot, PortalAccounts } from "./runtime/accounts.ts";
 import { loadRuntimeConfig, type RuntimeConfig } from "./runtime/config.ts";
 import { runtime as portalRuntime } from "./routes/api/runtime.ts";
 import { SignerConnectionService } from "./runtime/signer_service.ts";
@@ -28,22 +28,30 @@ const signerAccounts = new PortalAccounts(
     pool: new RelayPool(),
   },
 );
-let restoredSignerAccounts: Promise<unknown> | undefined;
+let restoredSignerAccounts: Promise<IdentitySnapshot> | undefined;
+function restoreSignerAccounts(): Promise<IdentitySnapshot> {
+  return restoredSignerAccounts ??= signerAccounts.restore();
+}
 export const signerService = new SignerConnectionService({
+  identity$: signerAccounts.identity$,
+  restore: async () => {
+    debug("restoring signer accounts for runtime state");
+    return await restoreSignerAccounts();
+  },
   startNostrConnect: async (abort) => {
     debug("restoring signer accounts before nostr connect");
-    await (restoredSignerAccounts ??= signerAccounts.restore());
+    await restoreSignerAccounts();
     debug("starting signer accounts nostr connect");
     return await signerAccounts.startNostrConnect(abort);
   },
   signInBunker: async (uri) => {
     debug("restoring signer accounts before bunker sign-in");
-    await (restoredSignerAccounts ??= signerAccounts.restore());
+    await restoreSignerAccounts();
     return await signerAccounts.signInBunker(uri);
   },
   signInNsec: async (privateKey) => {
     debug("restoring signer accounts before nsec sign-in");
-    await (restoredSignerAccounts ??= signerAccounts.restore());
+    await restoreSignerAccounts();
     return await signerAccounts.signInNsec(privateKey);
   },
   signOut: () => {
@@ -51,6 +59,7 @@ export const signerService = new SignerConnectionService({
     return signerAccounts.signOut();
   },
 });
+void signerService.restore();
 
 export function startupSummary(
   config: RuntimeConfig,

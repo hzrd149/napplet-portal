@@ -5,6 +5,8 @@ import type { IdentitySnapshot, NostrConnectResult } from "./accounts.ts";
 const debug = rootDebug.extend("signer");
 
 export interface SignerAccountsPort {
+  identity$: BehaviorSubject<IdentitySnapshot>;
+  restore?(): Promise<IdentitySnapshot>;
   startNostrConnect(abort?: AbortSignal): Promise<NostrConnectResult>;
   signInBunker?(uri: string): Promise<IdentitySnapshot>;
   signInNsec?(privateKey: string): Promise<IdentitySnapshot>;
@@ -18,7 +20,13 @@ export type SignerConnectionState =
   | { readonly status: "active"; readonly identity: IdentitySnapshot }
   | { readonly status: "error"; readonly message: string };
 
-const IDLE: SignerConnectionState = Object.freeze({ status: "idle" });
+const IDLE = Object.freeze({ status: "idle" } as const);
+
+type PendingState =
+  | typeof IDLE
+  | { readonly status: "preparing" }
+  | { readonly status: "awaiting"; readonly uri: string }
+  | { readonly status: "error"; readonly message: string };
 
 /**
  * Process-owned NIP-46 lifecycle. Browser connections only observe the safe
@@ -28,9 +36,11 @@ export class SignerConnectionService {
   readonly state$ = new BehaviorSubject<SignerConnectionState>(IDLE);
   readonly #accounts: SignerAccountsPort;
   readonly #timeoutMs: number;
+  #pending: PendingState = IDLE;
   #attempt:
     | { readonly token: symbol; readonly controller: AbortController }
     | undefined;
+  #restore: Promise<IdentitySnapshot | null> | undefined;
 
   constructor(
     accounts: SignerAccountsPort,
@@ -38,10 +48,19 @@ export class SignerConnectionService {
   ) {
     this.#accounts = accounts;
     this.#timeoutMs = options.timeoutMs ?? 120_000;
+    this.#accounts.identity$.subscribe((identity) => this.#project(identity));
   }
 
   get state(): SignerConnectionState {
     return this.state$.value;
+  }
+
+  async restore(): Promise<IdentitySnapshot | null> {
+    this.#restore ??= this.#restoreAccountState().catch((error) => {
+      this.#restore = undefined;
+      throw error;
+    });
+    return await this.#restore;
   }
 
   start(): void {
@@ -59,7 +78,7 @@ export class SignerConnectionService {
     };
     this.#attempt = attempt;
     debug("start timeoutMs=%d", this.#timeoutMs);
-    this.state$.next(Object.freeze({ status: "preparing" }));
+    this.#setPending(Object.freeze({ status: "preparing" }));
     const abort = AbortSignal.any([
       attempt.controller.signal,
       AbortSignal.timeout(this.#timeoutMs),
@@ -80,10 +99,10 @@ export class SignerConnectionService {
     this.cancel();
     try {
       const identity = await this.#accounts.signInBunker(uri);
-      this.state$.next(Object.freeze({ status: "active", identity }));
+      this.#setPending(IDLE);
       return identity;
     } catch (error) {
-      this.state$.next(Object.freeze({
+      this.#setPending(Object.freeze({
         status: "error",
         message: error instanceof Error
           ? error.message
@@ -100,10 +119,10 @@ export class SignerConnectionService {
     this.cancel();
     try {
       const identity = await this.#accounts.signInNsec(privateKey);
-      this.state$.next(Object.freeze({ status: "active", identity }));
+      this.#setPending(IDLE);
       return identity;
     } catch (error) {
-      this.state$.next(Object.freeze({
+      this.#setPending(Object.freeze({
         status: "error",
         message: error instanceof Error ? error.message : "nsec sign-in failed",
       }));
@@ -119,13 +138,14 @@ export class SignerConnectionService {
     );
     this.#attempt?.controller.abort();
     this.#attempt = undefined;
-    this.state$.next(IDLE);
+    this.#setPending(IDLE);
   }
 
   async signOut(): Promise<void> {
     debug("signout requested status=%s", this.state.status);
     this.cancel();
     await this.#accounts.signOut?.();
+    this.#restore = undefined;
     debug("signout complete");
   }
 
@@ -134,7 +154,7 @@ export class SignerConnectionService {
       const pending = await this.#accounts.startNostrConnect(abort);
       if (this.#attempt?.token !== token) return;
       debug("awaiting remote signer approval");
-      this.state$.next(Object.freeze({
+      this.#setPending(Object.freeze({
         status: "awaiting",
         uri: pending.uri,
       }));
@@ -142,15 +162,45 @@ export class SignerConnectionService {
       if (this.#attempt?.token !== token) return;
       this.#attempt = undefined;
       debug("remote signer active pubkey=%s", shortId(identity.pubkey));
-      this.state$.next(Object.freeze({ status: "active", identity }));
+      this.#setPending(IDLE);
     } catch {
       if (this.#attempt?.token !== token) return;
       this.#attempt = undefined;
       debug("remote signer failed or timed out");
-      this.state$.next(Object.freeze({
+      this.#setPending(Object.freeze({
         status: "error",
         message: "Remote signer connection failed or timed out",
       }));
     }
+  }
+
+  async #restoreAccountState(): Promise<IdentitySnapshot | null> {
+    const identity = await this.#accounts.restore?.();
+    if (identity?.pubkey && identity.status !== "unavailable") {
+      debug(
+        "restored signer state status=%s pubkey=%s",
+        identity.status,
+        shortId(identity.pubkey),
+      );
+    }
+    this.#project(identity ?? this.#accounts.identity$.value);
+    return identity ?? null;
+  }
+
+  #setPending(state: PendingState): void {
+    this.#pending = state;
+    this.#project(this.#accounts.identity$.value);
+  }
+
+  #project(identity: IdentitySnapshot): void {
+    if (this.#pending.status !== "idle") {
+      this.state$.next(this.#pending);
+      return;
+    }
+    if (identity.pubkey && identity.status !== "unavailable") {
+      this.state$.next(Object.freeze({ status: "active", identity }));
+      return;
+    }
+    this.state$.next(IDLE);
   }
 }

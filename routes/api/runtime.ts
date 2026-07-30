@@ -127,6 +127,7 @@ export const handler = define.handlers({
             }));
             return;
           }
+          await signer.restore();
           const signerState = signer.state;
           if (signerState.status !== "active" || !signerState.identity.pubkey) {
             debug(
