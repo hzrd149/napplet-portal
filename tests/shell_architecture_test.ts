@@ -11,13 +11,15 @@ Deno.test("shell keeps one exact-sandbox iframe and no backend authority", async
     shell.match(/<NappletFrame/g)?.length === 1,
     "persistent frame must have one render site",
   );
-  for (const forbidden of [
-    "applesauce",
-    "account_store",
-    "runtime/accounts",
-    "relay_adapter",
-    "@kehto/runtime",
-  ]) {
+  for (
+    const forbidden of [
+      "applesauce",
+      "account_store",
+      "runtime/accounts",
+      "relay_adapter",
+      "@kehto/runtime",
+    ]
+  ) {
     assert(!shell.includes(forbidden), `island must not import ${forbidden}`);
   }
 });
@@ -25,10 +27,21 @@ Deno.test("shell keeps one exact-sandbox iframe and no backend authority", async
 Deno.test("shell structure reserves content and safe-area navigation rows", async () => {
   const shell = await Deno.readTextFile("islands/NappletShell.tsx");
   const styles = await Deno.readTextFile("assets/styles.css");
-  assert(shell.includes('nav aria-label="Primary"'), "primary nav must be semantic");
-  assert(shell.includes('aria-current='), "selected destination must be exposed");
+  assert(
+    shell.includes('nav aria-label="Primary"'),
+    "primary nav must be semantic",
+  );
+  assert(
+    shell.includes("aria-current="),
+    "selected destination must be exposed",
+  );
   assert(styles.includes("100dvh"), "shell must use dynamic viewport height");
-  assert(styles.includes("safe-area-inset-bottom"), "nav must reserve safe area");
-  assert(styles.includes("prefers-reduced-motion"), "fade must respect reduced motion");
+  assert(
+    styles.includes("safe-area-inset-bottom"),
+    "nav must reserve safe area",
+  );
+  assert(
+    styles.includes("prefers-reduced-motion"),
+    "fade must respect reduced motion",
+  );
 });
-

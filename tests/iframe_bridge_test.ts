@@ -25,7 +25,8 @@ Deno.test("verified identity registers before srcdoc assignment", () => {
 });
 
 Deno.test("bridge is source-bound, silent for unknowns, and initializes once", () => {
-  const source = {};
+  const channel = new MessageChannel();
+  const source = channel.port1;
   const posted: unknown[] = [];
   const forwarded: unknown[] = [];
   const bridge = createIframeBridge({
@@ -34,7 +35,7 @@ Deno.test("bridge is source-bound, silent for unknowns, and initializes once", (
     forward: (message) => forwarded.push(message),
   });
 
-  bridge.receive({ source: {}, data: { type: "shell.ready" } });
+  bridge.receive({ source: channel.port2, data: { type: "shell.ready" } });
   bridge.receive({ source, data: { type: "unknown.message" } });
   bridge.receive({ source, data: { type: "shell.ready" } });
   bridge.receive({ source, data: { type: "shell.ready" } });
@@ -48,4 +49,3 @@ Deno.test("bridge is source-bound, silent for unknowns, and initializes once", (
   );
   assert(forwarded.length === 1, "only recognized non-shell message forwards");
 });
-

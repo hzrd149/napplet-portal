@@ -1,110 +1,168 @@
-import { useEffect, useRef, useState } from "preact/hooks";
-import { NappletFrame } from "../components/NappletFrame.tsx";
+import { useEffect, useMemo, useRef, useState } from "preact/hooks";
+import {
+  createIframeBridge,
+  type FrameIdentityRegistry,
+  NappletFrame,
+  type VerifiedNappletIdentity,
+} from "../components/NappletFrame.tsx";
 
 interface NappletShellProps {
   readonly coordinate: string;
 }
 
+type View = "napplet" | "home" | "profile";
+
 export default function NappletShell({ coordinate }: NappletShellProps) {
   const [srcdoc, setSrcdoc] = useState("");
-  const [status, setStatus] = useState("Sign in to load Security Lab");
+  const [identity, setIdentity] = useState<VerifiedNappletIdentity | null>(
+    null,
+  );
+  const [view, setView] = useState<View>("home");
+  const [status, setStatus] = useState("Waiting for updates");
   const socket = useRef<WebSocket | null>(null);
   const iframe = useRef<HTMLIFrameElement | null>(null);
-  const initialized = useRef(false);
+  const owner = useRef<{ connectionId: string; windowId: string } | null>(null);
+  const reconnectToken = useRef<string | null>(null);
+  const registered = useRef<
+    {
+      source: Window;
+      identity: VerifiedNappletIdentity;
+    } | null
+  >(null);
+
+  const registry = useMemo<FrameIdentityRegistry>(() => ({
+    register(source, nextIdentity) {
+      registered.current = { source, identity: nextIdentity };
+    },
+  }), []);
+
+  const bridge = useMemo(() =>
+    createIframeBridge({
+      source: () => iframe.current?.contentWindow ?? null,
+      post: (message) =>
+        iframe.current?.contentWindow?.postMessage(message, "*"),
+      forward: (message) => {
+        const ws = socket.current;
+        const currentOwner = owner.current;
+        if (ws?.readyState !== WebSocket.OPEN || !currentOwner) return;
+        ws.send(JSON.stringify({
+          type: "runtime.forward",
+          ...currentOwner,
+          message,
+        }));
+      },
+    }), []);
 
   useEffect(() => {
-    function receive(event: MessageEvent): void {
-      const target = iframe.current?.contentWindow;
-      if (!target || event.source !== target) return;
-      const message = event.data as Record<string, unknown> | null;
-      if (!message || typeof message.type !== "string") return;
-      if (message.type === "shell.ready") {
-        if (initialized.current) return;
-        initialized.current = true;
-        target.postMessage({
-          type: "shell.init",
-          capabilities: { domains: ["identity", "relay"] },
-          services: ["identity", "relay"],
-        }, "*");
-        setStatus("Security Lab handshake complete");
-        return;
-      }
-      if (!/^(identity|relay)\./.test(message.type)) return;
-      const ws = socket.current;
-      if (ws?.readyState !== WebSocket.OPEN) return;
-      ws.send(JSON.stringify({
-        type: "runtime.forward",
-        connectionId: "browser-tab",
-        windowId: "security-lab",
-        message,
-      }));
-    }
-
+    const receive = (event: MessageEvent) => bridge.receive(event);
     globalThis.addEventListener("message", receive);
+    const back = (event: PopStateEvent) => {
+      const next = (event.state as { view?: View } | null)?.view;
+      setView(next === "profile" || next === "napplet" ? next : "home");
+    };
+    globalThis.addEventListener("popstate", back);
     return () => {
       globalThis.removeEventListener("message", receive);
+      globalThis.removeEventListener("popstate", back);
       socket.current?.close();
     };
   }, []);
 
-  function signIn(): void {
+  function openSocket(): void {
+    socket.current?.close();
     const protocol = location.protocol === "https:" ? "wss:" : "ws:";
-    const ws = new WebSocket(`${protocol}//${location.host}/api/runtime`);
+    const token = reconnectToken.current
+      ? `?reconnect=${encodeURIComponent(reconnectToken.current)}`
+      : "";
+    const ws = new WebSocket(
+      `${protocol}//${location.host}/api/runtime${token}`,
+    );
     socket.current = ws;
     ws.addEventListener("open", () => {
       ws.send(JSON.stringify({ type: "runtime.start", coordinate }));
-      setStatus("Signed in — verifying supplied artifact…");
     });
     ws.addEventListener("message", (event) => {
       const message = JSON.parse(String(event.data)) as Record<string, unknown>;
-      if (message.type === "runtime.event") {
-        const runtimeMessage = message.message;
-        if (runtimeMessage && typeof runtimeMessage === "object") {
-          iframe.current?.contentWindow?.postMessage(runtimeMessage, "*");
-        }
+      if (
+        message.type === "runtime.connected" &&
+        typeof message.connectionId === "string" &&
+        typeof message.windowId === "string" &&
+        typeof message.reconnectToken === "string"
+      ) {
+        owner.current = {
+          connectionId: message.connectionId,
+          windowId: message.windowId,
+        };
+        reconnectToken.current = message.reconnectToken;
+        return;
+      }
+      if (message.type === "runtime.event" && message.message) {
+        iframe.current?.contentWindow?.postMessage(message.message, "*");
         return;
       }
       if (
         message.type === "runtime.artifact" &&
-        typeof message.srcdoc === "string"
+        typeof message.srcdoc === "string" &&
+        message.identity && typeof message.identity === "object"
       ) {
-        initialized.current = false;
+        const nextIdentity = message.identity as Record<string, unknown>;
+        if (
+          typeof nextIdentity.dTag !== "string" ||
+          typeof nextIdentity.aggregateHash !== "string"
+        ) return;
+        bridge.reset();
+        setIdentity({
+          dTag: nextIdentity.dTag,
+          aggregateHash: nextIdentity.aggregateHash,
+        });
         setSrcdoc(message.srcdoc);
-        setStatus("Verified Security Lab loaded");
+        navigate("napplet");
       }
     });
+    ws.addEventListener("close", () => setStatus("Connection interrupted"));
+  }
+
+  function navigate(next: View): void {
+    setView(next);
+    history.pushState({ view: next }, "", location.href);
   }
 
   return (
-    <section class="flex min-h-screen flex-col bg-slate-950 text-slate-100">
-      <header class="flex items-center justify-between gap-4 border-b border-slate-800 p-4">
-        <div>
-          <h1 class="text-lg font-semibold">Napplet Portal</h1>
-          <p class="text-xs text-slate-400">{status}</p>
+    <section class="portal-shell">
+      <main class="shell-content">
+        <div class={`shell-view ${view === "home" ? "" : "shell-view-hidden"}`}>
+          <button type="button" onClick={openSocket}>Connect signer</button>
         </div>
+        <div
+          class={`shell-view ${view === "profile" ? "" : "shell-view-hidden"}`}
+        >
+          <p>{status}</p>
+        </div>
+        <NappletFrame
+          srcdoc={srcdoc}
+          identity={identity}
+          title="Security Lab napplet"
+          hidden={view !== "napplet"}
+          registry={registry}
+          onFrame={(frame) => iframe.current = frame}
+        />
+      </main>
+      <nav aria-label="Primary" class="bottom-nav">
         <button
           type="button"
-          onClick={signIn}
-          class="rounded bg-emerald-500 px-4 py-2 font-medium text-slate-950"
+          aria-current={view === "home" ? "page" : undefined}
+          onClick={() => navigate("home")}
         >
-          Sign in
+          Home
         </button>
-      </header>
-      <main class="min-h-0 flex-1">
-        {srcdoc
-          ? (
-            <NappletFrame
-              srcdoc={srcdoc}
-              title="Security Lab napplet"
-              onFrame={(frame) => iframe.current = frame}
-            />
-          )
-          : (
-            <div class="grid min-h-[70vh] place-items-center text-slate-400">
-              No napplet loaded
-            </div>
-          )}
-      </main>
+        <button
+          type="button"
+          aria-current={view === "profile" ? "page" : undefined}
+          onClick={() => navigate("profile")}
+        >
+          Profile
+        </button>
+      </nav>
     </section>
   );
 }
