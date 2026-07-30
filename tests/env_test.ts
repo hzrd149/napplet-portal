@@ -63,22 +63,46 @@ Deno.test("committed .env.example documents every variable and holds no real val
   assert(!paths.includes(".env.example"), ".env.example must stay committed");
 });
 
-Deno.test("bind resolver rejects non-loopback addresses before they are served", () => {
+Deno.test("bind resolver preserves valid custom addresses", () => {
   const warnings: string[] = [];
   const push = (warning: string) => warnings.push(warning);
 
   assert(
-    loadBindAddress({ PORTAL_BIND: "0.0.0.0" }, push) === "127.0.0.1",
-    "non-loopback bind must fall back",
+    loadBindAddress({ PORTAL_BIND: "0.0.0.0" }, push) === "0.0.0.0",
+    "wildcard IPv4 bind must be preserved",
   );
-  assert(warnings.length === 1, "rejected bind must warn exactly once");
+  assert(
+    loadBindAddress({ PORTAL_BIND: "192.168.1.20" }, push) ===
+      "192.168.1.20",
+    "custom IPv4 bind must be preserved",
+  );
   assert(
     loadBindAddress({ PORTAL_BIND: "::1" }, push) === "::1",
-    "loopback IPv6 bind must be preserved",
+    "IPv6 bind must be preserved",
+  );
+  assert(
+    loadBindAddress({ PORTAL_BIND: "localhost" }, push) === "localhost",
+    "hostname bind must be preserved",
+  );
+  assert(warnings.length === 0, "valid binds must stay silent");
+});
+
+Deno.test("bind resolver rejects URL and host-port values", () => {
+  const warnings: string[] = [];
+  const push = (warning: string) => warnings.push(warning);
+
+  assert(
+    loadBindAddress({ PORTAL_BIND: "http://127.0.0.1" }, push) ===
+      "127.0.0.1",
+    "URL bind must fall back",
+  );
+  assert(
+    loadBindAddress({ PORTAL_BIND: "127.0.0.1:8000" }, push) === "127.0.0.1",
+    "host-port bind must fall back",
   );
   assert(
     loadBindAddress({}, push) === "127.0.0.1",
     "missing bind must default to loopback",
   );
-  assert(warnings.length === 1, "accepted binds must stay silent");
+  assert(warnings.length === 2, "rejected binds must warn exactly once each");
 });

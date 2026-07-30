@@ -1,6 +1,6 @@
 export interface RuntimeConfig {
   readonly coordinate: string;
-  readonly bind: "127.0.0.1" | "::1";
+  readonly bind: string;
   readonly relays: readonly string[];
   readonly remoteSignerRelays: readonly string[];
   readonly blossomServers: readonly string[];
@@ -22,6 +22,7 @@ export const DEFAULT_BLOSSOM_SERVERS = Object.freeze([
 ]);
 
 type Environment = Readonly<Record<string, string | undefined>>;
+const DEFAULT_BIND = "127.0.0.1";
 
 function endpoints(
   value: string | undefined,
@@ -49,7 +50,7 @@ function endpoints(
 /**
  * Resolve only the bind address. `deno serve` and the Vite dev server both take
  * the address before the app loads, so they resolve it here instead of reading
- * `PORTAL_BIND` directly: the same loopback validation applies, and no unrelated
+ * `PORTAL_BIND` directly: the same host validation applies, and no unrelated
  * configuration warning is duplicated ahead of the startup summary.
  */
 export function loadBindAddress(
@@ -59,16 +60,34 @@ export function loadBindAddress(
   return loadRuntimeConfig({ PORTAL_BIND: environment.PORTAL_BIND }, warn).bind;
 }
 
+function validBindAddress(value: string): string | undefined {
+  if (/[\s/@?#]/.test(value)) return undefined;
+
+  const bracketedIpv6 = value.startsWith("[") && value.endsWith("]");
+  if (value.includes("[") || value.includes("]")) {
+    if (!bracketedIpv6) return undefined;
+  }
+
+  const host = bracketedIpv6 ? value.slice(1, -1) : value;
+  if (!host) return undefined;
+
+  const href = host.includes(":") ? `http://[${host}]/` : `http://${host}/`;
+  try {
+    const parsed = new URL(href);
+    return parsed.hostname ? host : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 export function loadRuntimeConfig(
   environment: Environment = Deno.env.toObject(),
   warn: (message: string) => void = console.warn,
 ): RuntimeConfig {
   const requestedBind = environment.PORTAL_BIND?.trim();
-  const bind = requestedBind === "::1" || requestedBind === "127.0.0.1"
-    ? requestedBind
-    : "127.0.0.1";
-  if (requestedBind && requestedBind !== bind) {
-    warn(`Rejected non-loopback bind address: ${requestedBind}`);
+  const bind = requestedBind ? validBindAddress(requestedBind) : DEFAULT_BIND;
+  if (!bind) {
+    warn(`Rejected invalid bind address: ${requestedBind}`);
   }
 
   const reconnectCandidate = Number(environment.PORTAL_RECONNECT_GRACE_MS);
@@ -82,7 +101,7 @@ export function loadRuntimeConfig(
 
   return Object.freeze({
     coordinate: environment.NAPPLET_COORDINATE?.trim() ?? "",
-    bind,
+    bind: bind ?? DEFAULT_BIND,
     relays: environment.NOSTR_RELAYS === undefined
       ? DEFAULT_RELAYS
       : endpoints(environment.NOSTR_RELAYS, ["ws:", "wss:"], "relay", warn),

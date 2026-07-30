@@ -29,9 +29,9 @@ start` until a Fresh release with Vite dev-server WebSocket upgrade support is
 available.
 
 Development and production tasks bind to `127.0.0.1` unless `PORTAL_BIND` is
-explicitly set to another loopback address. Both tasks resolve the address
-through the same validation the runtime uses, so a non-loopback value is
-rejected with a warning instead of being served. Anyone who can reach this
+explicitly set to another valid host address. Both tasks resolve the address
+through the same validation the runtime uses, so URL-shaped or host-port values
+are rejected with a warning instead of being served. Anyone who can reach this
 server acts as the same trusted operator and shares the backend's globally
 active signer. There is no portal authentication or multi-user isolation in
 Phase 1. Do not expose it to a LAN or the public internet without adding an
@@ -60,7 +60,7 @@ Configuration is read once when the process starts. Restart after changing it.
 | `REMOTE_SIGNER_RELAYS`      | NIP-46 signer transport relays                      | `wss://bucket.coracle.social`            |
 | `BLOSSOM_SERVERS`           | Comma-separated `http:`/`https:` Blossom bases      | Small built-in public fallback list      |
 | `PORTAL_RECONNECT_GRACE_MS` | Detached-tab retention, from 1000 through 120000 ms | `10000`                                  |
-| `PORTAL_BIND`               | Server bind address                                 | `127.0.0.1`; `::1` is also accepted      |
+| `PORTAL_BIND`               | Server bind host, without a port or URL scheme      | `127.0.0.1`                              |
 
 Setting `NOSTR_RELAYS` or `BLOSSOM_SERVERS` overrides its built-in fallback
 list. Local endpoints are ordinary list entries: include local and public URLs

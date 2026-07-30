@@ -12,7 +12,7 @@ function assertEquals(
   }
 }
 
-Deno.test("runtime config is immutable, normalized, deduplicated, and loopback-safe", () => {
+Deno.test("runtime config is immutable, normalized, deduplicated, and bind-aware", () => {
   const warnings: string[] = [];
   const config = loadRuntimeConfig({
     NAPPLET_COORDINATE:
@@ -23,7 +23,7 @@ Deno.test("runtime config is immutable, normalized, deduplicated, and loopback-s
     PORTAL_BIND: "0.0.0.0",
   }, (warning) => warnings.push(warning));
 
-  assertEquals(config.bind, "127.0.0.1", "non-loopback bind must fall back");
+  assertEquals(config.bind, "0.0.0.0", "custom bind must be preserved");
   assertEquals(
     config.relays,
     ["wss://relay.example/"],
@@ -40,5 +40,5 @@ Deno.test("runtime config is immutable, normalized, deduplicated, and loopback-s
     "servers should dedupe",
   );
   assertEquals(Object.isFrozen(config), true, "config should be frozen");
-  assertEquals(warnings.length, 2, "invalid endpoint and bind should warn");
+  assertEquals(warnings.length, 1, "invalid endpoint should warn");
 });
