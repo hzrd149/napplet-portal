@@ -155,3 +155,21 @@ When executing Phase 1, deliver the one-day-targeted sign-in → supplied verifi
 
 Plans:
 - [ ] TBD (promote with $gsd-review-backlog when ready)
+
+### Phase 999.2: App shell dark and light themes (BACKLOG)
+
+**Goal:** The app shell supports dark and light themes.
+**Requirements:** TBD
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (promote with $gsd-review-backlog when ready)
+
+### Phase 999.3: NAP-RESOURCE resolution for HTTP, Blossom, and BUD-10 URLs (BACKLOG)
+
+**Goal:** Runtime supports NAP-RESOURCE resolution for HTTP URLs, Blossom URLs, and BUD-10 URIs, trying configured local Blossom servers first for Blossom-backed resources.
+**Requirements:** TBD
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (promote with $gsd-review-backlog when ready)
