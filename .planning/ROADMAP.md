@@ -236,3 +236,12 @@ Plans:
 
 Plans:
 - [ ] TBD (promote with $gsd-review-backlog when ready)
+
+### Phase 999.11: Backend runtime backoff reconnection for mobile tabs (BACKLOG)
+
+**Goal:** Browser tabs reconnect to the backend runtime with backoff when the runtime WebSocket disconnects, so a mobile session can recover automatically when the phone is opened again.
+**Requirements:** TBD
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (promote with $gsd-review-backlog when ready)
