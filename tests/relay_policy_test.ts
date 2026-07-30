@@ -5,7 +5,7 @@ import {
   createOutboxMap,
 } from "applesauce-core/helpers/relay-selection";
 import { RelayPool } from "applesauce-relay";
-import { map, type Observable, of } from "npm:rxjs@7.8.2";
+import { map, of } from "npm:rxjs@7.8.2";
 import {
   RelayPolicy,
   resolveAuthPermission,

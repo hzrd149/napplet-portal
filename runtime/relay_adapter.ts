@@ -10,14 +10,15 @@ import type {
   RelaySubscribeMessage,
 } from "@napplet/nap/relay";
 import {
+  concat,
   finalize,
   from,
   map,
-  merge,
   type Observable,
   tap,
 } from "npm:rxjs@7.8.2";
 import { debug as rootDebug, shortId } from "../debug.ts";
+import type { RelayCache } from "./relay_cache.ts";
 
 const debug = rootDebug.extend("relay");
 
@@ -72,11 +73,17 @@ function relayKey(owner: RelayOwner, subId: string): string {
 export class BackendRelayAdapter {
   readonly #pool: RelayPoolPort;
   readonly #store: RelayStorePort;
+  readonly #cache?: RelayCache;
   readonly #subscriptions = new Map<string, { unsubscribe(): void }>();
 
-  constructor(options: { pool: RelayPoolPort; store: RelayStorePort }) {
+  constructor(options: {
+    pool: RelayPoolPort;
+    store: RelayStorePort;
+    cache?: RelayCache;
+  }) {
     this.#pool = options.pool;
     this.#store = options.store;
+    this.#cache = options.cache;
   }
 
   get subscriptionCount(): number {
@@ -104,7 +111,7 @@ export class BackendRelayAdapter {
     const pending = { unsubscribe() {} };
     this.#subscriptions.set(key, pending);
 
-    const cached$ = from(this.#store.query(message.filters)).pipe(
+    const memory$ = from(this.#store.query(message.filters)).pipe(
       map((event): RawRelayItem => ({ type: "EVENT", event, from: "" })),
     );
     const live$ = this.#pool.req([message.relay], message.filters).pipe(
@@ -113,7 +120,11 @@ export class BackendRelayAdapter {
       }),
     );
 
-    const stream = merge(cached$, live$).pipe(
+    const relays$ = this.#cache
+      ? this.#cache.readThrough(message.filters, live$)
+      : live$;
+    // Memory is synchronous; bounded local relay and upstream follow in order.
+    const stream = concat(memory$, relays$).pipe(
       finalize(() => this.#subscriptions.delete(key)),
     ).subscribe((item) => {
       if (!this.#subscriptions.has(key)) return;
