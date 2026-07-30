@@ -3,18 +3,17 @@ status: testing
 phase: 01-one-day-napplet-runtime-mvp
 source: [01-VERIFICATION.md]
 started: 2026-07-30T18:08:00Z
-updated: 2026-07-30T18:20:12Z
+updated: 2026-07-30T18:22:15Z
 ---
 
 ## Current Test
 
-number: 3
-name: Responsive and accessibility shell pass
+number: 4
+name: Real supplied-napplet runtime acceptance
 expected: |
-  At 320, 390, 768, and 1440px plus safe-area emulation, Home/Profile/napplet/
-  sign-in states have no horizontal overflow; long napplet names and pubkeys
-  fit; focus, nav, dialog, live-region, and reduced-motion behavior match
-  01-UI-SPEC.md.
+  Using `deno task build && deno task start` with the supplied napplet, approve
+  real Nostr Connect, bunker, nsec, relay, outbox, publish, reconnect, Back
+  behavior, persistent iframe, retry notice, and mobile shell flows.
 awaiting: user response
 
 ## Tests
@@ -32,7 +31,7 @@ result: passed
 ### 3. Responsive and accessibility shell pass
 
 expected: At 320, 390, 768, and 1440px plus safe-area emulation, Home/Profile/napplet/sign-in states have no horizontal overflow; long napplet names and pubkeys fit; focus, nav, dialog, live-region, and reduced-motion behavior match 01-UI-SPEC.md.
-result: pending
+result: passed
 
 ### 4. Real supplied-napplet runtime acceptance
 
@@ -42,9 +41,9 @@ result: pending
 ## Summary
 
 total: 4
-passed: 2
+passed: 3
 issues: 0
-pending: 2
+pending: 1
 skipped: 0
 blocked: 0
 
