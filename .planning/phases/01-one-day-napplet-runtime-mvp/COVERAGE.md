@@ -8,8 +8,8 @@ Phase 1 injects only mandatory shell plus supported/granted domains. Sibling pac
 |---|---|---|
 | SHELL | INTEGRATE | Source-bound `shell.ready`; exactly one `shell.init`; verified napplet identity and only supported domains injected. |
 | IDENTITY | INTEGRATE | Read current public active-account state and receive active/offline/unavailable changes; signer authority stays backend-only. |
-| RELAY | INTEGRATE | Napplet supplies the relay URL. Query/subscribe delivers exact observed provenance, emits exactly one `relay.eose` after initial relay state, then keeps the live tail open. Close emits canonical `relay.closed`. Publish forwards an already-signed event unchanged; encrypted publish encrypts/signs on the backend. |
-| OUTBOX | INTEGRATE | Runtime combines preset relays with user NIP-65 routing. Query/subscribe has **no caller-visible EOSE envelope** and remains live until close. Publish accepts an unsigned template, signs with the global account, fans out canonically, and settles required per-relay outcomes before success. |
+| RELAY | INTEGRATE | Caller selects relay. Streams preserve provenance, emit one `relay.eose`, stay live, and close with `relay.closed`. Publish preserves signed events; backend encrypts/signs encrypted events. |
+| OUTBOX | INTEGRATE | Preset and NIP-65 relays form live streams without caller-visible EOSE. Backend signs templates and requires every routed relay to accept before publish succeeds. |
 | STORAGE | OPT-OUT | Deferred by locked Phase 1 scope: no per-napplet durable storage or quotas. |
 | RESOURCE | OPT-OUT | Deferred by locked Phase 1 scope: no mediated resource proxy. |
 | INTENT | OPT-OUT | Deferred by locked Phase 1 scope: no intent routing. |
