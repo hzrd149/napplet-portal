@@ -343,7 +343,7 @@ function SignInPanel(props: SignInPanelProps) {
             props.onConnect("connect");
           }}
         >
-          {props.connecting ? "Connecting…" : "Connect Designer"}
+          {props.connecting ? "Connecting…" : "Connect signer"}
         </a>
         <details>
           <summary>Use bunker URI</summary>
