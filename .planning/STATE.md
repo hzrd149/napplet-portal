@@ -1,12 +1,19 @@
 ---
-gsd_state_version: '1.0'
+gsd_state_version: 1.0
+milestone: v1.0
+milestone_name: milestone
+current_phase: 1
+current_phase_name: One-Day Napplet Runtime MVP
 status: planning
+stopped_at: Phase 1 context gathered
+last_updated: "2026-07-30T11:13:43.223Z"
+last_activity: 2026-07-30
+last_activity_desc: Project docs realigned to a one-day vertical MVP, stream-first Applesauce/RxJS architecture, and future local relay/Blossom cache backends.
 progress:
-  total_phases: 3
+  total_phases: 1
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
-  percent: 0
 ---
 
 # Project State
@@ -30,6 +37,7 @@ Progress: [----------] 0%
 ## Performance Metrics
 
 **Velocity:**
+
 - Total plans completed: 0
 - Average duration: N/A
 - Total execution time: 0.0 hours
@@ -43,6 +51,7 @@ Progress: [----------] 0%
 | 3. NAP Coverage, Policy, and Production Hardening | 0/TBD | - | - |
 
 **Recent Trend:**
+
 - Last 5 plans: none
 - Trend: N/A
 
@@ -81,6 +90,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-07-30
-Stopped at: Project ready to plan Phase 1 as a one-day MVP.
-Resume file: None
+Last session: 2026-07-30T11:13:43.217Z
+Stopped at: Phase 1 context gathered
+Resume file: .planning/phases/01-one-day-napplet-runtime-mvp/01-CONTEXT.md
