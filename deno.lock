@@ -8,6 +8,7 @@
     "jsr:@fresh/core@2": "2.3.3",
     "jsr:@fresh/core@^2.3.3": "2.3.3",
     "jsr:@fresh/plugin-vite@^1.1.2": "1.1.2",
+    "jsr:@grammyjs/debug@~0.3.1": "0.3.1",
     "jsr:@libs/qrcode@3.1.0": "3.1.0",
     "jsr:@std/bytes@^1.0.6": "1.0.6",
     "jsr:@std/dotenv@~0.225.5": "0.225.7",
@@ -48,7 +49,6 @@
     "npm:applesauce-core@6.2.0": "6.2.0",
     "npm:applesauce-relay@6.2.1": "6.2.1",
     "npm:applesauce-signers@6.2.2": "6.2.2_@capacitor+core@7.6.8",
-    "npm:debug@^4.4.3": "4.4.3",
     "npm:esbuild-wasm@~0.25.11": "0.25.12",
     "npm:esbuild@0.25.7": "0.25.7",
     "npm:esbuild@~0.25.5": "0.25.12",
@@ -125,6 +125,9 @@
         "npm:rollup",
         "npm:vite@^7.1.4"
       ]
+    },
+    "@grammyjs/debug@0.3.1": {
+      "integrity": "99e6269421782881829771082362dde8c732f3201e64fea7f92d648f53baff2d"
     },
     "@libs/qrcode@3.1.0": {
       "integrity": "1d65698d3cbaf1d5e2e0b025f7d8572e8b2c485dcfa81d485e0bf0ce607e9c2b"
@@ -1734,6 +1737,7 @@
     "dependencies": [
       "jsr:@fresh/core@^2.3.3",
       "jsr:@fresh/plugin-vite@^1.1.2",
+      "jsr:@grammyjs/debug@~0.3.1",
       "jsr:@libs/qrcode@3.1.0",
       "npm:@kehto/nip@0.5.1",
       "npm:@kehto/runtime@0.20.1",
@@ -1747,7 +1751,6 @@
       "npm:applesauce-core@6.2.0",
       "npm:applesauce-relay@6.2.1",
       "npm:applesauce-signers@6.2.2",
-      "npm:debug@^4.4.3",
       "npm:nostr-tools@2.24.1",
       "npm:preact@^10.29.1",
       "npm:tailwindcss@^4.1.10",

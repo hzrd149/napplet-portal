@@ -1,6 +1,16 @@
-import createDebug from "debug";
+import { createDebug, type DebugFn } from "@grammyjs/debug";
 
-export const debug = createDebug("napplet");
+export type AppDebug = DebugFn & {
+  extend(namespace: string): AppDebug;
+};
+
+function createAppDebug(namespace: string): AppDebug {
+  const logger = createDebug(namespace) as AppDebug;
+  logger.extend = (child) => createAppDebug(`${namespace}:${child}`);
+  return logger;
+}
+
+export const debug = createAppDebug("napplet");
 
 export function shortId(value: string | null | undefined): string {
   if (!value) return "none";

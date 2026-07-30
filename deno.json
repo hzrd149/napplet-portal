@@ -40,7 +40,7 @@
     "preact": "npm:preact@^10.29.1",
     "@preact/signals": "npm:@preact/signals@^2.9.0",
     "@fresh/plugin-vite": "jsr:@fresh/plugin-vite@^1.1.2",
-    "debug": "npm:debug@^4.4.3",
+    "@grammyjs/debug": "jsr:@grammyjs/debug@^0.3.1",
     "vite": "npm:vite@^7.1.3",
     "tailwindcss": "npm:tailwindcss@^4.1.10",
     "@tailwindcss/vite": "npm:@tailwindcss/vite@^4.1.12"
