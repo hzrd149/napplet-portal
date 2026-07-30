@@ -21,7 +21,7 @@
 - JSR - Fresh framework packages and Deno standard modules are resolved from JSR through `deno.json` and `deno.lock`.
   - SDK/Client: Deno import map in `deno.json`.
   - Auth: Not detected.
-- npm registry - Preact, Vite, Tailwind CSS, Babel types, and transitive build dependencies are resolved through Deno npm specifiers in `deno.json` and pinned in `deno.lock`.
+- npm registry - Preact, Vite, Tailwind CSS, and transitive build dependencies (Babel, Rollup, esbuild) are resolved through Deno npm specifiers in `deno.json` and pinned in `deno.lock`.
   - SDK/Client: Deno npm compatibility layer.
   - Auth: Not detected.
 

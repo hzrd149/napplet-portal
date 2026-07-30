@@ -1742,7 +1742,6 @@
       "npm:@napplet/nap@0.31.0",
       "npm:@preact/signals@^2.9.0",
       "npm:@tailwindcss/vite@^4.1.12",
-      "npm:@types/babel__core@^7.20.5",
       "npm:applesauce-accounts@6.2.0",
       "npm:applesauce-core@6.2.0",
       "npm:applesauce-relay@6.2.1",

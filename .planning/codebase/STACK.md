@@ -55,7 +55,7 @@
 
 **Infrastructure:**
 - `@tailwindcss/vite` / `npm:@tailwindcss/vite@^4.1.12` - Tailwind processing in Vite; see `vite.config.ts`.
-- `@types/babel__core` / `npm:@types/babel__core@^7.20.5` - Type package required by the Fresh/Vite toolchain; declared in `deno.json` imports.
+- Babel (`@babel/core`, `@babel/preset-react`, `@prefresh/vite`) - Pulled in transitively by `@fresh/plugin-vite` for the JSX transform and Preact fast refresh; not imported by project code and not declared in `deno.json`.
 - `deno.lock` - Pins transitive JSR and npm dependencies including Fresh, Vite, Preact, Rollup, esbuild, Babel, and Deno standard modules.
 
 ## Configuration
