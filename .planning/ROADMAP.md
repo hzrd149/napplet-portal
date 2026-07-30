@@ -218,3 +218,12 @@ Plans:
 
 Plans:
 - [ ] TBD (promote with $gsd-review-backlog when ready)
+
+### Phase 999.9: Home header account card and compact bottom nav (BACKLOG)
+
+**Goal:** Move the sign-in button and account card into a header card on the home page so account controls are visible only when the user is not viewing a napplet, then reduce bottom nav height to two simple icon buttons: home on the left and the current account avatar on the right.
+**Requirements:** TBD
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (promote with $gsd-review-backlog when ready)
