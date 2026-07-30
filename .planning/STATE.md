@@ -4,16 +4,16 @@ milestone: v1.0
 milestone_name: milestone
 current_phase: 2
 current_phase_name: Backend Runtime Expansion
-status: executing
-stopped_at: Completed 02-06-PLAN.md
-last_updated: "2026-07-30T20:59:44.411Z"
+status: verifying
+stopped_at: Completed 02-07-PLAN.md
+last_updated: "2026-07-30T21:06:11.105Z"
 last_activity: 2026-07-30
 last_activity_desc: Completed 02-01 persisted runtime tracer
 progress:
   total_phases: 2
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 13
-  completed_plans: 12
+  completed_plans: 13
 ---
 
 # Project State
@@ -29,10 +29,10 @@ See: .planning/PROJECT.md (updated 2026-07-30)
 
 Phase: 2 — Backend Runtime Expansion
 Plan: 7 of 7
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-07-30 — Completed 02-01 persisted runtime tracer
 
-Progress: [█████████░] 92%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -72,6 +72,7 @@ Progress: [█████████░] 92%
 | Phase 02 P04 | 10min | 1 tasks | 5 files |
 | Phase 02 P05 | 4min | 1 tasks | 12 files |
 | Phase 02 P06 | 13min | 2 tasks | 10 files |
+| Phase 02 P07 | 6min | 2 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -107,6 +108,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase ?]: Accepted manifest event IDs remain the only launch authority; unresolved entries cannot launch.
 - [Phase ?]: Catalog projections emit from one process-owned CatalogService after verified loads or fully accepted mutations.
 - [Phase ?]: Native catalog dialogs invalidate on replacement event identity and return focus to the invoking card.
+- [Phase ?]: Pinned @kehto/runtime 0.20.1 and @napplet/core/@napplet/nap 0.31.0 remain the sole executable contract authority.
+- [Phase ?]: Sibling source availability and marker mismatch are serialized as non-blocking diagnostic evidence.
 
 ### Pending Todos
 
@@ -135,6 +138,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-07-30T20:59:44.399Z
-Stopped at: Completed 02-06-PLAN.md
+Last session: 2026-07-30T21:06:11.093Z
+Stopped at: Completed 02-07-PLAN.md
 Resume file: None
