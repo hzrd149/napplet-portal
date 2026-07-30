@@ -48,6 +48,7 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
   const reconnectToken = useRef<string | null>(null);
   const connectTimer = useRef<number | null>(null);
   const signOutDialog = useRef<HTMLDialogElement | null>(null);
+  const hasMountedNapplet = useRef(false);
   const registered = useRef<
     {
       source: Window;
@@ -118,6 +119,10 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
     };
   }, []);
 
+  useEffect(() => {
+    hasMountedNapplet.current = Boolean(srcdoc);
+  }, [srcdoc]);
+
   function openSocket(): void {
     if (!coordinate) {
       debug("open socket skipped empty coordinate");
@@ -166,12 +171,10 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
       if (connectTimer.current !== null) clearTimeout(connectTimer.current);
       connectTimer.current = null;
       setConnecting(false);
-      if (profile) {
-        setProfile((current) =>
-          current ? { ...current, status: "offline" } : null
-        );
-      }
-      if (srcdoc) setNotice("connection");
+      setProfile((current) =>
+        current ? { ...current, status: "offline" } : null
+      );
+      if (hasMountedNapplet.current) setNotice("connection");
     });
   }
 

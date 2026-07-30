@@ -118,6 +118,35 @@ Deno.test("shell structure reserves content and safe-area navigation rows", asyn
   );
 });
 
+Deno.test("socket close projects current offline and connection state", async () => {
+  const shell = await Deno.readTextFile("islands/NappletShell.tsx");
+  assert(
+    shell.includes("hasMountedNapplet.current = Boolean(srcdoc)"),
+    "close handler must not depend on stale first-render srcdoc",
+  );
+  assert(
+    shell.includes("setProfile((current)") &&
+      shell.includes('current ? { ...current, status: "offline" } : null'),
+    "close handler must project the current profile offline",
+  );
+  assert(
+    shell.includes('if (hasMountedNapplet.current) setNotice("connection")'),
+    "active napplet must show a connection notice after disconnect",
+  );
+});
+
+Deno.test("startup account restore failure is handled", async () => {
+  const main = await Deno.readTextFile("main.ts");
+  assert(
+    main.includes("signerService.restore().catch"),
+    "startup restore must not create an unhandled rejection",
+  );
+  assert(
+    main.includes("startup account restore failed"),
+    "startup restore failure must be sanitized and logged",
+  );
+});
+
 Deno.test("approved sign-in, Home, Profile, notice, and sign-out copy is present", async () => {
   const shell = await Deno.readTextFile("islands/NappletShell.tsx");
   const signin = await Deno.readTextFile("islands/SignInFlow.tsx");

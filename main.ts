@@ -59,7 +59,12 @@ export const signerService = new SignerConnectionService({
     return signerAccounts.signOut();
   },
 });
-void signerService.restore();
+void signerService.restore().catch((error) => {
+  debug(
+    "startup account restore failed error=%s",
+    error instanceof Error ? error.message : "unknown",
+  );
+});
 
 export function startupSummary(
   config: RuntimeConfig,

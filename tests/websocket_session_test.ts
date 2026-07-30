@@ -2,6 +2,7 @@ import {
   ConnectionRegistry,
   PendingCorrelations,
 } from "../runtime/connections.ts";
+import { isSameOriginRuntimeRequest } from "../routes/api/runtime.ts";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -135,5 +136,28 @@ Deno.test("recognized timeout preserves original correlation ID", () => {
   assert(
     replies[0]?.id === "opaque-request-id",
     "timeout must retain request ID",
+  );
+});
+
+Deno.test("runtime websocket rejects missing and cross-site origins", () => {
+  const sameOrigin = new Request("http://127.0.0.1:8000/api/runtime", {
+    headers: { origin: "http://127.0.0.1:8000" },
+  });
+  const crossOrigin = new Request("http://127.0.0.1:8000/api/runtime", {
+    headers: { origin: "https://evil.example" },
+  });
+  const missingOrigin = new Request("http://127.0.0.1:8000/api/runtime");
+
+  assert(
+    isSameOriginRuntimeRequest(sameOrigin),
+    "same-origin browser websocket must be allowed",
+  );
+  assert(
+    !isSameOriginRuntimeRequest(crossOrigin),
+    "cross-site browser websocket must be rejected",
+  );
+  assert(
+    !isSameOriginRuntimeRequest(missingOrigin),
+    "missing origin must fail closed for browser command sockets",
   );
 });

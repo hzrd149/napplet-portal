@@ -30,8 +30,25 @@ const connections = new ConnectionRegistry({
   },
 });
 
+export function isSameOriginRuntimeRequest(req: Request): boolean {
+  const origin = req.headers.get("origin");
+  if (!origin) return false;
+  try {
+    const requestUrl = new URL(req.url);
+    const originUrl = new URL(origin);
+    return originUrl.protocol === requestUrl.protocol &&
+      originUrl.host === requestUrl.host;
+  } catch {
+    return false;
+  }
+}
+
 export const handler = define.handlers({
   GET(ctx) {
+    if (!isSameOriginRuntimeRequest(ctx.req)) {
+      debug("rejected websocket origin");
+      return new Response("Forbidden", { status: 403 });
+    }
     const runtime = ctx.state.runtime;
     const signer = ctx.state.signer;
     const requestedToken = new URL(ctx.req.url).searchParams.get("reconnect");
