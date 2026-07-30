@@ -3,6 +3,7 @@ import { finalize, type Observable } from "npm:rxjs@7.8.2";
 import { debug as rootDebug, shortId } from "../debug.ts";
 import type { IdentitySnapshot } from "./accounts.ts";
 import type { RelayOwner } from "./relay_adapter.ts";
+import type { RelayPolicy } from "./relay_policy.ts";
 
 const debug = rootDebug.extend("outbox");
 
@@ -64,6 +65,7 @@ export interface OutboxAdapterOptions {
   readonly nip65Relays: (pubkey: string) => readonly string[];
   readonly signEvent: (template: EventTemplate) => Promise<NostrEvent>;
   readonly pool: OutboxPoolPort;
+  readonly relayPolicy?: RelayPolicy;
 }
 
 function key(owner: RelayOwner, subId: string): string {
@@ -221,12 +223,10 @@ export class OutboxAdapter {
 
   #relays(): readonly string[] {
     const pubkey = this.#options.identity().pubkey;
-    return [
-      ...new Set([
-        ...this.#options.presetRelays,
-        ...(pubkey ? this.#options.nip65Relays(pubkey) : []),
-      ]),
-    ];
+    const nip65 = pubkey ? this.#options.nip65Relays(pubkey) : [];
+    return this.#options.relayPolicy
+      ? this.#options.relayPolicy.write({ inboxes: [], outboxes: nip65 })
+      : [...new Set([...this.#options.presetRelays, ...nip65])];
   }
 
   #close(subscriptionKey: string): void {

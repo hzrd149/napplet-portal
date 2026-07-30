@@ -4,6 +4,7 @@ import { Loaders } from "applesauce-loaders";
 import { RelayPool } from "applesauce-relay";
 import type { Filter } from "nostr-tools";
 import { firstValueFrom, type Observable } from "npm:rxjs@7.8.2";
+import type { RelayPolicy } from "./relay_policy.ts";
 
 type Request = (
   relays: string[],
@@ -12,15 +13,18 @@ type Request = (
 
 export interface EventRuntimeOptions {
   readonly request?: Request;
+  readonly relayPolicy?: RelayPolicy;
 }
 
 export class EventRuntime {
   readonly eventStore: EventStore;
   readonly relayPool: RelayPool;
   readonly loader: ReturnType<typeof Loaders.createEventLoaderForStore>;
+  readonly #policy?: RelayPolicy;
   destroyed = false;
 
   constructor(options: EventRuntimeOptions = {}) {
+    this.#policy = options.relayPolicy;
     this.eventStore = new EventStore();
     this.relayPool = new RelayPool();
     const upstream: Parameters<typeof Loaders.createEventLoaderForStore>[1] =
@@ -41,8 +45,11 @@ export class EventRuntime {
     }
     const existing = this.eventStore.getEvent(id);
     if (existing) return Promise.resolve(existing);
+    const eligible = this.#policy
+      ? this.#policy.read({ inboxes: relays, outboxes: [] })
+      : relays;
     return firstValueFrom(
-      this.loader({ id, relays: [...relays] }),
+      this.loader({ id, relays: [...eligible] }),
       { defaultValue: undefined },
     );
   }
