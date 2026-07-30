@@ -6,7 +6,12 @@ import type {
   RelayEventMessage,
   RelaySubscribeMessage,
 } from "@napplet/nap/relay";
+import { of } from "npm:rxjs@7.8.2";
+import { loadRuntimeConfig } from "../runtime/config.ts";
+import { createEventRuntime } from "../runtime/event_runtime.ts";
 import { createPortalRuntime } from "../runtime/portal_runtime.ts";
+import { RuntimeSettingsService } from "../runtime/settings.ts";
+import { SettingsStore } from "../runtime/settings_store.ts";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -76,4 +81,46 @@ Deno.test("verified Security Lab completes sign-in, handshake, and continuing re
     trace.filter((type) => type === "shell.init").length === 1,
     "shell.init must be exactly once",
   );
+});
+
+Deno.test("persisted settings reach a process-wide loader without restart", async () => {
+  const directory = await Deno.makeTempDir();
+  const settings = await RuntimeSettingsService.create(
+    new SettingsStore(`${directory}/settings.json`),
+    loadRuntimeConfig({}, () => undefined),
+  );
+  let requestedRelays: readonly string[] = [];
+  const eventRuntime = createEventRuntime({
+    request: (relays) => {
+      requestedRelays = [...relays];
+      return of(fixture.events.initial);
+    },
+  });
+  const runtime = createPortalRuntime({ fixture, settings, eventRuntime });
+
+  try {
+    await settings.save({
+      relays: ["wss://tracer.example"],
+      remoteSignerRelays: [],
+      blossomServers: ["https://blossom.example"],
+    });
+    const loaded = await runtime.loadEvent(fixture.events.initial.id);
+
+    assert(loaded?.id === fixture.events.initial.id, "loader should find event");
+    assert(
+      requestedRelays[0] === "wss://tracer.example/",
+      "next loader operation should use saved settings",
+    );
+    assert(
+      eventRuntime.eventStore.getEvent(loaded.id) === loaded,
+      "shared EventStore should own the loaded event",
+    );
+  } finally {
+    runtime.destroy();
+    runtime.destroy();
+    await Deno.remove(directory, { recursive: true });
+  }
+
+  assert(eventRuntime.destroyed, "event runtime should tear down deterministically");
+  assert(settings.destroyed, "settings stream should be released");
 });
