@@ -10,43 +10,43 @@ v1 is the complete Phase 1 MVP. Its original one-day vertical tracer remains the
 
 ### Phase 1 Vertical Slice
 
-- [ ] **MVP-01**: User can open a Napplet Portal shell that has replaced the Fresh starter UI with a simple mobile-first product shell.
-- [ ] **MVP-02**: User can load one known/test napplet in a sandboxed iframe from the portal shell.
-- [ ] **MVP-03**: The iframe host follows the reference-only `../napplet` contracts through pinned npm packages, or uses the canonical minimal source-bound adapter when the executable Deno import probe requires it.
-- [ ] **MVP-04**: The backend has a minimal runtime boundary that receives napplet messages and routes them through server-owned TypeScript code.
-- [ ] **MVP-05**: Napplet messages include correlation IDs and return success/error responses without the napplet directly accessing relays, signers, storage, or server internals.
+- [x] **MVP-01**: User can open a Napplet Portal shell that has replaced the Fresh starter UI with a simple mobile-first product shell.
+- [x] **MVP-02**: User can load one known/test napplet in a sandboxed iframe from the portal shell.
+- [x] **MVP-03**: The iframe host follows the reference-only `../napplet` contracts through pinned npm packages, or uses the canonical minimal source-bound adapter when the executable Deno import probe requires it.
+- [x] **MVP-04**: The backend has a minimal runtime boundary that receives napplet messages and routes them through server-owned TypeScript code.
+- [x] **MVP-05**: Napplet messages include correlation IDs and return success/error responses without the napplet directly accessing relays, signers, storage, or server internals.
 
 ### Sign-In MVP
 
-- [ ] **AUTH-01**: User can start a Nostr sign-in flow from the shell.
+- [x] **AUTH-01**: User can start a Nostr sign-in flow from the shell.
 - [ ] **AUTH-02**: MVP sign-in supports NIP-46 bunker URI input.
-- [ ] **AUTH-03**: MVP sign-in supports Nostr Connect QR-code display or handoff flow.
+- [x] **AUTH-03**: MVP sign-in supports Nostr Connect QR-code display or handoff flow.
 - [ ] **AUTH-04**: MVP sign-in supports `nsec` dev mode for fast local testing, with key material isolated from napplets and excluded from URLs/logs/browser-accessible storage.
 - [ ] **AUTH-05**: MVP explicitly documents read-only `npub` mode as deferred beyond the locked Phase 1 account modes; the former one-day deadline is not the reason for this boundary.
 - [ ] **AUTH-06**: User can see the active account/pubkey state in the shell after sign-in.
 
 ### Stream-First Applesauce Runtime
 
-- [ ] **STREAM-01**: Runtime code treats Nostr data as streams that continue updating rather than finite loads that become complete.
-- [ ] **STREAM-02**: Runtime code uses Applesauce/RxJS observables for relay/event/model flows where practical.
+- [x] **STREAM-01**: Runtime code treats Nostr data as streams that continue updating rather than finite loads that become complete.
+- [x] **STREAM-02**: Runtime code uses Applesauce/RxJS observables for relay/event/model flows where practical.
 - [ ] **STREAM-03**: Runtime code avoids nested subscriptions; stream composition should use RxJS operators or shared observable pipelines.
-- [ ] **STREAM-04**: Runtime code avoids unnecessary `async` flows that wait for all Nostr data before rendering or responding.
-- [ ] **STREAM-05**: UI shows partial/empty/updating stream states instead of blocking loading screens that wait for data to be complete.
+- [x] **STREAM-04**: Runtime code avoids unnecessary `async` flows that wait for all Nostr data before rendering or responding.
+- [x] **STREAM-05**: UI shows partial/empty/updating stream states instead of blocking loading screens that wait for data to be complete.
 - [ ] **STREAM-06**: The first napplet-facing data API can return an initial empty/partial value and then update through the selected stream/channel path.
-- [ ] **STREAM-07**: MVP leaves an explicit adapter/configuration seam for local Nostr relay and local Blossom server cache backends, even if durable caching is deferred.
+- [x] **STREAM-07**: MVP leaves an explicit adapter/configuration seam for local Nostr relay and local Blossom server cache backends, even if durable caching is deferred.
 
 ### Minimal NAP Surface
 
-- [ ] **NAP-01**: Napplet can complete a minimal shell/runtime handshake.
-- [ ] **NAP-02**: Napplet can request current identity/account state from the backend through a read-oriented API.
-- [ ] **NAP-03**: Napplet can receive at least one backend-proxied stream of Nostr-derived or fixture data.
-- [ ] **NAP-04**: Unsupported NAP methods fail with explicit typed errors rather than silent no-ops.
+- [x] **NAP-01**: Napplet can complete a minimal shell/runtime handshake.
+- [x] **NAP-02**: Napplet can request current identity/account state from the backend through a read-oriented API.
+- [x] **NAP-03**: Napplet can receive at least one backend-proxied stream of Nostr-derived or fixture data.
+- [x] **NAP-04**: Unsupported NAP methods fail with explicit typed errors rather than silent no-ops.
 
 ### MVP Quality Bar
 
-- [ ] **QUAL-01**: Implementation keeps backend runtime logic out of hydrated islands.
-- [ ] **QUAL-02**: Implementation keeps signers, key material, relay connections, and event stores on the backend side of the napplet boundary.
-- [ ] **QUAL-03**: `deno task check` passes for the MVP.
+- [x] **QUAL-01**: Implementation keeps backend runtime logic out of hydrated islands.
+- [x] **QUAL-02**: Implementation keeps signers, key material, relay connections, and event stores on the backend side of the napplet boundary.
+- [x] **QUAL-03**: `deno task check` passes for the MVP.
 - [ ] **QUAL-04**: MVP documentation clearly marks what is intentionally mocked, incomplete, or deferred.
 
 ## v2 Requirements
@@ -107,34 +107,35 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| MVP-01 | Phase 1 | Pending |
-| MVP-02 | Phase 1 | Pending |
-| MVP-03 | Phase 1 | Pending |
-| MVP-04 | Phase 1 | Pending |
-| MVP-05 | Phase 1 | Pending |
-| AUTH-01 | Phase 1 | Pending |
+| MVP-01 | Phase 1 | Complete |
+| MVP-02 | Phase 1 | Complete |
+| MVP-03 | Phase 1 | Complete |
+| MVP-04 | Phase 1 | Complete |
+| MVP-05 | Phase 1 | Complete |
+| AUTH-01 | Phase 1 | Complete |
 | AUTH-02 | Phase 1 | Pending |
-| AUTH-03 | Phase 1 | Pending |
+| AUTH-03 | Phase 1 | Complete |
 | AUTH-04 | Phase 1 | Pending |
 | AUTH-05 | Phase 1 | Pending |
 | AUTH-06 | Phase 1 | Pending |
-| STREAM-01 | Phase 1 | Pending |
-| STREAM-02 | Phase 1 | Pending |
+| STREAM-01 | Phase 1 | Complete |
+| STREAM-02 | Phase 1 | Complete |
 | STREAM-03 | Phase 1 | Pending |
-| STREAM-04 | Phase 1 | Pending |
-| STREAM-05 | Phase 1 | Pending |
+| STREAM-04 | Phase 1 | Complete |
+| STREAM-05 | Phase 1 | Complete |
 | STREAM-06 | Phase 1 | Pending |
-| STREAM-07 | Phase 1 | Pending |
-| NAP-01 | Phase 1 | Pending |
-| NAP-02 | Phase 1 | Pending |
-| NAP-03 | Phase 1 | Pending |
-| NAP-04 | Phase 1 | Pending |
-| QUAL-01 | Phase 1 | Pending |
-| QUAL-02 | Phase 1 | Pending |
-| QUAL-03 | Phase 1 | Pending |
+| STREAM-07 | Phase 1 | Complete |
+| NAP-01 | Phase 1 | Complete |
+| NAP-02 | Phase 1 | Complete |
+| NAP-03 | Phase 1 | Complete |
+| NAP-04 | Phase 1 | Complete |
+| QUAL-01 | Phase 1 | Complete |
+| QUAL-02 | Phase 1 | Complete |
+| QUAL-03 | Phase 1 | Complete |
 | QUAL-04 | Phase 1 | Pending |
 
 **Coverage:**
+
 - v1 requirements: 26 total
 - Mapped to phases: 26
 - Unmapped: 0

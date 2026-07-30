@@ -2,18 +2,18 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_phase: 1
-current_phase_name: One-Day Napplet Runtime MVP
-status: paused
-stopped_at: "Phase 1 Plan 01-01 Task 1: blocking-human package legitimacy approval required before installation"
-last_updated: "2026-07-30T12:03:11.731Z"
+current_phase: 01
+current_phase_name: one-day-napplet-runtime-mvp
+status: executing
+stopped_at: Completed 01-01-PLAN.md
+last_updated: "2026-07-30T12:50:36.983Z"
 last_activity: 2026-07-30
-last_activity_desc: Phase 1 plans finalized for the full locked runtime MVP, with a one-day target only for the first vertical tracer checkpoint.
+last_activity_desc: Phase 01 execution started
 progress:
   total_phases: 1
   completed_phases: 0
   total_plans: 6
-  completed_plans: 0
+  completed_plans: 1
 ---
 
 # Project State
@@ -23,16 +23,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-30)
 
 **Core value:** A napplet can run in a mobile browser while a server-side Deno runtime handles the heavy Nostr/runtime work.
-**Current focus:** Phase 1: One-Day Napplet Runtime MVP
+**Current focus:** Phase 01 — one-day-napplet-runtime-mvp
 
 ## Current Position
 
-Phase: 1 of 3 (One-Day Napplet Runtime MVP)
-Plan: TBD in current phase
-Status: Paused at blocking-human package verification checkpoint
-Last activity: 2026-07-30 - Phase 1 plans finalized for the full locked runtime MVP, with a one-day target only for the first vertical tracer checkpoint.
+Phase: 01 (one-day-napplet-runtime-mvp) — EXECUTING
+Plan: 2 of 6
+Status: Ready to execute
+Last activity: 2026-07-30 — Phase 01 execution started
 
-Progress: [----------] 0%
+Progress: [██░░░░░░░░] 17%
 
 ## Performance Metrics
 
@@ -56,6 +56,11 @@ Progress: [----------] 0%
 - Trend: N/A
 
 *Updated after each plan completion*
+**Per-Plan Metrics:**
+
+| Plan | Duration | Tasks | Files |
+|------|----------|-------|-------|
+| Phase 01 P01 | 18min | 3 tasks | 32 files |
 
 ## Accumulated Context
 
@@ -69,6 +74,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Runtime Style]: Applesauce/RxJS usage should be stream-first, avoid nested subscriptions, and avoid UI flows that wait for Nostr data to be complete.
 - [Cache Backends]: Runtime should support local Nostr relays and local Blossom servers so napplet events/blobs can be cached locally instead of always loading from public relays/servers.
 - [Roadmap]: Future phases expand backend Nostr runtime, Kehto/napplet contracts, NAP API breadth, policy, diagnostics, and production hardening.
+- [Phase ?]: Use ../napplet only as a reference source; production imports use pinned npm packages.
+- [Phase ?]: Verify manifest signature, aggregate, and Blossom bytes before srcdoc injection.
 
 ### Pending Todos
 
@@ -90,6 +97,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-07-30T12:07:39.453Z
-Stopped at: Phase 1 Plan 01-01 Task 1: blocking-human package legitimacy approval required before installation
-Resume file: .planning/phases/01-one-day-napplet-runtime-mvp/.continue-here.md
+Last session: 2026-07-30T12:50:36.974Z
+Stopped at: Completed 01-01-PLAN.md
+Resume file: None
