@@ -144,3 +144,14 @@ When executing Phase 1, deliver the one-day-targeted sign-in → supplied verifi
 - Deliver the locked local relay/local Blossom endpoint and in-memory adapter seams; defer only durable cache policy and synchronization beyond Phase 1.
 - Prefer explicit TODO/deferred notes over building broad settings, approvals, NAP domains, or production storage immediately.
 - Treat `nsec` as dev mode, not a production key-custody decision.
+
+## Backlog
+
+### Phase 999.1: Installed napplets launchable from home via naddr (BACKLOG)
+
+**Goal:** Users can maintain an installed list of napplets, launch them from the home page, and initially install a napplet by pasting its `naddr` so the portal can fetch and add it.
+**Requirements:** TBD
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (promote with $gsd-review-backlog when ready)
