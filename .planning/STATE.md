@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_phase: 01
-current_phase_name: one-day-napplet-runtime-mvp
-status: executing
-stopped_at: Completed 01-06-PLAN.md; verification/UAT pending
-last_updated: "2026-07-30T17:53:00Z"
+current_phase: 2
+current_phase_name: Backend Runtime Expansion
+status: planning
+stopped_at: Phase 01 complete, ready to discuss Phase 2
+last_updated: "2026-07-30T18:27:15.053Z"
 last_activity: 2026-07-30
-last_activity_desc: "Completed quick task 260730-pcm: repaired Phase 01 API coverage preflight"
+last_activity_desc: Phase 01 complete, transitioned to Phase 2
 progress:
-  total_phases: 1
-  completed_phases: 0
+  total_phases: 3
+  completed_phases: 1
   total_plans: 6
   completed_plans: 6
 ---
@@ -23,14 +23,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-30)
 
 **Core value:** A napplet can run in a mobile browser while a server-side Deno runtime handles the heavy Nostr/runtime work.
-**Current focus:** Phase 01 — one-day-napplet-runtime-mvp
+**Current focus:** Phase 2 — Backend Runtime Expansion
 
 ## Current Position
 
-Phase: 01 (one-day-napplet-runtime-mvp) — VERIFYING
-Plan: 6 of 6
-Status: Ready for phase verification and supplied-napplet UAT
-Last activity: 2026-07-30 — Completed quick task 260730-pcm: repaired Phase 01 API coverage preflight
+Phase: 2 — Backend Runtime Expansion
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-07-30 — Phase 01 complete, transitioned to Phase 2
 
 Progress: [██████████] 100%
 
@@ -38,7 +38,7 @@ Progress: [██████████] 100%
 
 **Velocity:**
 
-- Total plans completed: 0
+- Total plans completed: 6
 - Average duration: N/A
 - Total execution time: 0.0 hours
 
@@ -46,7 +46,7 @@ Progress: [██████████] 100%
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 1. One-Day Napplet Runtime MVP | 0/TBD | - | - |
+| 1. One-Day Napplet Runtime MVP | 6/6 | 99min | 17min |
 | 2. Backend Runtime Expansion | 0/TBD | - | - |
 | 3. NAP Coverage, Policy, and Production Hardening | 0/TBD | - | - |
 
@@ -79,16 +79,11 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Runtime Style]: Applesauce/RxJS usage should be stream-first, avoid nested subscriptions, and avoid UI flows that wait for Nostr data to be complete.
 - [Cache Backends]: Runtime should support local Nostr relays and local Blossom servers so napplet events/blobs can be cached locally instead of always loading from public relays/servers.
 - [Roadmap]: Future phases expand backend Nostr runtime, Kehto/napplet contracts, NAP API breadth, policy, diagnostics, and production hardening.
-- [Phase ?]: Use ../napplet only as a reference source; production imports use pinned npm packages.
-- [Phase ?]: Verify manifest signature, aggregate, and Blossom bytes before srcdoc injection.
-- [Phase ?]: PortalAccounts requires the process-wide NIP-46 relay methods and never creates a second pool.
-- [Phase ?]: Persist complete Applesauce account JSON with a portal-owned activeAccountId sidecar.
-- [Phase ?]: Hold each verified artifact version until process restart or explicit retry.
-- [Phase ?]: Reconnect replaces the socket sender while preserving connection-owned windows and logical subscriptions through grace.
-- [Phase ?]: Register verified iframe identity before assigning srcdoc bytes.
-- [Phase ?]: Keep Home, Profile, and napplet views mounted and switch visibility with inert state.
-- [Phase ?]: Compose RELAY cache and pool sources in one RxJS subscription with centralized dedupe.
-- [Phase ?]: OUTBOX publishes succeed only after every required preset/NIP-65 relay accepts.
+- [Phase 1]: Production imports use pinned npm packages; sibling packages remain reference-only.
+- [Phase 1]: Verify manifest signature, aggregate, and Blossom bytes before srcdoc injection.
+- [Phase 1]: Process-owned signer and relay services survive transient browser sessions.
+- [Phase 1]: Reconnect preserves connection-owned windows and logical subscriptions through grace.
+- [Phase 1]: RELAY and OUTBOX use composed streams with centralized dedupe and complete required publish settlement.
 
 ### Pending Todos
 
@@ -96,9 +91,8 @@ None yet.
 
 ### Blockers/Concerns
 
-- The user-supplied napplet coordinate/artifact is a blocking Wave 0 prerequisite; no authored or synthetic example may substitute for its contract fixture.
-- Plan verification proceeded by explicit user override with two accepted findings: the Wave 0 tracer task is larger than the checker threshold, and artifact-dependent research questions remain execution prerequisites until the supplied artifact is available.
-- Catalog breadth, multi-user authentication, approval UX, durable cache policy, and NAP domains beyond SHELL, IDENTITY, RELAY, and OUTBOX remain deferred.
+- [Phase 2+] Catalog breadth, multi-user authentication, approval UX, durable cache policy, and NAP domains beyond SHELL, IDENTITY, RELAY, and OUTBOX remain deferred.
+- [Phase 2] Fresh 2.3/Vite middleware cannot exercise WebSocket upgrades under `deno task dev`; use the production build/start path for runtime transport checks.
 
 ### Quick Tasks Completed
 
@@ -118,6 +112,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-07-30T13:24:09.739Z
-Stopped at: Completed 01-05-PLAN.md
+Last session: 2026-07-30T18:27:15Z
+Stopped at: Phase 01 complete, ready to discuss Phase 2
 Resume file: None

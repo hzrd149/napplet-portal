@@ -47,7 +47,7 @@ v1 is the complete Phase 1 MVP. Its original one-day vertical tracer remains the
 - [x] **QUAL-01**: Implementation keeps backend runtime logic out of hydrated islands.
 - [x] **QUAL-02**: Implementation keeps signers, key material, relay connections, and event stores on the backend side of the napplet boundary.
 - [x] **QUAL-03**: `deno task check` passes for the MVP.
-- [ ] **QUAL-04**: MVP documentation clearly marks what is intentionally mocked, incomplete, or deferred.
+- [x] **QUAL-04**: MVP documentation clearly marks what is intentionally mocked, incomplete, or deferred.
 
 ## v2 Requirements
 
@@ -132,7 +132,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | QUAL-01 | Phase 1 | Complete |
 | QUAL-02 | Phase 1 | Complete |
 | QUAL-03 | Phase 1 | Complete |
-| QUAL-04 | Phase 1 | Pending |
+| QUAL-04 | Phase 1 | Complete |
 
 **Coverage:**
 

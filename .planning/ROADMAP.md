@@ -15,7 +15,7 @@ The roadmap intentionally avoids building everything at once. Phase 1 is the MVP
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Napplet Runtime MVP** - User can sign in, load one sandboxed napplet, and use the complete locked backend-proxied stream runtime seam.
+- [x] **Phase 1: Napplet Runtime MVP** - User can sign in, load one sandboxed napplet, and use the complete locked backend-proxied stream runtime seam. (completed 2026-07-30)
 - [ ] **Phase 2: Backend Runtime Expansion** - Backend grows from MVP seam into durable Applesauce relay/event/account runtime with local relay/blob caching and Kehto contract integration.
 - [ ] **Phase 3: NAP Coverage, Policy, and Production Hardening** - Runtime expands NAP domains, approval persistence, mobile diagnostics, and deployment/security controls.
 
@@ -97,7 +97,7 @@ Phases execute in numeric order: 1 -> 2 -> 3
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Napplet Runtime MVP | 6/6 | Verification/UAT Pending |  |
+| 1. Napplet Runtime MVP | 6/6 | Complete    | 2026-07-30 |
 | 2. Backend Runtime Expansion | 0/TBD | Future expansion | - |
 | 3. NAP Coverage, Policy, and Production Hardening | 0/TBD | Future expansion | - |
 
@@ -154,6 +154,7 @@ When executing Phase 1, deliver the one-day-targeted sign-in → supplied verifi
 **Plans:** 0 plans
 
 Plans:
+
 - [ ] TBD (promote with $gsd-review-backlog when ready)
 
 ### Phase 999.2: App shell dark and light themes (BACKLOG)
@@ -163,6 +164,7 @@ Plans:
 **Plans:** 0 plans
 
 Plans:
+
 - [ ] TBD (promote with $gsd-review-backlog when ready)
 
 ### Phase 999.3: NAP-RESOURCE resolution for HTTP, Blossom, and BUD-10 URLs (BACKLOG)
@@ -172,6 +174,7 @@ Plans:
 **Plans:** 0 plans
 
 Plans:
+
 - [ ] TBD (promote with $gsd-review-backlog when ready)
 
 ### Phase 999.4: NAP-UPLOAD API with configured Blossom servers (BACKLOG)
@@ -181,6 +184,7 @@ Plans:
 **Plans:** 0 plans
 
 Plans:
+
 - [ ] TBD (promote with $gsd-review-backlog when ready)
 
 ### Phase 999.5: Searchable installed napplets on the home page (BACKLOG)
@@ -190,6 +194,7 @@ Plans:
 **Plans:** 0 plans
 
 Plans:
+
 - [ ] TBD (promote with $gsd-review-backlog when ready)
 
 ### Phase 999.6: Full NAP-COMMON support with Applesauce APIs (BACKLOG)
@@ -199,6 +204,7 @@ Plans:
 **Plans:** 0 plans
 
 Plans:
+
 - [ ] TBD (promote with $gsd-review-backlog when ready)
 
 ### Phase 999.7: Custom SVG vector app icon (BACKLOG)
@@ -208,6 +214,7 @@ Plans:
 **Plans:** 0 plans
 
 Plans:
+
 - [ ] TBD (promote with $gsd-review-backlog when ready)
 
 ### Phase 999.8: NAP-INTENT cross-napplet navigation (BACKLOG)
@@ -217,6 +224,7 @@ Plans:
 **Plans:** 0 plans
 
 Plans:
+
 - [ ] TBD (promote with $gsd-review-backlog when ready)
 
 ### Phase 999.9: Home header account card and compact bottom nav (BACKLOG)
@@ -226,6 +234,7 @@ Plans:
 **Plans:** 0 plans
 
 Plans:
+
 - [ ] TBD (promote with $gsd-review-backlog when ready)
 
 ### Phase 999.10: Cyberpunk backend connection loading sequence (BACKLOG)
@@ -235,6 +244,7 @@ Plans:
 **Plans:** 0 plans
 
 Plans:
+
 - [ ] TBD (promote with $gsd-review-backlog when ready)
 
 ### Phase 999.11: Backend runtime backoff reconnection for mobile tabs (BACKLOG)
@@ -244,4 +254,5 @@ Plans:
 **Plans:** 0 plans
 
 Plans:
+
 - [ ] TBD (promote with $gsd-review-backlog when ready)
