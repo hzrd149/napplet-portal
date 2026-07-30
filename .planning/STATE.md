@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 01
 current_phase_name: one-day-napplet-runtime-mvp
 status: executing
-stopped_at: Completed 01-01-PLAN.md
-last_updated: "2026-07-30T12:50:36.983Z"
+stopped_at: Completed 01-02-PLAN.md
+last_updated: "2026-07-30T12:58:11.839Z"
 last_activity: 2026-07-30
 last_activity_desc: Phase 01 execution started
 progress:
   total_phases: 1
   completed_phases: 0
   total_plans: 6
-  completed_plans: 1
+  completed_plans: 2
 ---
 
 # Project State
@@ -28,11 +28,11 @@ See: .planning/PROJECT.md (updated 2026-07-30)
 ## Current Position
 
 Phase: 01 (one-day-napplet-runtime-mvp) — EXECUTING
-Plan: 2 of 6
+Plan: 3 of 6
 Status: Ready to execute
 Last activity: 2026-07-30 — Phase 01 execution started
 
-Progress: [██░░░░░░░░] 17%
+Progress: [███░░░░░░░] 33%
 
 ## Performance Metrics
 
@@ -61,6 +61,7 @@ Progress: [██░░░░░░░░] 17%
 | Plan | Duration | Tasks | Files |
 |------|----------|-------|-------|
 | Phase 01 P01 | 18min | 3 tasks | 32 files |
+| Phase 01 P02 | 5min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -76,6 +77,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Roadmap]: Future phases expand backend Nostr runtime, Kehto/napplet contracts, NAP API breadth, policy, diagnostics, and production hardening.
 - [Phase ?]: Use ../napplet only as a reference source; production imports use pinned npm packages.
 - [Phase ?]: Verify manifest signature, aggregate, and Blossom bytes before srcdoc injection.
+- [Phase ?]: PortalAccounts requires the process-wide NIP-46 relay methods and never creates a second pool.
+- [Phase ?]: Persist complete Applesauce account JSON with a portal-owned activeAccountId sidecar.
 
 ### Pending Todos
 
@@ -97,6 +100,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-07-30T12:50:36.974Z
-Stopped at: Completed 01-01-PLAN.md
+Last session: 2026-07-30T12:58:11.830Z
+Stopped at: Completed 01-02-PLAN.md
 Resume file: None

@@ -19,11 +19,11 @@ v1 is the complete Phase 1 MVP. Its original one-day vertical tracer remains the
 ### Sign-In MVP
 
 - [x] **AUTH-01**: User can start a Nostr sign-in flow from the shell.
-- [ ] **AUTH-02**: MVP sign-in supports NIP-46 bunker URI input.
+- [x] **AUTH-02**: MVP sign-in supports NIP-46 bunker URI input.
 - [x] **AUTH-03**: MVP sign-in supports Nostr Connect QR-code display or handoff flow.
-- [ ] **AUTH-04**: MVP sign-in supports `nsec` dev mode for fast local testing, with key material isolated from napplets and excluded from URLs/logs/browser-accessible storage.
-- [ ] **AUTH-05**: MVP explicitly documents read-only `npub` mode as deferred beyond the locked Phase 1 account modes; the former one-day deadline is not the reason for this boundary.
-- [ ] **AUTH-06**: User can see the active account/pubkey state in the shell after sign-in.
+- [x] **AUTH-04**: MVP sign-in supports `nsec` dev mode for fast local testing, with key material isolated from napplets and excluded from URLs/logs/browser-accessible storage.
+- [x] **AUTH-05**: MVP explicitly documents read-only `npub` mode as deferred beyond the locked Phase 1 account modes; the former one-day deadline is not the reason for this boundary.
+- [x] **AUTH-06**: User can see the active account/pubkey state in the shell after sign-in.
 
 ### Stream-First Applesauce Runtime
 
@@ -113,11 +113,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | MVP-04 | Phase 1 | Complete |
 | MVP-05 | Phase 1 | Complete |
 | AUTH-01 | Phase 1 | Complete |
-| AUTH-02 | Phase 1 | Pending |
+| AUTH-02 | Phase 1 | Complete |
 | AUTH-03 | Phase 1 | Complete |
-| AUTH-04 | Phase 1 | Pending |
-| AUTH-05 | Phase 1 | Pending |
-| AUTH-06 | Phase 1 | Pending |
+| AUTH-04 | Phase 1 | Complete |
+| AUTH-05 | Phase 1 | Complete |
+| AUTH-06 | Phase 1 | Complete |
 | STREAM-01 | Phase 1 | Complete |
 | STREAM-02 | Phase 1 | Complete |
 | STREAM-03 | Phase 1 | Pending |
