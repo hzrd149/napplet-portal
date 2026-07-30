@@ -25,6 +25,12 @@ Deno.test("Fresh composition is singleton, loopback-safe, and starter-free", asy
     !main.includes("api2") && !main.includes("exampleLogger"),
     "starter routes must be gone",
   );
+  try {
+    await Deno.stat("routes/api/[name].tsx");
+    throw new Error("starter greeting route must be removed");
+  } catch (error) {
+    if (!(error instanceof Deno.errors.NotFound)) throw error;
+  }
   assert(
     !utils.includes("shared: string"),
     "starter request state must be gone",
