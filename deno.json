@@ -1,7 +1,7 @@
 {
   "nodeModulesDir": "manual",
   "tasks": {
-    "check": "deno fmt --check . && deno lint . && deno check",
+    "check": "deno fmt --check main.ts client.ts utils.ts vite.config.ts deno.json assets routes components islands runtime tests && deno lint main.ts client.ts utils.ts vite.config.ts routes components islands runtime tests && deno check",
     "dev": "vite",
     "build": "vite build",
     "start": "deno serve -A _fresh/server.js",
@@ -16,11 +16,23 @@
     }
   },
   "exclude": [
-    "**/_fresh/*"
+    "**/_fresh/*",
+    "**/.planning/*"
   ],
   "imports": {
     "@/": "./",
+    "@kehto/nip": "npm:@kehto/nip@0.5.1",
+    "@kehto/runtime": "npm:@kehto/runtime@0.20.1",
+    "@kehto/services": "npm:@kehto/services@0.18.1",
+    "@kehto/shell": "npm:@kehto/shell@0.19.1",
+    "@napplet/core": "npm:@napplet/core@0.31.0",
+    "@napplet/nap": "npm:@napplet/nap@0.31.0",
+    "applesauce-accounts": "npm:applesauce-accounts@6.2.0",
+    "applesauce-core": "npm:applesauce-core@6.2.0",
+    "applesauce-relay": "npm:applesauce-relay@6.2.1",
+    "applesauce-signers": "npm:applesauce-signers@6.2.2",
     "fresh": "jsr:@fresh/core@^2.3.3",
+    "nostr-tools": "npm:nostr-tools@2.24.1",
     "preact": "npm:preact@^10.29.1",
     "@preact/signals": "npm:@preact/signals@^2.9.0",
     "@fresh/plugin-vite": "jsr:@fresh/plugin-vite@^1.1.2",

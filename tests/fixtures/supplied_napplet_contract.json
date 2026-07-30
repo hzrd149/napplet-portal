@@ -1,0 +1,110 @@
+{
+  "coordinate": "naddr1qvzqqqyf8ypzpem34u9stj8ftlxldl4n2qz5f5hmrnxns3uga86fpwe7u28ga4n0qqx8xetrw4exjare94kxzcsuktmwx",
+  "identity": {
+    "eventId": "b5fe654330fff38ad3c3d27f462aa1e47272620a1f5074e4033b1417b177591f",
+    "pubkey": "e771af0b05c8e95fcdf6feb3500544d2fb1ccd384788e9f490bb3ee28e8ed66f",
+    "kind": 35129,
+    "identifier": "security-lab",
+    "aggregateHash": "663a7d0bc4fcff9af5014ce2f5948826fefa7c5307e047eacc94470e1099c2ae"
+  },
+  "manifestEvent": {
+    "kind": 35129,
+    "id": "b5fe654330fff38ad3c3d27f462aa1e47272620a1f5074e4033b1417b177591f",
+    "pubkey": "e771af0b05c8e95fcdf6feb3500544d2fb1ccd384788e9f490bb3ee28e8ed66f",
+    "created_at": 1784885404,
+    "tags": [
+      ["d", "security-lab"],
+      [
+        "path",
+        "/index.html",
+        "05570ec277fda70751b374d3fe6b33019ce11aacf9d56c7e176e3605cd80dc55"
+      ],
+      [
+        "x",
+        "663a7d0bc4fcff9af5014ce2f5948826fefa7c5307e047eacc94470e1099c2ae",
+        "aggregate"
+      ],
+      ["server", "https://blssm.us"],
+      ["server", "https://cdn.hzrd149.com"],
+      ["server", "https://nostr.download"],
+      ["requires", "identity"],
+      ["requires", "inc"],
+      ["requires", "relay"],
+      ["requires", "resource"],
+      ["requires", "storage"],
+      ["requires", "theme"],
+      ["title", "Security Lab"],
+      ["description", "Tests a napplet's sandbox"]
+    ],
+    "content": "",
+    "sig": "ffe8716a71aa4fc92060d7c17a59ffb85f15b8e78d1fd9120e0fe1dba0100efd38c1dbfff44a75dd63adbfa3df8ad25e8758f794cdf1947929608719fdc064fb"
+  },
+  "artifact": {
+    "singleFile": true,
+    "path": "/index.html",
+    "sha256": "05570ec277fda70751b374d3fe6b33019ce11aacf9d56c7e176e3605cd80dc55",
+    "byteLength": 531120,
+    "relativeAssetBehavior": "none; scripts and styles are inline in the verified index.html",
+    "servers": [
+      "https://blssm.us",
+      "https://cdn.hzrd149.com",
+      "https://nostr.download"
+    ]
+  },
+  "requiredDomains": [
+    "identity",
+    "inc",
+    "relay",
+    "resource",
+    "storage",
+    "theme"
+  ],
+  "iframe": {
+    "sandbox": "allow-scripts",
+    "opaqueOrigin": true
+  },
+  "envelopes": {
+    "shellReady": { "type": "shell.ready" },
+    "shellInit": {
+      "type": "shell.init",
+      "capabilities": { "domains": ["identity", "relay"] },
+      "services": ["identity", "relay"]
+    },
+    "relayQueryObservedInArtifact": {
+      "type": "relay.query",
+      "id": "security-lab-runtime-query",
+      "filters": [{ "kinds": [0], "limit": 1 }]
+    },
+    "relaySubscribe": {
+      "type": "relay.subscribe",
+      "id": "security-lab-stream-request",
+      "subId": "security-lab-stream",
+      "filters": [{ "kinds": [1], "limit": 2 }]
+    }
+  },
+  "events": {
+    "initial": {
+      "id": "1111111111111111111111111111111111111111111111111111111111111111",
+      "pubkey": "e771af0b05c8e95fcdf6feb3500544d2fb1ccd384788e9f490bb3ee28e8ed66f",
+      "created_at": 1784885404,
+      "kind": 1,
+      "tags": [],
+      "content": "initial stored tracer event",
+      "sig": "11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111"
+    },
+    "live": {
+      "id": "2222222222222222222222222222222222222222222222222222222222222222",
+      "pubkey": "e771af0b05c8e95fcdf6feb3500544d2fb1ccd384788e9f490bb3ee28e8ed66f",
+      "created_at": 1784885405,
+      "kind": 1,
+      "tags": [],
+      "content": "later live tracer update",
+      "sig": "22222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222"
+    }
+  },
+  "evidence": {
+    "coordinateDecodedWith": "nak v0.20.2",
+    "manifestFetchedWith": "nak req --outbox",
+    "blobVerified": true
+  }
+}

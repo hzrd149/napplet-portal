@@ -1,6 +1,11 @@
 import fixture from "./fixtures/supplied_napplet_contract.json" with {
   type: "json",
 };
+import type {
+  RelayEoseMessage,
+  RelayEventMessage,
+  RelaySubscribeMessage,
+} from "@napplet/nap/relay";
 import { createPortalRuntime } from "../runtime/portal_runtime.ts";
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -44,9 +49,9 @@ Deno.test("verified Security Lab completes sign-in, handshake, and continuing re
   bridge.receive(source, { type: "shell.ready" });
   bridge.receive({}, { type: "shell.ready" });
 
-  const messages: Array<Record<string, unknown>> = [];
+  const messages: Array<RelayEventMessage | RelayEoseMessage> = [];
   const subscription = bridge.subscribeRelay(
-    fixture.envelopes.relaySubscribe,
+    fixture.envelopes.relaySubscribe as RelaySubscribeMessage,
     (message) => messages.push(message),
   );
   runtime.relay.emitLive(fixture.events.live);
