@@ -191,3 +191,12 @@ Plans:
 
 Plans:
 - [ ] TBD (promote with $gsd-review-backlog when ready)
+
+### Phase 999.6: Full NAP-COMMON support with Applesauce APIs (BACKLOG)
+
+**Goal:** Runtime fully supports NAP-COMMON so other users' profiles and common Nostr data can be easily loaded, using Applesauce packages' simple APIs where available and reviewing examples and documentation before writing custom implementation.
+**Requirements:** TBD
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (promote with $gsd-review-backlog when ready)
