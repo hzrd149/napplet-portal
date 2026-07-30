@@ -1,10 +1,29 @@
 import { App, staticFiles } from "fresh";
+import { RelayPool } from "applesauce-relay";
+import { AccountStore } from "./runtime/account_store.ts";
+import { PortalAccounts } from "./runtime/accounts.ts";
 import { loadRuntimeConfig, type RuntimeConfig } from "./runtime/config.ts";
 import { runtime as portalRuntime } from "./routes/api/runtime.ts";
+import { SignerConnectionService } from "./runtime/signer_service.ts";
 import { type State } from "./utils.ts";
 
 export const runtimeConfig = loadRuntimeConfig();
 export const processRuntime = portalRuntime;
+const signerAccounts = new PortalAccounts(
+  new AccountStore(".data/accounts.json"),
+  {
+    remoteSignerRelays: runtimeConfig.remoteSignerRelays,
+    pool: new RelayPool(),
+  },
+);
+let restoredSignerAccounts: Promise<unknown> | undefined;
+export const signerService = new SignerConnectionService({
+  startNostrConnect: async (abort) => {
+    await (restoredSignerAccounts ??= signerAccounts.restore());
+    return await signerAccounts.startNostrConnect(abort);
+  },
+  signOut: () => signerAccounts.signOut(),
+});
 
 export function startupSummary(
   config: RuntimeConfig,
@@ -27,6 +46,7 @@ app.use(staticFiles());
 app.use((ctx) => {
   ctx.state.config = runtimeConfig;
   ctx.state.runtime = portalRuntime;
+  ctx.state.signer = signerService;
   return ctx.next();
 });
 app.fsRoutes();

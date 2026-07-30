@@ -5,44 +5,18 @@ import type {
   RelayQueryMessage,
   RelaySubscribeMessage,
 } from "@napplet/nap/relay";
-import { RelayPool } from "applesauce-relay";
-import { AccountStore } from "../../runtime/account_store.ts";
-import { PortalAccounts } from "../../runtime/accounts.ts";
-import type { RuntimeConfig } from "../../runtime/config.ts";
 import { ConnectionRegistry } from "../../runtime/connections.ts";
 import { createPortalRuntime } from "../../runtime/portal_runtime.ts";
 import { decodeClientMessage } from "../../runtime/transport.ts";
 import { define } from "../../utils.ts";
 
 export const runtime = createPortalRuntime({ fixture });
-const signerPool = new RelayPool();
-let signerAccounts: PortalAccounts | undefined;
-let restoreAccounts: Promise<unknown> | undefined;
-
-async function accountAuthority(
-  config: RuntimeConfig,
-): Promise<PortalAccounts> {
-  if (!signerAccounts) {
-    signerAccounts = new PortalAccounts(
-      new AccountStore(".data/accounts.json"),
-      {
-        remoteSignerRelays: config.remoteSignerRelays,
-        pool: signerPool,
-      },
-    );
-    restoreAccounts = signerAccounts.restore();
-  }
-  await restoreAccounts;
-  return signerAccounts;
-}
-
 const sessions = new Map<
   string,
   {
     readonly windowId: string;
     readonly source: object;
     readonly bridge: ReturnType<typeof runtime.openWindow>;
-    signerAbort?: AbortController;
   }
 >();
 const connections = new ConnectionRegistry({
@@ -80,6 +54,7 @@ export const handler = define.handlers({
       sessions.set(connection.connectionId, session);
     }
     const { windowId, bridge } = session;
+    let signerProjection: { unsubscribe(): void } | undefined;
     socket.addEventListener("open", () => {
       socket.send(JSON.stringify({
         type: "runtime.connected",
@@ -88,9 +63,30 @@ export const handler = define.handlers({
         windowId,
         resumed: connection.resumed,
       }));
+      const signer = ctx.state.signer;
+      signerProjection = signer.state$.subscribe((state) => {
+        if (socket.readyState !== WebSocket.OPEN) return;
+        if (state.status === "awaiting") {
+          socket.send(JSON.stringify({
+            type: "runtime.signer.pending",
+            uri: state.uri,
+          }));
+          return;
+        }
+        if (state.status === "error") {
+          socket.send(JSON.stringify({
+            type: "runtime.signer.error",
+            error: state.message,
+          }));
+          return;
+        }
+        if (state.status === "active" && state.identity.pubkey) {
+          void sendActiveSigner(state.identity.pubkey);
+        }
+      });
     });
     socket.addEventListener("close", () => {
-      session?.signerAbort?.abort();
+      signerProjection?.unsubscribe();
       connections.detach(connection.connectionId);
     });
     socket.addEventListener("message", async (event) => {
@@ -115,39 +111,12 @@ export const handler = define.handlers({
             }));
             return;
           }
-          session.signerAbort?.abort();
-          const controller = new AbortController();
-          session.signerAbort = controller;
-          const abort = AbortSignal.any([
-            controller.signal,
-            AbortSignal.timeout(120_000),
-          ]);
-          const accounts = await accountAuthority(ctx.state.config);
-          const pending = await accounts.startNostrConnect(abort);
-          socket.send(JSON.stringify({
-            type: "runtime.signer.pending",
-            uri: pending.uri,
-          }));
-          const identity = await pending.connected;
-          if (!identity.pubkey) {
-            throw new Error("Remote signer has no public key");
-          }
-          const account = runtime.signIn(identity.pubkey);
-          const artifact = await runtime.resolveArtifact();
-          socket.send(JSON.stringify({
-            type: "runtime.artifact",
-            srcdoc: artifact.indexHtml,
-            identity: {
-              dTag: artifact.dTag,
-              aggregateHash: artifact.aggregateHash,
-            },
-            account,
-          }));
-          session.signerAbort = undefined;
+          ctx.state.signer.start();
           return;
         }
         if (message.type === "runtime.signout") {
           runtime.signOut();
+          await ctx.state.signer.signOut();
           socket.send(
             JSON.stringify({ type: "runtime.identity", account: null }),
           );
@@ -201,6 +170,29 @@ export const handler = define.handlers({
         );
       }
     });
+
+    async function sendActiveSigner(pubkey: string): Promise<void> {
+      try {
+        const account = runtime.signIn(pubkey);
+        const artifact = await runtime.resolveArtifact();
+        if (socket.readyState !== WebSocket.OPEN) return;
+        socket.send(JSON.stringify({
+          type: "runtime.artifact",
+          srcdoc: artifact.indexHtml,
+          identity: {
+            dTag: artifact.dTag,
+            aggregateHash: artifact.aggregateHash,
+          },
+          account,
+        }));
+      } catch {
+        if (socket.readyState !== WebSocket.OPEN) return;
+        socket.send(JSON.stringify({
+          type: "runtime.signer.error",
+          error: "Verified napplet could not be opened",
+        }));
+      }
+    }
     return response;
   },
 });

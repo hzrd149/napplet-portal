@@ -52,6 +52,7 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
   const iframe = useRef<HTMLIFrameElement | null>(null);
   const owner = useRef<{ connectionId: string; windowId: string } | null>(null);
   const reconnectToken = useRef<string | null>(null);
+  const signInMethod = useRef<"connect" | "bunker" | "nsec">("connect");
   const copyTimer = useRef<number | null>(null);
   const signOutDialog = useRef<HTMLDialogElement | null>(null);
   const registered = useRef<
@@ -104,6 +105,7 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
   function openSocket(method: "connect" | "bunker" | "nsec" = "connect"): void {
     if (!coordinate) return;
     setConnecting(true);
+    signInMethod.current = method;
     setSignInError("");
     setNotice(null);
     socket.current?.close();
@@ -115,9 +117,6 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
       `${protocol}//${location.host}/api/runtime${token}`,
     );
     socket.current = ws;
-    ws.addEventListener("open", () => {
-      ws.send(JSON.stringify({ type: "runtime.start", coordinate, method }));
-    });
     ws.addEventListener("message", (event) => receiveRuntimeMessage(event));
     ws.addEventListener("error", () => {
       setConnecting(false);
@@ -154,6 +153,11 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
         windowId: message.windowId,
       };
       reconnectToken.current = message.reconnectToken;
+      socket.current?.send(JSON.stringify({
+        type: "runtime.start",
+        coordinate,
+        method: signInMethod.current,
+      }));
       return;
     }
     if (message.type === "runtime.event" && message.message) {

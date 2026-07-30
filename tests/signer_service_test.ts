@@ -30,10 +30,11 @@ Deno.test("signer service replays URI before approval and survives projection cl
   const uri =
     "nostrconnect://client?relay=wss%3A%2F%2Fbucket.coracle.social%2F";
   const accounts: SignerAccountsPort = {
-    startNostrConnect: () => Promise.resolve({
-      uri,
-      connected: approval.promise,
-    }),
+    startNostrConnect: () =>
+      Promise.resolve({
+        uri,
+        connected: approval.promise,
+      }),
   };
   const service = new SignerConnectionService(accounts, { timeoutMs: 5_000 });
 
@@ -46,19 +47,40 @@ Deno.test("signer service replays URI before approval and survives projection cl
   const projection = service.state$.subscribe((state) => {
     projected.push(state.status);
   });
-  assert(projected[0] === "awaiting", "late endpoint must receive current URI state");
+  assert(
+    projected[0] === "awaiting",
+    "late endpoint must receive current URI state",
+  );
   projection.unsubscribe();
 
-  approval.resolve({ accountId: "remote", pubkey: "a".repeat(64), status: "active" });
-  await eventually(() => service.state.status === "active");
-  assert(service.state.status === "active", "endpoint cleanup must not cancel signer");
+  approval.resolve({
+    accountId: "remote",
+    pubkey: "a".repeat(64),
+    status: "active",
+  });
+  const currentStatus = () => service.state$.value.status;
+  await eventually(() => currentStatus() === "active");
+  assert(
+    currentStatus() === "active",
+    "endpoint cleanup must not cancel signer",
+  );
 });
 
 Deno.test("runtime endpoint only dispatches and projects signer service state", async () => {
   const endpoint = await Deno.readTextFile("routes/api/runtime.ts");
-  for (const forbidden of ["RelayPool", "AccountStore", "PortalAccounts", "waitForSigner"]) {
+  for (
+    const forbidden of [
+      "RelayPool",
+      "AccountStore",
+      "PortalAccounts",
+      "waitForSigner",
+    ]
+  ) {
     assert(!endpoint.includes(forbidden), `endpoint must not own ${forbidden}`);
   }
-  assert(endpoint.includes("signer.state$.subscribe"), "endpoint must project state");
+  assert(
+    endpoint.includes("signer.state$.subscribe"),
+    "endpoint must project state",
+  );
   assert(endpoint.includes("signer.start()"), "endpoint must dispatch start");
 });
