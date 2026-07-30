@@ -37,6 +37,26 @@ Deno.test("shell receives the server-owned remote signer URI", async () => {
   );
 });
 
+Deno.test("shell requests signer initiation after runtime session handshake", async () => {
+  const shell = await Deno.readTextFile("islands/NappletShell.tsx");
+  const connectedBranch = shell.slice(
+    shell.indexOf('message.type === "runtime.connected"'),
+    shell.indexOf('message.type === "runtime.event"'),
+  );
+  assert(
+    connectedBranch.includes('type: "runtime.start"'),
+    "signer initiation must follow runtime.connected",
+  );
+  const openBranch = shell.slice(
+    shell.indexOf('ws.addEventListener("open"'),
+    shell.indexOf('ws.addEventListener("message"'),
+  );
+  assert(
+    !openBranch.includes('type: "runtime.start"'),
+    "transport open must not race the runtime session handshake",
+  );
+});
+
 Deno.test("shell keeps one exact-sandbox iframe and no backend authority", async () => {
   const shell = await Deno.readTextFile("islands/NappletShell.tsx");
   const frame = await Deno.readTextFile("components/NappletFrame.tsx");
