@@ -8,6 +8,7 @@
     "jsr:@fresh/core@2": "2.3.3",
     "jsr:@fresh/core@^2.3.3": "2.3.3",
     "jsr:@fresh/plugin-vite@^1.1.2": "1.1.2",
+    "jsr:@libs/qrcode@3.1.0": "3.1.0",
     "jsr:@std/bytes@^1.0.6": "1.0.6",
     "jsr:@std/dotenv@~0.225.5": "0.225.7",
     "jsr:@std/encoding@^1.0.10": "1.0.10",
@@ -123,6 +124,9 @@
         "npm:rollup",
         "npm:vite@^7.1.4"
       ]
+    },
+    "@libs/qrcode@3.1.0": {
+      "integrity": "1d65698d3cbaf1d5e2e0b025f7d8572e8b2c485dcfa81d485e0bf0ce607e9c2b"
     },
     "@std/bytes@1.0.6": {
       "integrity": "f6ac6adbd8ccd99314045f5703e23af0a68d7f7e58364b47d2c7f408aeb5820a"
@@ -1729,6 +1733,7 @@
     "dependencies": [
       "jsr:@fresh/core@^2.3.3",
       "jsr:@fresh/plugin-vite@^1.1.2",
+      "jsr:@libs/qrcode@3.1.0",
       "npm:@kehto/nip@0.5.1",
       "npm:@kehto/runtime@0.20.1",
       "npm:@kehto/services@0.18.1",

@@ -1,3 +1,4 @@
+import { qrcode } from "@libs/qrcode";
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { HomeView } from "../components/HomeView.tsx";
 import {
@@ -14,6 +15,21 @@ import {
 
 interface NappletShellProps {
   readonly coordinate: string;
+}
+
+export function createSignerLaunch(uri: string): {
+  readonly href: string;
+  readonly qrSvg: string;
+  readonly qrDataUrl: string;
+} {
+  const qrSvg = uri
+    ? qrcode(uri, { output: "svg", ecl: "MEDIUM", border: 2 })
+    : "";
+  return {
+    href: uri,
+    qrSvg,
+    qrDataUrl: qrSvg ? `data:image/svg+xml,${encodeURIComponent(qrSvg)}` : "",
+  };
 }
 
 type View = "napplet" | "home" | "profile";
@@ -297,6 +313,7 @@ interface SignInPanelProps {
 }
 
 function SignInPanel(props: SignInPanelProps) {
+  const launch = createSignerLaunch(props.uri);
   return (
     <section class="sign-in-view" aria-labelledby="sign-in-title">
       <div class="sign-in-panel">
@@ -305,9 +322,7 @@ function SignInPanel(props: SignInPanelProps) {
           Scan this QR code with your signer app, or copy the connection URI.
         </p>
         <div class="qr-code" role="img" aria-label="Nostr Connect QR code">
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M3 3h6v6H3zM15 3h6v6h-6zM3 15h6v6H3zM14 14h3v3h-3zM18 14h3v7h-3zM12 18h4v3h-4z" />
-          </svg>
+          {launch.qrDataUrl && <img src={launch.qrDataUrl} alt="" />}
         </div>
         <label for="connect-uri">Connection URI</label>
         <div class="uri-row">
@@ -316,14 +331,20 @@ function SignInPanel(props: SignInPanelProps) {
             {props.copied ? "Copied" : "Copy URI"}
           </button>
         </div>
-        <button
-          type="button"
+        <a
           class="primary-button"
-          disabled={props.connecting}
-          onClick={() => props.onConnect("connect")}
+          href={launch.href || undefined}
+          aria-disabled={!launch.href || props.connecting}
+          onClick={(event) => {
+            if (!launch.href || props.connecting) {
+              event.preventDefault();
+              return;
+            }
+            props.onConnect("connect");
+          }}
         >
-          {props.connecting ? "Connecting…" : "Connect signer"}
-        </button>
+          {props.connecting ? "Connecting…" : "Connect Designer"}
+        </a>
         <details>
           <summary>Use bunker URI</summary>
           <label for="bunker-uri">Bunker URI</label>

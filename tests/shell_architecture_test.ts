@@ -2,6 +2,29 @@ function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
 }
 
+Deno.test("Designer launch and QR encode the exact same Nostr Connect URI", async () => {
+  const { qrcode } = await import("@libs/qrcode");
+  const { createSignerLaunch } = await import("../islands/NappletShell.tsx");
+  const uri = "nostrconnect://napplet-portal?relay=wss%3A%2F%2Frelay.example";
+  const launch = createSignerLaunch(uri);
+  assert(launch.href === uri, "Designer target must preserve the exact URI");
+  assert(
+    launch.qrSvg ===
+      qrcode(uri, { output: "svg", ecl: "MEDIUM", border: 2 }),
+    "QR and Designer target must encode the same URI",
+  );
+
+  const shell = await Deno.readTextFile("islands/NappletShell.tsx");
+  assert(
+    shell.includes("href={launch.href || undefined}"),
+    "launch must be a link",
+  );
+  assert(
+    shell.includes("Connect Designer"),
+    "Designer action must be explicit",
+  );
+});
+
 Deno.test("shell keeps one exact-sandbox iframe and no backend authority", async () => {
   const shell = await Deno.readTextFile("islands/NappletShell.tsx");
   const frame = await Deno.readTextFile("components/NappletFrame.tsx");

@@ -329,11 +329,9 @@ svg {
   box-shadow: 0 0 0 1px #cbd5e1;
 }
 
-.qr-code svg {
+.qr-code img {
   width: 132px;
   height: 132px;
-  fill: currentColor;
-  stroke: none;
 }
 
 .uri-row {
@@ -355,6 +353,7 @@ svg {
 }
 
 .primary-button {
+  display: block;
   width: 100%;
   margin-top: 16px;
   padding: 8px 16px;
@@ -362,7 +361,14 @@ svg {
   border-radius: 8px;
   color: #fff;
   font-weight: 600;
+  text-align: center;
+  text-decoration: none;
   background: #7c3aed;
+}
+
+.primary-button[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.65;
 }
 
 .sign-in-panel details {

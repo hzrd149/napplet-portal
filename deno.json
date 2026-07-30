@@ -26,6 +26,7 @@
     "@kehto/runtime": "npm:@kehto/runtime@0.20.1",
     "@kehto/services": "npm:@kehto/services@0.18.1",
     "@kehto/shell": "npm:@kehto/shell@0.19.1",
+    "@libs/qrcode": "jsr:@libs/qrcode@3.1.0",
     "@napplet/core": "npm:@napplet/core@0.31.0",
     "@napplet/nap": "npm:@napplet/nap@0.31.0",
     "applesauce-accounts": "npm:applesauce-accounts@6.2.0",
