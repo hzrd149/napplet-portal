@@ -2,6 +2,7 @@ import fixture from "./fixtures/supplied_napplet_contract.json" with {
   type: "json",
 };
 import type {
+  RelayClosedMessage,
   RelayEventMessage,
   RelaySubscribeMessage,
 } from "@napplet/nap/relay";
@@ -74,21 +75,33 @@ Deno.test("supplied Security Lab traverses verified mount, handshake, identity, 
     "source-bound init must be exact once",
   );
 
-  const messages: RelayEventMessage[] = [];
-  window.subscribeRelay(
+  const messages: Array<RelayEventMessage | RelayClosedMessage> = [];
+  const subscription = window.subscribeRelay(
     fixture.envelopes.relaySubscribe as RelaySubscribeMessage,
     (message) => {
       if (message.type === "relay.event") messages.push(message);
     },
   );
   runtime.relay.emitLive(fixture.events.live);
+  subscription.close();
+  runtime.relay.emitLive({ ...fixture.events.live, id: "3".repeat(64) });
   assert(
-    messages[0]?.result.event.id === fixture.events.initial.id,
+    messages[0]?.type === "relay.event" &&
+      messages[0].result.event.id === fixture.events.initial.id,
     "stored value must arrive",
   );
   assert(
-    messages[1]?.result.event.id === fixture.events.live.id,
+    messages[1]?.type === "relay.event" &&
+      messages[1].result.event.id === fixture.events.live.id,
     "live tail must continue",
+  );
+  assert(
+    messages[2]?.type === "relay.closed",
+    "close must emit terminal frame",
+  );
+  assert(
+    messages.length === 3,
+    "closed stream must reject later live delivery",
   );
   runtime.signOut();
   assert(
