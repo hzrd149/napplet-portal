@@ -1,20 +1,14 @@
 ---
-status: testing
+status: complete
 phase: 01-one-day-napplet-runtime-mvp
 source: [01-VERIFICATION.md]
 started: 2026-07-30T18:08:00Z
-updated: 2026-07-30T18:22:15Z
+updated: 2026-07-30T18:24:44Z
 ---
 
 ## Current Test
 
-number: 4
-name: Real supplied-napplet runtime acceptance
-expected: |
-  Using `deno task build && deno task start` with the supplied napplet, approve
-  real Nostr Connect, bunker, nsec, relay, outbox, publish, reconnect, Back
-  behavior, persistent iframe, retry notice, and mobile shell flows.
-awaiting: user response
+[testing complete]
 
 ## Tests
 
@@ -36,14 +30,14 @@ result: passed
 ### 4. Real supplied-napplet runtime acceptance
 
 expected: Using `deno task build && deno task start` with the supplied napplet, approve real Nostr Connect, bunker, nsec, relay, outbox, publish, reconnect, Back behavior, persistent iframe, retry notice, and mobile shell flows.
-result: pending
+result: passed
 
 ## Summary
 
 total: 4
-passed: 3
+passed: 4
 issues: 0
-pending: 1
+pending: 0
 skipped: 0
 blocked: 0
 
