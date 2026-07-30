@@ -138,6 +138,9 @@ export function createPortalRuntime({ fixture }: { fixture: Fixture }) {
   return {
     events,
     relay,
+    get activeAccount() {
+      return accounts.active;
+    },
     signIn: (pubkey: string) => accounts.signIn(pubkey),
     signOut: () => accounts.signOut(),
     resolveArtifact: async () => {

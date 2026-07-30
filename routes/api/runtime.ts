@@ -10,7 +10,7 @@ import { createPortalRuntime } from "../../runtime/portal_runtime.ts";
 import { decodeClientMessage } from "../../runtime/transport.ts";
 import { define } from "../../utils.ts";
 
-const runtime = createPortalRuntime({ fixture });
+export const runtime = createPortalRuntime({ fixture });
 const sessions = new Map<
   string,
   {
@@ -29,6 +29,7 @@ const connections = new ConnectionRegistry({
 
 export const handler = define.handlers({
   GET(ctx) {
+    const runtime = ctx.state.runtime;
     if (ctx.req.headers.get("upgrade")?.toLowerCase() !== "websocket") {
       return new Response("WebSocket upgrade required", { status: 426 });
     }

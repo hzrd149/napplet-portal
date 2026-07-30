@@ -1,9 +1,11 @@
 import { createDefine } from "fresh";
+import type { RuntimeConfig } from "./runtime/config.ts";
+import type { createPortalRuntime } from "./runtime/portal_runtime.ts";
 
-// This specifies the type of "ctx.state" which is used to share
-// data among middlewares, layouts and routes.
+/** Browser-safe request state. Runtime authority remains process-owned. */
 export interface State {
-  shared: string;
+  config: RuntimeConfig;
+  runtime: ReturnType<typeof createPortalRuntime>;
 }
 
 export const define = createDefine<State>();

@@ -1,10 +1,9 @@
 import { Head } from "fresh/runtime";
-import { loadRuntimeConfig } from "../runtime/config.ts";
 import { define } from "../utils.ts";
 import NappletShell from "../islands/NappletShell.tsx";
 
-export default define.page(function Home() {
-  const config = loadRuntimeConfig();
+export default define.page(function Home(ctx) {
+  const config = ctx.state.config;
   return (
     <>
       <Head>
