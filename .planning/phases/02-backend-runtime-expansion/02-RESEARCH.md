@@ -348,16 +348,16 @@ The chosen identifier and JSON schema are recommendations under agent discretion
 | A2 | URL allowlisting should reject unexpected schemes/private hosts except explicit loopback cache endpoints. | Pitfalls / Security | Overly strict policy could reject legitimate operator endpoints; overly weak policy enables SSRF. |
 | A3 | A lightweight cache-health snapshot is sufficient (available/degraded, last success/error timestamp, sanitized reason). | Architecture | UI may need richer history, but no runtime redesign. |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Exact local relay request timeout**
    - Known: Applesauce accepts per-request milliseconds and Relay's documented default is 30 seconds for a request; local cache must not delay upstream materially. [VERIFIED: installed declarations]
-   - Recommendation: start at 1,500 ms, make it a validated backend setting or constant, and test timeout/EOSE/error paths. [ASSUMED]
+   - **RESOLVED:** Use the backend constant `LOCAL_RELAY_REQUEST_TIMEOUT_MS = 1_500` and pass it as `Relay.request(filters, { timeout: LOCAL_RELAY_REQUEST_TIMEOUT_MS })`. It is intentionally not an operator setting: it bounds optional loopback-cache latency rather than expressing routing policy. Test exact 1,500 ms timeout, earlier EOSE, and immediate error paths. [VERIFIED: installed `applesauce-relay@6.2.1` `RelayRequestOptions.timeout` declarations; value selected under the agent's discretion]
 2. **Which Applesauce reactive NIP-65 helper to standardize on**
    - Known: core exposes mailbox helpers/factory and RelayPool accepts observable `FilterMap`/`OutboxMap`; Phase 1 already has an outbox adapter. [VERIFIED: installed declarations/codebase]
-   - Recommendation: planner should schedule an API spike/test first, choosing official mailbox models over a portal-owned duplicate state machine.
+   - **RESOLVED:** Standardize on `MailboxesModel(pubkey)` from `applesauce-core/models/mailboxes` as the reactive EventStore-derived `{ inboxes, outboxes }` source. Convert its emissions to `ProfilePointer[]`, use `createOutboxMap` from `applesauce-core/helpers/relay-selection`, and feed the resulting `Observable<OutboxMap>` directly to `RelayPool.outboxSubscription`. For direction-specific filter maps use the same model emission plus the official `createFilterMap` helper and `RelayPool.subscriptionMap`. Prove imports, live relay-list replacement, empty state, fallback injection, and blocked-relay removal in a focused API probe before completing `RelayPolicy`; do not persist or maintain a portal-owned mailbox map. [VERIFIED: installed `applesauce-core@6.2.0` and `applesauce-relay@6.2.1` declarations]
 3. **Drift report destination**
-   - Recommendation: `.planning/phases/02-backend-runtime-expansion/02-CONTRACT-DRIFT.json` for phase evidence, plus a temp/runtime path for repeated local runs; never import it into production. [ASSUMED]
+   - **RESOLVED:** Commit `.planning/phases/02-backend-runtime-expansion/02-CONTRACT-DRIFT.json` as phase evidence. Repeated local runs write to a caller-supplied temporary path created by the test/command; production runtime never imports or generates the report. [Selected under the agent's discretion]
 
 ## Environment Availability
 
@@ -422,7 +422,7 @@ NIP-42 authentication is connection-scoped and does not imply authorization: a r
 **Confidence breakdown:**
 - Standard stack: HIGH — exact pins, registry versions, installed declarations, and official docs checked.
 - Architecture: HIGH — mostly locked decisions plus verified existing seams and exact APIs.
-- Pitfalls: MEDIUM-HIGH — derived from API shapes and project behavior; timeout/URL policy values remain discretionary.
+- Pitfalls: MEDIUM-HIGH — derived from API shapes and project behavior; the local relay timeout is resolved to 1,500 ms, while broader URL policy remains implementation-sensitive.
 - Contract drift: HIGH — locked behavior and inspected sibling/pinned contract shapes.
 
 **Research date:** 2026-07-30  
