@@ -266,3 +266,13 @@ Plans:
 Plans:
 
 - [ ] TBD (promote with $gsd-review-backlog when ready)
+
+### Phase 999.13: NAP-MEDIA shared cross-tab media sessions (BACKLOG)
+
+**Goal:** Research and implement a backend-coordinated `NAP-MEDIA` interface where napplets can create one shared media session across browser tabs: only one tab plays media at a time, starting media in one tab stops competing sessions in other tabs, all open tabs reflect active media state in the bottom nav, playback can be switched to another open tab, closing the origin tab closes its media session, and the bottom nav can close/stop the current media session.
+**Requirements:** TBD
+**Plans:** 0 plans
+
+Plans:
+
+- [ ] TBD (promote with $gsd-review-backlog when ready)
