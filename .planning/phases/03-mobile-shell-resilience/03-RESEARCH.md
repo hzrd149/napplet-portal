@@ -154,7 +154,7 @@ and final SVG geometry remain implementation details for research and planning.
 | ID | Description | Research Support |
 |----|-------------|------------------|
 | SHL-01 | User can select or follow system dark/light theme across server-rendered shell views and runtime states. | Central first-paint bootstrap, CSS token strategy, persisted preference, live `matchMedia` handling, and dynamic `theme-color`. |
-| SHL-02 | User sees a Napplet Portal SVG icon instead of Fresh starter branding. | One reusable constellation-gate SVG geometry and generated favicon assets replace the existing Fresh logo/ICO. |
+| SHL-02 | User sees a Napplet Portal SVG icon instead of Fresh starter branding. | One reusable constellation-gate SVG geometry replaces the Fresh logo and is referenced directly as the standards-compatible SVG favicon; the starter ICO is removed. |
 | SHL-03 | User sees sign-in/account controls in a home-page header card and a compact bottom navigation with home and current-account controls while a napplet is open. | Existing persistent iframe and shell history architecture can be retained while home/account sheets and the stable three-target bar are restructured. |
 | CON-01 | User sees a polished cyberpunk connection sequence driven by actual pending, connected, bootstrapping, ready, retry, and failure states, with reduced-motion and accessible status support. | Explicit connection state reducer maps only observable transport/runtime milestones to constellation stages, plus `role=status` and reduced-motion CSS. |
 | CON-02 | User sees a compact bottom-navigation indicator reflecting the current tab's backend runtime connection state. | The same state reducer drives the ritual, persistent status target, sheet copy, and non-color SVG geometry. |
@@ -278,7 +278,7 @@ shell/
 routes/_app.tsx                  # global pre-paint theme bootstrap and metadata
 assets/styles.css                # tokens, responsive shell, ritual, reduced motion
 static/logo.svg                  # canonical gate artwork
-static/favicon.ico               # favicon derived from the same geometry
+static/logo.svg                  # canonical static mark, also referenced directly as the SVG favicon
 tests/
 ├── connection_controller_test.ts
 ├── shell_resilience_test.tsx
@@ -440,22 +440,13 @@ function finishAttempt(attempt: number, reason: "close" | "timeout"): void {
 | A3 | Independent callbacks without serialization are the likely source of duplicate sockets. | Common Pitfalls | Low; this is a design risk, not a claim that the current code already exhibits it. |
 | A4 | Hydration-only theme resolution would visibly flash the light theme. | Common Pitfalls | Medium; actual visibility varies by browser/cache, but first-paint correctness still requires pre-paint application. |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Which runtime message marks “ready” for the shell?**
-   - What we know: `runtime.connected` proves backend attachment; `runtime.start` begins signer/artifact work; `runtime.artifact` proves verified napplet availability; catalog/identity streams can update independently. [VERIFIED: codebase grep]
-   - What's unclear: whether ready means shell navigation usable, signer projection received, or verified artifact mounted on cold launch.
-   - Recommendation: define ready as the first backend projection that makes current shell controls truthful; for napplet cold launch, use verified `runtime.artifact`, while Home/Account become available after D-11 even if artifact work continues. Add a sanitized explicit stage message only if the existing milestones cannot express bootstrapping truthfully.
+1. **Shell-ready milestone — resolved:** `runtime.connected` proves attachment and starts the connected stage; sending `runtime.start` enters bootstrapping; the first verified `runtime.artifact` is the ready milestone for a cold napplet launch. Home and Account become usable after D-11's roughly three-second threshold while artifact work continues, but the ritual must not label the napplet ready before `runtime.artifact`. No new stage message is needed because the existing milestones express the required truth. [VERIFIED: codebase grep and CONTEXT.md]
 
-2. **How should `publishIdentityChanged("")` be integrated with the portal's custom backend bridge?**
-   - What we know: pinned Kehto requires that exact napplet-facing transition, but the current custom tracer bridge is not a `ShellBridge` instance. [VERIFIED: pinned package and codebase]
-   - What's unclear: whether Phase 3 should minimally forward the canonical envelope through the registered verified frame or adapt the backend service hub to the pinned publisher seam.
-   - Recommendation: choose the narrowest adapter that preserves current source/verified-frame eligibility and add a contract test asserting exactly one `identity.changed` empty-pubkey delivery and subsequent canonical denials.
+2. **Canonical sign-out adapter — resolved:** add the narrow adapter at the existing verified-frame bridge: when backend account truth transitions to signed out, invoke the pinned Kehto shell publisher semantics equivalent to `publishIdentityChanged("")` and forward its canonical `identity.changed` empty-pubkey envelope only through the registered `windowId`/source-eligible frame. Do not introduce a portal-only napplet message or replace the custom runtime hub. Contract tests must assert exactly one eligible delivery, stale/foreign rejection, and canonical protected denials afterward. [VERIFIED: pinned `@kehto/shell@0.19.1` declarations and codebase]
 
-3. **Exact palette contrast values and SVG geometry**
-   - What we know: ink/bone/electric amber and non-color geometry are locked; WCAG AA requires 4.5:1 normal text and 3:1 large text/non-text UI contrast. [CITED: https://www.w3.org/TR/WCAG22/]
-   - What's unclear: final token hex values and mark paths.
-   - Recommendation: UI-SPEC should lock tokens after automated contrast calculation at all text/border/state pairings and favicon-size review.
+3. **Palette and SVG authority — resolved:** Phase 3 implementation owns the exact ink/bone/electric-amber token values and the canonical node/link gate paths because no UI-SPEC exists. `components/PortalMark.tsx` is the source geometry for the ready ritual and inline shell mark; `static/logo.svg` carries the same geometry and is referenced directly as the document's standards-compatible SVG favicon, so no ICO generator or independently drawn favicon exists. Token choices are accepted only when automated checks prove WCAG AA 4.5:1 normal-text and 3:1 non-text/UI contrast in both themes and structural SVG checks prove the mark retains its defining nodes, links, and viewBox at favicon dimensions. [CITED: https://www.w3.org/TR/WCAG22/]
 
 ## Environment Availability
 
