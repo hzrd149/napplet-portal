@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 01
 current_phase_name: one-day-napplet-runtime-mvp
 status: executing
-stopped_at: Completed 01-05-PLAN.md
-last_updated: "2026-07-30T18:31:05+01:00"
+stopped_at: Completed 01-06-PLAN.md; verification/UAT pending
+last_updated: "2026-07-30T17:53:00Z"
 last_activity: 2026-07-30
-last_activity_desc: "Completed quick task 260730-phe: Restore Applesauce active account into signer runtime on startup"
+last_activity_desc: "Closed out 01-06 summary from existing commits; automated checks pass"
 progress:
   total_phases: 1
   completed_phases: 0
   total_plans: 6
-  completed_plans: 5
+  completed_plans: 6
 ---
 
 # Project State
@@ -27,12 +27,12 @@ See: .planning/PROJECT.md (updated 2026-07-30)
 
 ## Current Position
 
-Phase: 01 (one-day-napplet-runtime-mvp) — EXECUTING
+Phase: 01 (one-day-napplet-runtime-mvp) — VERIFYING
 Plan: 6 of 6
-Status: Ready to execute
-Last activity: 2026-07-30 — Completed quick task 260730-phe: Restore Applesauce active account into signer runtime on startup
+Status: Ready for phase verification and supplied-napplet UAT
+Last activity: 2026-07-30 — Closed out 01-06 summary from existing commits; automated checks pass
 
-Progress: [████████░░] 83%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -65,6 +65,7 @@ Progress: [████████░░] 83%
 | Phase 01 P03 | 6min | 2 tasks | 6 files |
 | Phase 01 P04 | 8min | 2 tasks | 12 files |
 | Phase 01 P05 | 7min | 2 tasks | 5 files |
+| Phase 01 P06 | 55min | 3 tasks | 18 files |
 
 ## Accumulated Context
 

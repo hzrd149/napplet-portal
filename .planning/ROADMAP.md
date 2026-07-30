@@ -37,7 +37,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   6. MVP leaves an explicit seam for local Nostr relay and local Blossom cache backends so future phases can avoid always refetching napplet events/blobs from public relays and servers.
   7. `deno task check` passes, and MVP docs clearly mark mocked, incomplete, and deferred behavior.
 
-**Plans**: 5/6 plans executed
+**Plans**: 6/6 plans executed
 
 Plans:
 **Wave 1**
@@ -53,7 +53,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 01-06-PLAN.md — Fresh composition, documentation, and supplied-napplet acceptance
+- [x] 01-06-PLAN.md — Fresh composition, documentation, and supplied-napplet acceptance
 
 **UI hint**: yes
 
@@ -97,7 +97,7 @@ Phases execute in numeric order: 1 -> 2 -> 3
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Napplet Runtime MVP | 5/6 | In Progress|  |
+| 1. Napplet Runtime MVP | 6/6 | Verification/UAT Pending |  |
 | 2. Backend Runtime Expansion | 0/TBD | Future expansion | - |
 | 3. NAP Coverage, Policy, and Production Hardening | 0/TBD | Future expansion | - |
 
