@@ -84,6 +84,12 @@ Deno.test("runtime endpoint only dispatches and projects signer service state", 
   );
   assert(endpoint.includes("signer.start()"), "endpoint must dispatch start");
   assert(
+    endpoint.includes("Configured napplet is not available in this tracer") &&
+      endpoint.indexOf('message.type === "runtime.start"') <
+        endpoint.indexOf("const decoded = decodeClientMessage"),
+    "endpoint must reject unsupported runtime.start before NAP decoding",
+  );
+  assert(
     endpoint.includes('message.type === "runtime.signer.cancel"') &&
       endpoint.includes("signer.cancel()"),
     "endpoint must route explicit cancellation",

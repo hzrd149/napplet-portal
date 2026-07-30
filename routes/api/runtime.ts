@@ -148,10 +148,18 @@ export const handler = define.handlers({
           String(message.type),
           raw.length,
         );
-        if (
-          message.type === "runtime.start" &&
-          message.coordinate === fixture.coordinate
-        ) {
+        if (message.type === "runtime.start") {
+          if (message.coordinate !== fixture.coordinate) {
+            debug(
+              "rejected runtime start connection=%s coordinate=unsupported",
+              shortId(connection.connectionId),
+            );
+            socket.send(JSON.stringify({
+              type: "runtime.signer.error",
+              error: "Configured napplet is not available in this tracer",
+            }));
+            return;
+          }
           if (message.method !== "connect") {
             debug("rejected runtime start method=%s", String(message.method));
             socket.send(JSON.stringify({
