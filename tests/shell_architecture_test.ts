@@ -206,3 +206,22 @@ Deno.test("approved sign-in, Home, Profile, notice, and sign-out copy is present
   assert(shell.includes("<HomeView"), "Home must remain presentational");
   assert(shell.includes("<ProfileView"), "Profile must remain presentational");
 });
+
+Deno.test("runtime settings navigation preserves the mounted iframe and browser Back profile state", async () => {
+  const shell = await Deno.readTextFile("islands/NappletShell.tsx");
+  const profile = await Deno.readTextFile("components/ProfileView.tsx");
+  assert(profile.includes("Runtime settings"), "Profile needs settings action");
+  assert(
+    shell.includes('type View = "napplet" | "home" | "profile" | "settings"'),
+    "settings must be an in-shell view",
+  );
+  assert(
+    shell.includes('history.pushState({ view: next }, next === "settings" ? "/settings"'),
+    "settings must use browser history without unloading the shell",
+  );
+  assert(shell.includes('next === "settings"'), "Back must restore settings/profile history");
+  assert(
+    shell.match(/<NappletFrame/g)?.length === 1,
+    "settings navigation must retain one persistent iframe mount",
+  );
+});
