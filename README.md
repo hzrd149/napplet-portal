@@ -20,11 +20,13 @@ deno task build
 deno task start
 ```
 
-`deno task dev` cannot serve the `/api/runtime` WebSocket. Fresh runs the app as
-a Node middleware under the Vite dev server, where upgrade requests are never
-routed, so the portal stays on "Preparing secure signer connection…" until it
-times out. Fresh documents this as fixed in 2.4 with Deno 2.8 or newer; until
-that release, exercise the runtime with `deno task build && deno task start`.
+`deno task dev` cannot serve the `/api/runtime` WebSocket with the current latest
+Fresh releases, `@fresh/core` 2.3.3 and `@fresh/plugin-vite` 1.1.2. Fresh runs
+the app as a Node middleware under the Vite dev server, where upgrade requests
+are never routed, so the portal stays on "Preparing secure signer connection..."
+until it times out. Exercise the runtime with `deno task build && deno task
+start` until a Fresh release with Vite dev-server WebSocket upgrade support is
+available.
 
 Development and production tasks bind to `127.0.0.1` unless `PORTAL_BIND` is
 explicitly set to another loopback address. Both tasks resolve the address
