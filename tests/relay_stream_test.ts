@@ -107,3 +107,44 @@ Deno.test("same subId stays independently owned and close is immediate", () => {
   assert(second.includes("relay.event"), "other owner must remain live");
   assert(adapter.subscriptionCount === 1, "only closed ownership is removed");
 });
+
+Deno.test("RELAY forwards signed events unchanged and encrypts before backend signing", async () => {
+  const published: unknown[] = [];
+  const adapter = new BackendRelayAdapter({
+    store: { query: () => [], add: () => {} },
+    pool: {
+      req: () => new Subject<RawRelayItem>(),
+      publish: (_relay, event) => {
+        published.push(event);
+        return Promise.resolve(true);
+      },
+    },
+  });
+  const signed = fixture.events.live;
+  const direct = await adapter.publishSigned("direct", signed, ["wss://relay"]);
+  assert(
+    direct.ok && published[0] === signed,
+    "signed RELAY event must pass unchanged",
+  );
+
+  let signedContent = "";
+  const encrypted = await adapter.publishEncrypted(
+    "encrypted",
+    { kind: 4, content: "plaintext", tags: [], created_at: 1 },
+    "recipient",
+    ["wss://relay"],
+    {
+      encrypt: (_recipient, plaintext) =>
+        Promise.resolve(`cipher:${plaintext}`),
+      signEvent: (template) => {
+        signedContent = template.content;
+        return Promise.resolve(signed);
+      },
+    },
+  );
+  assert(encrypted.ok, "encrypted publish must settle after relay acceptance");
+  assert(
+    signedContent === "cipher:plaintext",
+    "backend must encrypt before signing",
+  );
+});

@@ -1,4 +1,9 @@
-import type { NappletMessage, NostrEvent, NostrFilter } from "@napplet/core";
+import type {
+  EventTemplate,
+  NappletMessage,
+  NostrEvent,
+  NostrFilter,
+} from "@napplet/core";
 import type {
   RelayEoseMessage,
   RelayEventMessage,
@@ -26,6 +31,7 @@ export interface RelayPoolPort {
     relays: readonly string[],
     filters: readonly NostrFilter[],
   ): Observable<RawRelayItem>;
+  publish?(relay: string, event: NostrEvent): Promise<boolean>;
 }
 
 export interface RelayStorePort {
@@ -142,6 +148,68 @@ export class BackendRelayAdapter {
     subscription?.unsubscribe();
   }
 
+  async publishSigned(
+    id: string,
+    event: NostrEvent,
+    relays: readonly string[],
+  ): Promise<RelayPublishResult> {
+    if (!event.id || !event.sig || !this.#pool.publish) {
+      return { id, ok: false, error: "invalid signed event", outcomes: [] };
+    }
+    return await this.#publish(id, event, relays);
+  }
+
+  async publishEncrypted(
+    id: string,
+    template: EventTemplate,
+    recipient: string,
+    relays: readonly string[],
+    authority: {
+      encrypt(recipient: string, plaintext: string): Promise<string>;
+      signEvent(template: EventTemplate): Promise<NostrEvent>;
+    },
+  ): Promise<RelayPublishResult> {
+    try {
+      const content = await authority.encrypt(recipient, template.content);
+      const event = await authority.signEvent({ ...template, content });
+      return await this.#publish(id, event, relays);
+    } catch {
+      return {
+        id,
+        ok: false,
+        error: "encryption or signing failed",
+        outcomes: [],
+      };
+    }
+  }
+
+  async #publish(
+    id: string,
+    event: NostrEvent,
+    relays: readonly string[],
+  ): Promise<RelayPublishResult> {
+    if (!this.#pool.publish) {
+      return {
+        id,
+        ok: false,
+        error: "relay publishing unavailable",
+        outcomes: [],
+      };
+    }
+    const outcomes = await Promise.all(
+      [...new Set(relays)].map(async (relay) => {
+        try {
+          return { relay, accepted: await this.#pool.publish!(relay, event) };
+        } catch {
+          return { relay, accepted: false };
+        }
+      }),
+    );
+    return outcomes.length > 0 && outcomes.every((outcome) => outcome.accepted)
+      ? { id, ok: true, event, outcomes }
+      : { id, ok: false, error: "required relay rejected publish", outcomes };
+  }
+
   destroy(): void {
     for (const [key, subscription] of this.#subscriptions) {
       this.#subscriptions.delete(key);
@@ -198,3 +266,22 @@ export class TracerRelayAdapter {
 }
 
 export type RelayPublishReply = NappletMessage;
+
+export interface RelayPublishOutcome {
+  readonly relay: string;
+  readonly accepted: boolean;
+}
+
+export type RelayPublishResult =
+  | {
+    readonly id: string;
+    readonly ok: true;
+    readonly event: NostrEvent;
+    readonly outcomes: readonly RelayPublishOutcome[];
+  }
+  | {
+    readonly id: string;
+    readonly ok: false;
+    readonly error: string;
+    readonly outcomes: readonly RelayPublishOutcome[];
+  };
