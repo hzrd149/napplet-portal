@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 2
 current_phase_name: Backend Runtime Expansion
 status: executing
-stopped_at: Completed 02-02-PLAN.md
-last_updated: "2026-07-30T20:26:50.647Z"
+stopped_at: Completed 02-03-PLAN.md
+last_updated: "2026-07-30T20:31:03.899Z"
 last_activity: 2026-07-30
 last_activity_desc: Completed 02-01 persisted runtime tracer
 progress:
   total_phases: 2
   completed_phases: 1
   total_plans: 13
-  completed_plans: 8
+  completed_plans: 9
 ---
 
 # Project State
@@ -28,11 +28,11 @@ See: .planning/PROJECT.md (updated 2026-07-30)
 ## Current Position
 
 Phase: 2 — Backend Runtime Expansion
-Plan: 3 of 7
+Plan: 4 of 7
 Status: Ready to execute
 Last activity: 2026-07-30 — Completed 02-01 persisted runtime tracer
 
-Progress: [██████░░░░] 62%
+Progress: [███████░░░] 69%
 
 ## Performance Metrics
 
@@ -68,6 +68,7 @@ Progress: [██████░░░░] 62%
 | Phase 01 P06 | 55min | 3 tasks | 18 files |
 | Phase 02 P01 | 6min | 2 tasks | 8 files |
 | Phase 02 P02 | 5min | 2 tasks | 7 files |
+| Phase 02 P03 | 3min | 1 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -92,6 +93,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase ?]: Canonical relay equality is evaluated before precedence, blocking, deduplication, or AUTH permission.
 - [Phase ?]: The local relay request is an internal cache boundary; only upstream EOSE is emitted to callers.
 - [Phase ?]: Cache write settlement updates sanitized health asynchronously and never gates upstream event delivery.
+- [Phase ?]: Local Blossom discovery is fixed to loopback and bounded; configured HTTP(S) endpoints contribute only upstream proxy hints.
+- [Phase ?]: Cached executable bytes remain untrusted until existing signature, aggregate, and blob hash verification succeeds.
 
 ### Pending Todos
 
@@ -120,6 +123,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-07-30T20:26:50.635Z
-Stopped at: Completed 02-02-PLAN.md
+Last session: 2026-07-30T20:31:03.887Z
+Stopped at: Completed 02-03-PLAN.md
 Resume file: None
