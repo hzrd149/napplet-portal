@@ -27,6 +27,7 @@ import type { CatalogCommand } from "./transport.ts";
 const debug = rootDebug.extend("runtime");
 
 interface Fixture {
+  readonly coordinate: string;
   readonly identity: { readonly aggregateHash: string };
   readonly manifestEvent: NostrEvent;
   readonly artifact: { readonly servers: readonly string[] };
@@ -206,11 +207,15 @@ export function createPortalRuntime(
   const events = new RuntimeEvents();
   const blossomCache = new BlossomCache();
   let destroyed = false;
+  let catalog: CatalogService | undefined;
 
   return {
     events,
     relay,
     eventRuntime,
+    configureCatalog(service: CatalogService): void {
+      catalog = service;
+    },
     get activeAccount() {
       return accounts.active;
     },
@@ -240,6 +245,36 @@ export function createPortalRuntime(
         }),
       };
     },
+    resolveCatalogArtifact: async (
+      coordinate: string,
+      manifestEventId: string,
+    ) => {
+      if (
+        coordinate !== fixture.coordinate ||
+        manifestEventId !== fixture.manifestEvent.id
+      ) throw new Error("catalog artifact is unavailable");
+      const resolved = await resolveVerifiedArtifact(
+        fixture,
+        fetch,
+        settings?.settings.blossomServers ?? fixture.artifact.servers,
+        blossomCache,
+      );
+      const title = fixture.manifestEvent.tags.find((tag) => tag[0] === "title")
+        ?.[1] ?? resolved.dTag;
+      return {
+        manifestEventId,
+        title,
+        version: String(fixture.manifestEvent.created_at),
+        capabilities: Object.freeze([...resolved.manifest.requires]),
+        launch: Object.freeze({
+          dTag: resolved.dTag,
+          aggregateHash: resolved.aggregateHash,
+          srcdoc: injectNappletNamespacePrelude(resolved.indexHtml, {
+            domains: ["identity", "relay"],
+          }),
+        }),
+      };
+    },
     openWindow(connectionId: string, windowId: string, source: object) {
       debug(
         "open tracer window connection=%s window=%s",
@@ -249,6 +284,21 @@ export function createPortalRuntime(
       connections.register(connectionId, windowId, source);
       let initialized = false;
       return {
+        catalog: () =>
+          catalog?.project() ??
+            Promise.resolve({ catalogEventId: null, entries: [] }),
+        catalogCommand: (command: CatalogCommand) => {
+          if (!catalog) throw new Error("catalog service unavailable");
+          return command.type === "catalog.approve"
+            ? catalog.approveManifestUpdate(
+              command.id,
+              command.coordinate,
+              command.manifestEventId,
+            )
+            : catalog.uninstallNapplet(command.id, command.coordinate);
+        },
+        subscribeCatalog: (listener: () => void) =>
+          catalog?.subscribe(listener) ?? (() => undefined),
         receive(candidate: object, message: { readonly type?: unknown }) {
           if (!connections.owns(connectionId, windowId, candidate)) {
             debug(

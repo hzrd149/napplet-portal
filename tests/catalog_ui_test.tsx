@@ -213,3 +213,21 @@ Deno.test("catalog dialogs are native, stale-safe, back-safe, and return focus",
   assertStringIncludes(shell, "catalog.approve");
   assertStringIncludes(shell, "catalog.uninstall");
 });
+
+Deno.test("production runtime emits projections and dispatches correlated catalog commands", async () => {
+  const endpoint = await Deno.readTextFile("routes/api/runtime.ts");
+  const main = await Deno.readTextFile("main.ts");
+  for (
+    const required of [
+      "decodeCatalogCommand(message)",
+      "bridge.catalogCommand(catalogCommand)",
+      'type: "runtime.catalog"',
+      'type: "runtime.catalog.result"',
+      "bridge.subscribeCatalog",
+    ]
+  ) assertStringIncludes(endpoint, required);
+  assertStringIncludes(main, "new CatalogService(");
+  assertStringIncludes(main, "processRuntime.configureCatalog(catalogService)");
+  assertStringIncludes(main, "relayPool.request(");
+  assertStringIncludes(main, "catalogService.load([event])");
+});

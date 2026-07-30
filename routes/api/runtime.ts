@@ -7,7 +7,10 @@ import type {
 } from "@napplet/nap/relay";
 import { ConnectionRegistry } from "../../runtime/connections.ts";
 import { createPortalRuntime } from "../../runtime/portal_runtime.ts";
-import { decodeClientMessage } from "../../runtime/transport.ts";
+import {
+  decodeCatalogCommand,
+  decodeClientMessage,
+} from "../../runtime/transport.ts";
 import { define } from "../../utils.ts";
 import { debug as rootDebug, shortId } from "../../debug.ts";
 
@@ -87,6 +90,24 @@ export const handler = define.handlers({
       );
     }
     const { windowId, bridge } = session;
+    const sendCatalog = async (status: "ready" | "error" = "ready") => {
+      try {
+        socket.send(JSON.stringify({
+          type: "runtime.catalog",
+          status,
+          catalog: await bridge.catalog(),
+        }));
+      } catch {
+        socket.send(JSON.stringify({
+          type: "runtime.catalog",
+          status: "error",
+          catalog: { catalogEventId: null, entries: [] },
+        }));
+      }
+    };
+    const unsubscribeCatalog = bridge.subscribeCatalog(() => {
+      if (socket.readyState === WebSocket.OPEN) void sendCatalog();
+    });
     socket.addEventListener("open", () => {
       debug(
         "socket open connection=%s window=%s resumed=%s",
@@ -101,6 +122,7 @@ export const handler = define.handlers({
         windowId,
         resumed: connection.resumed,
       }));
+      void sendCatalog();
     });
     socket.addEventListener("close", () => {
       debug(
@@ -109,6 +131,7 @@ export const handler = define.handlers({
         shortId(windowId),
       );
       connections.detach(connection.connectionId);
+      unsubscribeCatalog();
     });
     socket.addEventListener("message", async (event) => {
       const raw = String(event.data);
@@ -175,6 +198,18 @@ export const handler = define.handlers({
           socket.send(
             JSON.stringify({ type: "runtime.identity", account: null }),
           );
+          return;
+        }
+
+        const catalogCommand = decodeCatalogCommand(message);
+        if (catalogCommand) {
+          const result = await bridge.catalogCommand(catalogCommand);
+          socket.send(JSON.stringify({
+            type: "runtime.catalog.result",
+            id: result.id,
+            ok: result.ok,
+          }));
+          if (result.ok) await sendCatalog();
           return;
         }
 

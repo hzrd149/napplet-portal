@@ -11,6 +11,11 @@ import { RuntimeSettingsService } from "./runtime/settings.ts";
 import { SettingsStore } from "./runtime/settings_store.ts";
 import { discoverLocalBlossom } from "./runtime/blossom_cache.ts";
 import type { CacheHealthState } from "./utils.ts";
+import {
+  CATALOG_IDENTIFIER,
+  CATALOG_KIND,
+  CatalogService,
+} from "./runtime/catalog.ts";
 
 const debug = rootDebug.extend("backend");
 
@@ -100,6 +105,39 @@ export const signerService = new SignerConnectionService({
     restoredSignerAccounts = undefined;
     return signerAccounts.signOut();
   },
+});
+const catalogService = new CatalogService({
+  eventStore: processRuntime.eventRuntime.eventStore,
+  identity: () => signerAccounts.identity,
+  resolveVerifiedArtifact: (coordinate, manifestEventId) =>
+    processRuntime.resolveCatalogArtifact(coordinate, manifestEventId),
+  signEvent: (template) => signerAccounts.signEvent(template),
+  publish: async (event) => {
+    const relays = runtimeSettings.settings.relays;
+    const results = await processRuntime.eventRuntime.relayPool.publish(
+      [...relays],
+      event,
+    );
+    return results.map((result, index) => ({
+      relay: relays[index] ?? "unknown",
+      accepted: result.ok,
+    }));
+  },
+});
+processRuntime.configureCatalog(catalogService);
+let catalogSync: { unsubscribe(): void } | undefined;
+signerAccounts.identity$.subscribe((identity) => {
+  catalogSync?.unsubscribe();
+  catalogSync = undefined;
+  if (!identity.pubkey) return;
+  catalogSync = processRuntime.eventRuntime.relayPool.request(
+    [...runtimeSettings.settings.relays],
+    [{
+      kinds: [CATALOG_KIND],
+      authors: [identity.pubkey],
+      "#d": [CATALOG_IDENTIFIER],
+    }],
+  ).subscribe((event) => catalogService.load([event]));
 });
 void signerService.restore().catch((error) => {
   debug(

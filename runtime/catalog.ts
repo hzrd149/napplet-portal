@@ -139,6 +139,7 @@ const EMPTY: CatalogProjection = Object.freeze({
 export class CatalogService {
   readonly options: CatalogServiceOptions;
   #mutationTail: Promise<void> = Promise.resolve();
+  readonly #listeners = new Set<() => void>();
 
   constructor(options: CatalogServiceOptions) {
     this.options = options;
@@ -152,7 +153,13 @@ export class CatalogService {
       if (!decodeCatalogEvent(event, pubkey)) continue;
       if (this.options.eventStore.add(event)) accepted++;
     }
+    if (accepted > 0) this.#notify();
     return accepted;
+  }
+
+  subscribe(listener: () => void): () => void {
+    this.#listeners.add(listener);
+    return () => this.#listeners.delete(listener);
   }
 
   async project(): Promise<CatalogProjection> {
@@ -282,9 +289,14 @@ export class CatalogService {
         };
       }
       this.options.eventStore.add(event);
+      this.#notify();
       return { id, ok: true, event, outcomes };
     } catch {
       return { id, ok: false, error: "catalog mutation failed", outcomes: [] };
     }
+  }
+
+  #notify(): void {
+    for (const listener of this.#listeners) listener();
   }
 }

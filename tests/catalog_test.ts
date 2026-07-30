@@ -252,3 +252,33 @@ Deno.test("concurrent updates re-read latest projection; absent signer and unins
     "absent signer is typed failure",
   );
 });
+
+Deno.test("catalog listeners observe synchronized loads and accepted mutations", async () => {
+  const eventStore = new EventStore();
+  const original = catalogEvent([{
+    coordinate,
+    acceptedManifestEventId: acceptedId,
+  }], 1);
+  const notifications: number[] = [];
+  const service = new CatalogService({
+    eventStore,
+    identity: () => ({ accountId: pubkey, pubkey, status: "active" }),
+    resolveVerifiedArtifact: (_coordinate, eventId) =>
+      Promise.resolve(artifact(eventId)),
+    signEvent: (template) =>
+      Promise.resolve(catalogEvent(
+        JSON.parse(template.content).entries,
+        template.created_at,
+      )),
+    publish: () =>
+      Promise.resolve([{ relay: "wss://relay.example", accepted: true }]),
+  });
+  const unsubscribe = service.subscribe(() => notifications.push(1));
+  service.load([original]);
+  await service.uninstallNapplet("remove-listener", coordinate);
+  unsubscribe();
+  assert(
+    notifications.length === 2,
+    "load and accepted replacement must each notify projection listeners",
+  );
+});
