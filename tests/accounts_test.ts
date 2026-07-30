@@ -8,6 +8,7 @@ import {
   type PortalAccountFactories,
   PortalAccounts,
 } from "../runtime/accounts.ts";
+import { EMPTY } from "npm:rxjs@7.8.2";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -56,6 +57,8 @@ async function withPortal(
     const path = `${directory}/accounts.json`;
     const portal = new PortalAccounts(new AccountStore(path), {
       relays: ["wss://relay.example/"],
+      subscriptionMethod: () => EMPTY,
+      publishMethod: () => Promise.resolve(),
       ...factories,
     });
     await portal.restore();
@@ -137,7 +140,7 @@ Deno.test("bunker and Not recommended nsec paths run server-side and newest wins
       !JSON.stringify(portal.identity).includes("bunker"),
       "projection must exclude bunker data",
     );
-  }, { connectBunker: async () => nip46Account() });
+  }, { connectBunker: () => Promise.resolve(nip46Account()) });
 });
 
 Deno.test("restored unavailable NIP-46 remains active offline and retries", async () => {
@@ -153,9 +156,11 @@ Deno.test("restored unavailable NIP-46 remains active offline and retries", asyn
     let retries = 0;
     const portal = new PortalAccounts(store, {
       relays: ["wss://relay.example/"],
-      reconnectNostrConnect: async () => {
+      subscriptionMethod: () => EMPTY,
+      publishMethod: () => Promise.resolve(),
+      reconnectNostrConnect: () => {
         retries++;
-        throw new Error("offline");
+        return Promise.reject(new Error("offline"));
       },
     });
     await portal.restore();
