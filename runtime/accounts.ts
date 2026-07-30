@@ -234,4 +234,8 @@ export class AccountRuntime {
   get active(): PublicAccount | null {
     return this.#active;
   }
+
+  signOut(): void {
+    this.#active = null;
+  }
 }

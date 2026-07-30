@@ -41,6 +41,7 @@ export function createPortalRuntime({ fixture }: { fixture: Fixture }) {
     events,
     relay,
     signIn: (pubkey: string) => accounts.signIn(pubkey),
+    signOut: () => accounts.signOut(),
     resolveArtifact: async () => {
       const resolved = await resolveVerifiedArtifact(fixture);
       return {

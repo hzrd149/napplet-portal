@@ -45,3 +45,28 @@ Deno.test("shell structure reserves content and safe-area navigation rows", asyn
     "fade must respect reduced motion",
   );
 });
+
+Deno.test("approved sign-in, Home, Profile, notice, and sign-out copy is present", async () => {
+  const shell = await Deno.readTextFile("islands/NappletShell.tsx");
+  const home = await Deno.readTextFile("components/HomeView.tsx");
+  const profile = await Deno.readTextFile("components/ProfileView.tsx");
+  for (
+    const copy of [
+      "Connect signer",
+      "Use bunker URI",
+      "Use nsec",
+      "Not recommended",
+      "Retry Connection",
+      "Retry Napplet",
+      "Waiting for updates",
+      "Public data will keep updating",
+    ]
+  ) assert(shell.includes(copy), `missing approved copy: ${copy}`);
+  assert(
+    home.includes("No napplet configured"),
+    "empty configuration copy required",
+  );
+  assert(profile.includes("Signer offline"), "offline signer state required");
+  assert(shell.includes("<HomeView"), "Home must remain presentational");
+  assert(shell.includes("<ProfileView"), "Profile must remain presentational");
+});

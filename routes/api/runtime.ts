@@ -80,7 +80,7 @@ export const handler = define.handlers({
           message.type === "runtime.start" &&
           message.coordinate === fixture.coordinate
         ) {
-          runtime.signIn(fixture.identity.pubkey);
+          const account = runtime.signIn(fixture.identity.pubkey);
           const artifact = await runtime.resolveArtifact();
           socket.send(JSON.stringify({
             type: "runtime.artifact",
@@ -89,7 +89,15 @@ export const handler = define.handlers({
               dTag: artifact.dTag,
               aggregateHash: artifact.aggregateHash,
             },
+            account,
           }));
+          return;
+        }
+        if (message.type === "runtime.signout") {
+          runtime.signOut();
+          socket.send(
+            JSON.stringify({ type: "runtime.identity", account: null }),
+          );
           return;
         }
 

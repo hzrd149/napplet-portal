@@ -6,9 +6,10 @@ export default define.page(function App({ Component }) {
       <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>napplet-portal</title>
+        <meta name="theme-color" content="#F8FAFC" />
+        <title>Napplet Portal</title>
       </head>
-      <body>
+      <body class="bg-[#F8FAFC] text-[#0F172A]">
         <Component />
       </body>
     </html>
