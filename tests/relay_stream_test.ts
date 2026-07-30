@@ -35,18 +35,38 @@ Deno.test("RELAY merges store first with exact-provenance live tail and one EOSE
     (message) => received.push(message as unknown as Record<string, unknown>),
   );
 
-  live.next({ type: "EVENT", event: fixture.events.initial, from: "wss://observed.example" });
+  live.next({
+    type: "EVENT",
+    event: fixture.events.initial,
+    from: "wss://observed.example",
+  });
   live.next({ type: "EOSE" });
   live.next({ type: "EOSE" });
-  live.next({ type: "EVENT", event: fixture.events.live, from: "wss://observed.example" });
+  live.next({
+    type: "EVENT",
+    event: fixture.events.live,
+    from: "wss://observed.example",
+  });
 
-  assert(received.length === 3, "dedupe plus one EOSE must yield three envelopes");
+  assert(
+    received.length === 3,
+    "dedupe plus one EOSE must yield three envelopes",
+  );
   const cached = received[0].result as { sidecar?: unknown };
   assert(cached.sidecar === undefined, "cache provenance must be omitted");
-  assert(received[1].type === "relay.eose", "EOSE must be nonterminal boundary");
+  assert(
+    received[1].type === "relay.eose",
+    "EOSE must be nonterminal boundary",
+  );
   const tail = received[2].result as { sidecar: { relayHints: string[] } };
-  assert(tail.sidecar.relayHints[0] === "wss://observed.example", "raw from must be exact hint");
-  assert(added[0]?.from === "wss://observed.example", "store must retain observed provenance");
+  assert(
+    tail.sidecar.relayHints[0] === "wss://observed.example",
+    "raw from must be exact hint",
+  );
+  assert(
+    added[0]?.from === "wss://observed.example",
+    "store must retain observed provenance",
+  );
   assert(!subscription.closed, "stream must remain live after EOSE");
 });
 
@@ -60,12 +80,24 @@ Deno.test("same subId stays independently owned and close is immediate", () => {
   const second: string[] = [];
   const one = adapter.subscribe(
     { connectionId: "one", windowId: "window" },
-    { type: "relay.subscribe", id: "a", subId: "same", relay: "wss://one", filters: [] },
+    {
+      type: "relay.subscribe",
+      id: "a",
+      subId: "same",
+      relay: "wss://one",
+      filters: [],
+    },
     (message) => first.push(message.type),
   );
   adapter.subscribe(
     { connectionId: "two", windowId: "window" },
-    { type: "relay.subscribe", id: "b", subId: "same", relay: "wss://two", filters: [] },
+    {
+      type: "relay.subscribe",
+      id: "b",
+      subId: "same",
+      relay: "wss://two",
+      filters: [],
+    },
     (message) => second.push(message.type),
   );
   one.close();
@@ -75,4 +107,3 @@ Deno.test("same subId stays independently owned and close is immediate", () => {
   assert(second.includes("relay.event"), "other owner must remain live");
   assert(adapter.subscriptionCount === 1, "only closed ownership is removed");
 });
-
