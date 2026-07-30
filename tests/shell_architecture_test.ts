@@ -57,6 +57,19 @@ Deno.test("shell requests signer initiation after runtime session handshake", as
   );
 });
 
+Deno.test("awaiting signer exposes explicit accessible cancellation", async () => {
+  const shell = await Deno.readTextFile("islands/NappletShell.tsx");
+  assert(shell.includes("Cancel"), "awaiting view must expose Cancel");
+  assert(
+    shell.includes('type: "runtime.signer.cancel"'),
+    "Cancel must dispatch an explicit runtime command",
+  );
+  assert(
+    shell.includes("Start new signer connection"),
+    "cancelled state must allow a fresh attempt",
+  );
+});
+
 Deno.test("shell keeps one exact-sandbox iframe and no backend authority", async () => {
   const shell = await Deno.readTextFile("islands/NappletShell.tsx");
   const frame = await Deno.readTextFile("components/NappletFrame.tsx");

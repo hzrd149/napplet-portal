@@ -83,4 +83,56 @@ Deno.test("runtime endpoint only dispatches and projects signer service state", 
     "endpoint must project state",
   );
   assert(endpoint.includes("signer.start()"), "endpoint must dispatch start");
+  assert(
+    endpoint.includes('message.type === "runtime.signer.cancel"') &&
+      endpoint.includes("signer.cancel()"),
+    "endpoint must route explicit cancellation",
+  );
+});
+
+Deno.test("cancel clears state and blocks late activation before a fresh attempt", async () => {
+  const first = deferred<{
+    accountId: string;
+    pubkey: string;
+    status: "active";
+  }>();
+  const second = deferred<{
+    accountId: string;
+    pubkey: string;
+    status: "active";
+  }>();
+  let attempts = 0;
+  const service = new SignerConnectionService({
+    startNostrConnect: () => {
+      attempts++;
+      return Promise.resolve({
+        uri: `nostrconnect://attempt-${attempts}`,
+        connected: attempts === 1 ? first.promise : second.promise,
+      });
+    },
+  });
+
+  service.start();
+  await eventually(() => service.state.status === "awaiting");
+  service.cancel();
+  assert(
+    service.state.status === "idle",
+    "cancel must clear replayed URI state",
+  );
+  first.resolve({ accountId: "old", pubkey: "a".repeat(64), status: "active" });
+  await new Promise((resolve) => setTimeout(resolve, 5));
+  assert(service.state.status === "idle", "cancelled approval must be ignored");
+
+  service.start();
+  await eventually(() =>
+    service.state.status === "awaiting" &&
+    service.state.uri === "nostrconnect://attempt-2"
+  );
+  assert(attempts === 2, "restart must create a fresh attempt");
+  second.resolve({
+    accountId: "new",
+    pubkey: "b".repeat(64),
+    status: "active",
+  });
+  await eventually(() => service.state.status === "active");
 });
