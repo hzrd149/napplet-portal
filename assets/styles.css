@@ -272,23 +272,108 @@ svg {
   transition: opacity 120ms ease;
 }
 
-.napplet-grid {
+.catalog-grid {
   display: grid;
   width: 100%;
+  align-items: start;
+  gap: 16px;
 }
 
-.napplet-tile {
+.catalog-card {
   display: grid;
-  grid-template-columns: 48px minmax(0, 1fr) auto;
+  grid-template-columns: 48px minmax(0, 1fr) 44px;
   align-items: center;
   gap: 16px;
+  min-width: 0;
   width: 100%;
   padding: 16px;
   border: 1px solid #cbd5e1;
   border-radius: 12px;
   color: #0f172a;
-  text-align: left;
   background: #fff;
+}
+
+.catalog-heading {
+  margin-bottom: 24px;
+}
+
+.catalog-heading h1 {
+  margin-bottom: 8px;
+}
+
+.catalog-status {
+  margin: 0;
+  color: #475569;
+}
+
+.catalog-card-copy {
+  min-width: 0;
+}
+
+.catalog-card-copy p {
+  margin: 2px 0 0;
+  overflow: hidden;
+  color: #475569;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.catalog-actions {
+  position: relative;
+}
+
+.catalog-actions summary {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.catalog-action-menu {
+  position: absolute;
+  z-index: 2;
+  top: 44px;
+  right: 0;
+  display: grid;
+  min-width: 10rem;
+  padding: 4px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.catalog-action-menu button {
+  border: 0;
+  text-align: left;
+  background: transparent;
+}
+
+.catalog-launch {
+  grid-column: 1 / -1;
+  padding: 8px 16px;
+  border: 1px solid #7c3aed;
+  border-radius: 8px;
+  color: #fff;
+  background: #7c3aed;
+  font-weight: 600;
+}
+
+.catalog-empty {
+  min-height: 20rem;
+}
+
+@media (min-width: 640px) {
+  .catalog-grid {
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  }
+
+  .catalog-card {
+    max-width: 36rem;
+  }
 }
 
 .napplet-icon {

@@ -1,5 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
-import { HomeView } from "../components/HomeView.tsx";
+import {
+  type CatalogCardCommand,
+  type CatalogStreamStatus,
+  type CatalogViewEntry,
+  type CatalogViewProjection,
+  HomeView,
+} from "../components/HomeView.tsx";
 import {
   createIframeBridge,
   type FrameIdentityRegistry,
@@ -42,6 +48,13 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
   const [notice, setNotice] = useState<Notice>(null);
   const [connecting, setConnecting] = useState(false);
   const [runtimeError, setRuntimeError] = useState("");
+  const [catalog, setCatalog] = useState<CatalogViewProjection>({
+    catalogEventId: null,
+    entries: [],
+  });
+  const [catalogStatus, setCatalogStatus] = useState<CatalogStreamStatus>(
+    "loading",
+  );
   const socket = useRef<WebSocket | null>(null);
   const iframe = useRef<HTMLIFrameElement | null>(null);
   const owner = useRef<{ connectionId: string; windowId: string } | null>(null);
@@ -219,6 +232,17 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
       iframe.current?.contentWindow?.postMessage(message.message, "*");
       return;
     }
+    if (message.type === "runtime.catalog") {
+      if (
+        message.status === "loading" || message.status === "ready" ||
+        message.status === "stale" || message.status === "error"
+      ) setCatalogStatus(message.status);
+      if (message.catalog && typeof message.catalog === "object") {
+        const next = message.catalog as CatalogViewProjection;
+        if (Array.isArray(next.entries)) setCatalog(next);
+      }
+      return;
+    }
     if (message.type === "runtime.auth.required") {
       debug("runtime auth required");
       setConnecting(false);
@@ -283,6 +307,21 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
     navigate("home");
   }
 
+  function openCatalogEntry(entry: CatalogViewEntry): void {
+    if (!entry.launch) return;
+    bridge.reset();
+    setIdentity({
+      dTag: entry.launch.dTag,
+      aggregateHash: entry.launch.aggregateHash,
+    });
+    setSrcdoc(entry.launch.srcdoc);
+    navigate("napplet");
+  }
+
+  function sendCatalogCommand(command: CatalogCardCommand): void {
+    debug("catalog command requested type=%s", command.type);
+  }
+
   const signedIn = profile !== null;
   const configured = Boolean(coordinate);
   const homeVisible = !configured || view === "home";
@@ -294,11 +333,11 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
           inert={!homeVisible}
         >
           <HomeView
-            configured={configured}
+            catalog={catalog}
+            status={catalogStatus}
             signedIn={signedIn}
-            title="Security Lab"
-            active={Boolean(srcdoc)}
-            onOpen={() => navigate("napplet")}
+            onOpen={openCatalogEntry}
+            onCommand={sendCatalogCommand}
           />
           {runtimeError && <p class="form-error" role="alert">{runtimeError}
           </p>}

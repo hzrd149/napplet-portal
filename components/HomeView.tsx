@@ -1,61 +1,164 @@
-interface HomeViewProps {
-  readonly configured: boolean;
-  readonly signedIn: boolean;
-  readonly title: string;
-  readonly active: boolean;
-  readonly onOpen: () => void;
+export interface CatalogViewEntry {
+  readonly coordinate: string;
+  readonly acceptedManifestEventId: string;
+  readonly title?: string;
+  readonly version?: string;
+  readonly capabilities?: readonly string[];
+  readonly launch?: {
+    readonly dTag: string;
+    readonly aggregateHash: string;
+    readonly srcdoc: string;
+  };
 }
 
+export interface CatalogViewProjection {
+  readonly catalogEventId: string | null;
+  readonly entries: readonly CatalogViewEntry[];
+}
+
+export type CatalogStreamStatus = "loading" | "ready" | "stale" | "error";
+
+interface HomeViewProps {
+  readonly catalog: CatalogViewProjection;
+  readonly status: CatalogStreamStatus;
+  readonly signedIn: boolean;
+  readonly onOpen: (entry: CatalogViewEntry) => void;
+  readonly onCommand: (command: CatalogCardCommand) => void;
+}
+
+export type CatalogCardCommand =
+  | { readonly type: "review"; readonly entry: CatalogViewEntry }
+  | { readonly type: "uninstall"; readonly entry: CatalogViewEntry };
+
 export function HomeView({
-  configured,
+  catalog,
+  status,
   signedIn,
-  title,
-  active,
   onOpen,
+  onCommand,
 }: HomeViewProps) {
+  const hasEntries = catalog.entries.length > 0;
   return (
-    <section class="portal-view" aria-label="Home">
-      {!configured
+    <section class="portal-view catalog-view" aria-label="Home">
+      <header class="catalog-heading">
+        <h1>Installed napplets</h1>
+        <InlineStatusNotice status={status} hasEntries={hasEntries} />
+      </header>
+      {!signedIn && (
+        <div class="signin-callout">
+          <p>Sign in to connect a Nostr account before opening napplets.</p>
+          <a class="primary-button" href="/signin">Sign in</a>
+        </div>
+      )}
+      {!hasEntries && status !== "loading"
         ? (
-          <div class="empty-state">
+          <div class="empty-state catalog-empty">
             <UserWindowIcon />
-            <h1>No napplet configured</h1>
+            <h2>No napplets installed</h2>
             <p>
-              Add a napplet coordinate to the server configuration, then restart
-              Napplet Portal.
+              Installed napplets synchronized for this account will appear here.
             </p>
           </div>
         )
         : (
-          <>
-            {!signedIn && (
-              <div class="signin-callout">
-                <p>
-                  Sign in to connect a Nostr account before opening napplets.
-                </p>
-                <a class="primary-button" href="/signin">Sign in</a>
-              </div>
-            )}
-            <div class="napplet-grid">
-              <button
-                type="button"
-                class="napplet-tile"
-                onClick={onOpen}
-                disabled={!signedIn}
-              >
-                <span class="napplet-icon" aria-hidden="true">
-                  <UserWindowIcon />
-                </span>
-                <span class="napplet-title">{title}</span>
-                <span class="active-status">
-                  <span class="active-dot" aria-hidden="true" />
-                  {active ? "Active" : signedIn ? "Open" : "Sign in first"}
-                </span>
-              </button>
-            </div>
-          </>
+          <div class="catalog-grid">
+            {catalog.entries.map((entry) => (
+              <NappletCard
+                key={entry.coordinate}
+                entry={entry}
+                signedIn={signedIn}
+                onOpen={onOpen}
+                onCommand={onCommand}
+              />
+            ))}
+          </div>
         )}
     </section>
+  );
+}
+
+function InlineStatusNotice(
+  { status, hasEntries }: {
+    status: CatalogStreamStatus;
+    hasEntries: boolean;
+  },
+) {
+  const copy = status === "loading"
+    ? hasEntries
+      ? "Showing synchronized napplets while updates continue."
+      : "Syncing installed napplets…"
+    : status === "stale"
+    ? "Showing synchronized napplets while updates continue."
+    : status === "error"
+    ? "Installed napplets could not be refreshed. Showing the last synchronized catalog."
+    : "";
+  return copy
+    ? <p class="catalog-status" role="status" aria-live="polite">{copy}</p>
+    : null;
+}
+
+function NappletCard({
+  entry,
+  signedIn,
+  onOpen,
+  onCommand,
+}: {
+  entry: CatalogViewEntry;
+  signedIn: boolean;
+  onOpen: (entry: CatalogViewEntry) => void;
+  onCommand: (command: CatalogCardCommand) => void;
+}) {
+  const fallback = entry.coordinate.split(":").at(-1) || "Installed napplet";
+  const title = entry.title?.trim() || fallback;
+  const resolved = Boolean(entry.launch);
+  return (
+    <article
+      class="catalog-card"
+      data-coordinate={entry.coordinate}
+      data-manifest-id={entry.acceptedManifestEventId}
+    >
+      <span class="napplet-icon" aria-hidden="true">
+        <UserWindowIcon />
+      </span>
+      <div class="catalog-card-copy">
+        <h2 class="napplet-title">{title}</h2>
+        <p class="catalog-metadata" title={entry.coordinate}>
+          {entry.coordinate}
+        </p>
+        <p class="catalog-version" title={entry.version || undefined}>
+          {resolved
+            ? `Accepted version ${entry.version?.trim() || "Not provided"}`
+            : "Manifest details unavailable"}
+        </p>
+      </div>
+      <details class="catalog-actions">
+        <summary aria-label={`Actions for ${title}`}>•••</summary>
+        <div class="catalog-action-menu">
+          <button
+            type="button"
+            disabled={!signedIn || !resolved}
+            onClick={() => onCommand({ type: "review", entry })}
+          >
+            Review update
+          </button>
+          <button
+            type="button"
+            disabled={!signedIn}
+            onClick={() => onCommand({ type: "uninstall", entry })}
+          >
+            Uninstall
+          </button>
+        </div>
+      </details>
+      <button
+        type="button"
+        class="catalog-launch"
+        disabled={!signedIn || !resolved}
+        onClick={() => onOpen(entry)}
+      >
+        {resolved ? "Open" : "Unavailable"}
+      </button>
+    </article>
   );
 }
 
