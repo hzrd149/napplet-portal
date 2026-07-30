@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 2
 current_phase_name: Backend Runtime Expansion
 status: executing
-stopped_at: Completed 02-03-PLAN.md
-last_updated: "2026-07-30T20:31:03.899Z"
+stopped_at: Completed 02-04-PLAN.md
+last_updated: "2026-07-30T20:37:31.097Z"
 last_activity: 2026-07-30
 last_activity_desc: Completed 02-01 persisted runtime tracer
 progress:
   total_phases: 2
   completed_phases: 1
   total_plans: 13
-  completed_plans: 9
+  completed_plans: 10
 ---
 
 # Project State
@@ -28,11 +28,11 @@ See: .planning/PROJECT.md (updated 2026-07-30)
 ## Current Position
 
 Phase: 2 — Backend Runtime Expansion
-Plan: 4 of 7
+Plan: 5 of 7
 Status: Ready to execute
 Last activity: 2026-07-30 — Completed 02-01 persisted runtime tracer
 
-Progress: [███████░░░] 69%
+Progress: [████████░░] 77%
 
 ## Performance Metrics
 
@@ -69,6 +69,7 @@ Progress: [███████░░░] 69%
 | Phase 02 P01 | 6min | 2 tasks | 8 files |
 | Phase 02 P02 | 5min | 2 tasks | 7 files |
 | Phase 02 P03 | 3min | 1 tasks | 5 files |
+| Phase 02 P04 | 10min | 1 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -95,6 +96,9 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase ?]: Cache write settlement updates sanitized health asynchronously and never gates upstream event delivery.
 - [Phase ?]: Local Blossom discovery is fixed to loopback and bounded; configured HTTP(S) endpoints contribute only upstream proxy hints.
 - [Phase ?]: Cached executable bytes remain untrusted until existing signature, aggregate, and blob hash verification succeeds.
+- [Phase ?]: Public catalog content is an exact versioned codec containing only coordinate and accepted manifest event ID.
+- [Phase ?]: Catalog mutations serialize, re-read the latest active-account replacement, and advance locally only after complete required-relay acceptance.
+- [Phase ?]: Launch identity is projected only after the exact accepted manifest event ID crosses the verified artifact boundary.
 
 ### Pending Todos
 
@@ -123,6 +127,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-07-30T20:31:03.887Z
-Stopped at: Completed 02-03-PLAN.md
+Last session: 2026-07-30T20:37:31.085Z
+Stopped at: Completed 02-04-PLAN.md
 Resume file: None
