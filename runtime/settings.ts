@@ -1,11 +1,33 @@
 import { BehaviorSubject } from "npm:rxjs@7.8.2";
 import type { RuntimeConfig } from "./config.ts";
-import {
-  type RuntimeSettingsSnapshot,
-  SettingsStore,
-} from "./settings_store.ts";
+import { SettingsStore } from "./settings_store.ts";
 
-export type RuntimeSettings = Omit<RuntimeSettingsSnapshot, "version">;
+export interface RuntimeSettings {
+  readonly relays: readonly string[];
+  readonly remoteSignerRelays: readonly string[];
+  readonly blossomServers: readonly string[];
+  readonly indexerRelays: readonly string[];
+  readonly lookupRelays: readonly string[];
+  readonly localRelay: string;
+  readonly authRelays: readonly string[];
+  readonly blockedRelays: readonly string[];
+}
+
+export type RuntimeSettingsInput =
+  & Pick<
+    RuntimeSettings,
+    "relays" | "remoteSignerRelays" | "blossomServers"
+  >
+  & Partial<
+    Pick<
+      RuntimeSettings,
+      | "indexerRelays"
+      | "lookupRelays"
+      | "localRelay"
+      | "authRelays"
+      | "blockedRelays"
+    >
+  >;
 
 function endpoints(
   values: readonly string[],
@@ -28,6 +50,7 @@ function endpoints(
 }
 
 function normalize(settings: RuntimeSettings): RuntimeSettings {
+  const localRelay = settings.localRelay.trim();
   return Object.freeze({
     relays: endpoints(settings.relays, ["ws:", "wss:"], "relay"),
     remoteSignerRelays: endpoints(
@@ -40,6 +63,13 @@ function normalize(settings: RuntimeSettings): RuntimeSettings {
       ["http:", "https:"],
       "Blossom",
     ),
+    indexerRelays: endpoints(settings.indexerRelays, ["ws:", "wss:"], "relay"),
+    lookupRelays: endpoints(settings.lookupRelays, ["ws:", "wss:"], "relay"),
+    localRelay: localRelay
+      ? endpoints([localRelay], ["ws:", "wss:"], "relay")[0]
+      : "",
+    authRelays: endpoints(settings.authRelays, ["ws:", "wss:"], "relay"),
+    blockedRelays: endpoints(settings.blockedRelays, ["ws:", "wss:"], "relay"),
   });
 }
 
@@ -48,6 +78,11 @@ function defaults(config: RuntimeConfig): RuntimeSettings {
     relays: config.relays,
     remoteSignerRelays: config.remoteSignerRelays,
     blossomServers: config.blossomServers,
+    indexerRelays: [],
+    lookupRelays: [],
+    localRelay: "",
+    authRelays: [],
+    blockedRelays: [],
   });
 }
 
@@ -67,7 +102,16 @@ export class RuntimeSettingsService {
     config: RuntimeConfig,
   ): Promise<RuntimeSettingsService> {
     const snapshot = await store.read();
-    const initial = snapshot ? normalize(snapshot) : defaults(config);
+    const initial = snapshot
+      ? normalize({
+        ...snapshot,
+        indexerRelays: snapshot.indexerRelays ?? [],
+        lookupRelays: snapshot.lookupRelays ?? [],
+        localRelay: snapshot.localRelay ?? "",
+        authRelays: snapshot.authRelays ?? [],
+        blockedRelays: snapshot.blockedRelays ?? [],
+      })
+      : defaults(config);
     return new RuntimeSettingsService(store, initial);
   }
 
@@ -75,11 +119,19 @@ export class RuntimeSettingsService {
     return this.settings$.value;
   }
 
-  save(settings: RuntimeSettings): Promise<void> {
+  save(settings: RuntimeSettingsInput): Promise<void> {
     if (this.destroyed) {
       return Promise.reject(new Error("Settings service is destroyed"));
     }
-    const next = normalize(settings);
+    const current = this.settings;
+    const next = normalize({
+      ...settings,
+      indexerRelays: settings.indexerRelays ?? current.indexerRelays,
+      lookupRelays: settings.lookupRelays ?? current.lookupRelays,
+      localRelay: settings.localRelay ?? current.localRelay,
+      authRelays: settings.authRelays ?? current.authRelays,
+      blockedRelays: settings.blockedRelays ?? current.blockedRelays,
+    });
     const operation = this.#saveQueue.then(async () => {
       await this.#store.write({ version: 1, ...next });
       this.settings$.next(next);

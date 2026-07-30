@@ -7,6 +7,8 @@ import { runtime as portalRuntime } from "./routes/api/runtime.ts";
 import { SignerConnectionService } from "./runtime/signer_service.ts";
 import { type State } from "./utils.ts";
 import { debug as rootDebug } from "./debug.ts";
+import { RuntimeSettingsService } from "./runtime/settings.ts";
+import { SettingsStore } from "./runtime/settings_store.ts";
 
 const debug = rootDebug.extend("backend");
 
@@ -21,6 +23,10 @@ debug(
   runtimeConfig.reconnectGraceMs,
 );
 export const processRuntime = portalRuntime;
+export const runtimeSettings = await RuntimeSettingsService.create(
+  new SettingsStore(".data/settings.json"),
+  runtimeConfig,
+);
 const signerAccounts = new PortalAccounts(
   new AccountStore(".data/accounts.json"),
   {
@@ -106,6 +112,8 @@ app.use((ctx) => {
   ctx.state.config = runtimeConfig;
   ctx.state.runtime = portalRuntime;
   ctx.state.signer = signerService;
+  ctx.state.settings = runtimeSettings;
+  ctx.state.cacheHealth = { relay: "checking", blossom: "checking" };
   return ctx.next();
 });
 app.fsRoutes();

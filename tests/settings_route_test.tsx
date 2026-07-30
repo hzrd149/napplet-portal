@@ -1,9 +1,10 @@
-import { assert, assertEquals, assertStringIncludes } from "jsr:@std/assert@1.0.16";
-import { renderToString } from "npm:preact-render-to-string@^6.6.3";
 import {
-  parseSettingsForm,
-  RuntimeSettingsPage,
-} from "../routes/settings.tsx";
+  assert,
+  assertEquals,
+  assertStringIncludes,
+} from "jsr:@std/assert@1.0.16";
+import { renderToString } from "npm:preact-render-to-string@^6.6.3";
+import { parseSettingsForm, RuntimeSettingsPage } from "../routes/settings.tsx";
 
 const snapshot = {
   relays: ["wss://relay.example/"],
@@ -23,19 +24,21 @@ Deno.test("runtime settings renders the immediate canonical snapshot and indepen
       health={{ relay: "checking", blossom: "degraded" }}
     />,
   );
-  for (const copy of [
-    "Runtime settings",
-    "Relay routing",
-    "Fallback and extra relays",
-    "Default indexer relays",
-    "Default lookup relays",
-    "Local relay cache",
-    "Relay authentication",
-    "Allow NIP-42 AUTH",
-    "Blossom servers",
-    "Checking local relay cache…",
-    "Local Blossom cache unavailable — using upstream servers.",
-  ]) assertStringIncludes(html, copy);
+  for (
+    const copy of [
+      "Runtime settings",
+      "Relay routing",
+      "Fallback and extra relays",
+      "Default indexer relays",
+      "Default lookup relays",
+      "Local relay cache",
+      "Relay authentication",
+      "Allow NIP-42 AUTH",
+      "Blossom servers",
+      "Checking local relay cache…",
+      "Local Blossom cache unavailable — using upstream servers.",
+    ]
+  ) assertStringIncludes(html, copy);
   assertStringIncludes(html, "wss://relay.example/");
 });
 
@@ -74,7 +77,13 @@ Deno.test("invalid settings retain every submitted value with field errors", () 
 Deno.test("blocked AUTH rows override selection and empty state is explicit", () => {
   const html = renderToString(
     <RuntimeSettingsPage
-      values={{ ...snapshot, relays: [], authRelays: [] }}
+      values={{
+        ...snapshot,
+        relays: [],
+        indexerRelays: [],
+        lookupRelays: [],
+        authRelays: [],
+      }}
       health={{ relay: "healthy", blossom: "healthy" }}
     />,
   );

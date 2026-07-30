@@ -7,6 +7,11 @@ export interface RuntimeSettingsSnapshot {
   readonly relays: readonly string[];
   readonly remoteSignerRelays: readonly string[];
   readonly blossomServers: readonly string[];
+  readonly indexerRelays?: readonly string[];
+  readonly lookupRelays?: readonly string[];
+  readonly localRelay?: string;
+  readonly authRelays?: readonly string[];
+  readonly blockedRelays?: readonly string[];
 }
 
 function stringArray(value: unknown): value is string[] {
@@ -24,7 +29,17 @@ function parseSnapshot(text: string): RuntimeSettingsSnapshot {
     if (
       candidate.version !== 1 || !stringArray(candidate.relays) ||
       !stringArray(candidate.remoteSignerRelays) ||
-      !stringArray(candidate.blossomServers)
+      !stringArray(candidate.blossomServers) ||
+      (candidate.indexerRelays !== undefined &&
+        !stringArray(candidate.indexerRelays)) ||
+      (candidate.lookupRelays !== undefined &&
+        !stringArray(candidate.lookupRelays)) ||
+      (candidate.localRelay !== undefined &&
+        typeof candidate.localRelay !== "string") ||
+      (candidate.authRelays !== undefined &&
+        !stringArray(candidate.authRelays)) ||
+      (candidate.blockedRelays !== undefined &&
+        !stringArray(candidate.blockedRelays))
     ) throw new Error();
     return candidate as unknown as RuntimeSettingsSnapshot;
   } catch {

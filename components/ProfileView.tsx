@@ -8,6 +8,7 @@ export interface PublicProfile {
 interface ProfileViewProps {
   readonly profile: PublicProfile | null;
   readonly onSignOut: () => void;
+  readonly onOpenSettings: () => void;
 }
 
 function middleTruncate(value: string): string {
@@ -16,7 +17,9 @@ function middleTruncate(value: string): string {
     : value;
 }
 
-export function ProfileView({ profile, onSignOut }: ProfileViewProps) {
+export function ProfileView(
+  { profile, onSignOut, onOpenSettings }: ProfileViewProps,
+) {
   return (
     <section class="portal-view profile-view" aria-label="Profile">
       <h1>Profile</h1>
@@ -53,6 +56,13 @@ export function ProfileView({ profile, onSignOut }: ProfileViewProps) {
                 </p>
               )}
             </div>
+            <button
+              type="button"
+              class="secondary-button"
+              onClick={onOpenSettings}
+            >
+              Runtime settings
+            </button>
             <button
               type="button"
               class="destructive-button"

@@ -216,10 +216,15 @@ Deno.test("runtime settings navigation preserves the mounted iframe and browser 
     "settings must be an in-shell view",
   );
   assert(
-    shell.includes('history.pushState({ view: next }, next === "settings" ? "/settings"'),
+    shell.includes("history.pushState(") &&
+      shell.includes("{ view: next },") &&
+      shell.includes('next === "settings"') && shell.includes('"/settings"'),
     "settings must use browser history without unloading the shell",
   );
-  assert(shell.includes('next === "settings"'), "Back must restore settings/profile history");
+  assert(
+    shell.includes('next === "settings"'),
+    "Back must restore settings/profile history",
+  );
   assert(
     shell.match(/<NappletFrame/g)?.length === 1,
     "settings navigation must retain one persistent iframe mount",

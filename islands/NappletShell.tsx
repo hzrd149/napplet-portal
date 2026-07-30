@@ -19,7 +19,7 @@ interface NappletShellProps {
   readonly coordinate: string;
 }
 
-type View = "napplet" | "home" | "profile";
+type View = "napplet" | "home" | "profile" | "settings";
 type Notice = "connection" | "handshake" | "integrity" | null;
 
 /**
@@ -106,7 +106,11 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
     globalThis.addEventListener("message", receive);
     const back = (event: PopStateEvent) => {
       const next = (event.state as { view?: View } | null)?.view;
-      setView(next === "profile" || next === "napplet" ? next : "home");
+      setView(
+        next === "profile" || next === "napplet" || next === "settings"
+          ? next
+          : "home",
+      );
     };
     globalThis.addEventListener("popstate", back);
     openSocket();
@@ -261,7 +265,14 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
   function navigate(next: View): void {
     debug("navigate view=%s", next);
     setView(next);
-    history.pushState({ view: next }, "", location.href);
+    history.pushState(
+      { view: next },
+      next === "settings"
+        ? "/settings"
+        : location.pathname === "/settings"
+        ? "/"
+        : location.href,
+    );
   }
 
   function signOut(): void {
@@ -301,6 +312,19 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
           <ProfileView
             profile={profile}
             onSignOut={() => signOutDialog.current?.showModal()}
+            onOpenSettings={() => navigate("settings")}
+          />
+        </div>
+        <div
+          class={`shell-view ${
+            signedIn && view === "settings" ? "" : "shell-view-hidden"
+          }`}
+          inert={!signedIn || view !== "settings"}
+        >
+          <iframe
+            class="settings-frame"
+            src="/settings"
+            title="Runtime settings"
           />
         </div>
         <div

@@ -18,8 +18,156 @@ body {
 }
 
 button,
-input {
+input,
+textarea {
   font: inherit;
+}
+
+.settings-frame {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: #f8fafc;
+}
+
+.settings-page {
+  width: 100%;
+  max-width: 40rem;
+  padding: 24px 16px;
+}
+
+.settings-page h1 {
+  margin: 0 0 24px;
+  font-size: 28px;
+  font-weight: 600;
+}
+
+.settings-form {
+  display: grid;
+  gap: 24px;
+}
+
+.settings-form fieldset {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+  margin: 0;
+  padding: 16px;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.settings-form legend {
+  padding: 0 4px;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.settings-field {
+  display: grid;
+  min-width: 0;
+  gap: 6px;
+  font-weight: 600;
+}
+
+.settings-field textarea {
+  width: 100%;
+  min-width: 0;
+  padding: 10px 12px;
+  overflow-x: auto;
+  border: 1px solid #94a3b8;
+  border-radius: 8px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 16px;
+  resize: vertical;
+}
+
+.settings-field small,
+.auth-relay-row small {
+  color: #475569;
+  font-weight: 400;
+}
+
+.field-error,
+.settings-error-summary {
+  color: #9a3412;
+}
+
+.settings-error-summary,
+.settings-success,
+.cache-health {
+  margin: 0 0 24px;
+  padding: 12px 16px;
+  border-radius: 8px;
+}
+
+.settings-error-summary {
+  background: #fff7ed;
+}
+
+.settings-success {
+  color: #166534;
+  background: #f0fdf4;
+}
+
+.cache-health {
+  border: 1px solid #cbd5e1;
+  background: #fff;
+}
+
+.cache-health p {
+  margin: 4px 0;
+}
+
+.auth-relay-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px 12px;
+  align-items: center;
+  padding-block: 8px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.auth-relay-url {
+  min-width: 0;
+  overflow: hidden;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.auth-relay-row label {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 8px;
+}
+
+.auth-relay-row input {
+  width: 20px;
+  height: 20px;
+}
+
+.auth-relay-row small {
+  grid-column: 1 / -1;
+}
+
+.settings-save {
+  width: 100%;
+  padding: 10px 18px;
+  border: 0;
+  border-radius: 8px;
+  color: #fff;
+  background: #7c3aed;
+  font-weight: 600;
+}
+
+@media (min-width: 640px) {
+  .settings-save {
+    width: max-content;
+  }
 }
 
 button {
