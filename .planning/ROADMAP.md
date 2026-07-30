@@ -71,7 +71,31 @@ Plans:
   4. User can configure relays and Blossom servers while runtime keeps portal login, signer authority, cache trust, and relay AUTH separate.
   5. Developer can verify `../kehto`, `../napplet`, and `@napplet/*` contracts through documented adapters and tests.
 
-**Plans**: TBD
+**Plans**: 7 plans
+
+Plans:
+
+**Wave 1**
+
+- [ ] 02-01-PLAN.md — Persisted settings through a process-wide Applesauce runtime tracer
+
+**Wave 2**
+
+- [ ] 02-02-PLAN.md — Policy-safe NIP-65/NIP-42 routing and local-relay read-through cache
+- [ ] 02-03-PLAN.md — Local Blossom proxy fallback with preserved artifact integrity
+
+**Wave 3**
+
+- [ ] 02-04-PLAN.md — Signed NIP-78 installed catalog and runtime-attested identity
+- [ ] 02-05-PLAN.md — Backend-owned runtime settings UI and cache health
+
+**Wave 4**
+
+- [ ] 02-06-PLAN.md — Responsive installed catalog, update approval, and uninstall UX
+
+**Wave 5**
+
+- [ ] 02-07-PLAN.md — Pinned contract coverage and non-blocking sibling drift report
 **UI hint**: yes
 
 ### Phase 3: NAP Coverage, Policy, and Production Hardening
