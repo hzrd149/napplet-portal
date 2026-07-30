@@ -227,3 +227,12 @@ Plans:
 
 Plans:
 - [ ] TBD (promote with $gsd-review-backlog when ready)
+
+### Phase 999.10: Cyberpunk backend connection loading sequence (BACKLOG)
+
+**Goal:** Add a polished cyberpunk-style loading animation for the browser tab's backend runtime connection flow, covering connection pending, connected, and bootup sequence states.
+**Requirements:** TBD
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (promote with $gsd-review-backlog when ready)
