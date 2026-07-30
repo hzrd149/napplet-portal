@@ -138,70 +138,70 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SHELL-01 | TBD | Pending |
-| SHELL-02 | TBD | Pending |
-| SHELL-03 | TBD | Pending |
-| SHELL-04 | TBD | Pending |
-| SHELL-05 | TBD | Pending |
-| AUTH-01 | TBD | Pending |
-| AUTH-02 | TBD | Pending |
-| AUTH-03 | TBD | Pending |
-| AUTH-04 | TBD | Pending |
-| AUTH-05 | TBD | Pending |
-| AUTH-06 | TBD | Pending |
-| AUTH-07 | TBD | Pending |
-| NOSTR-01 | TBD | Pending |
-| NOSTR-02 | TBD | Pending |
-| NOSTR-03 | TBD | Pending |
-| NOSTR-04 | TBD | Pending |
-| NOSTR-05 | TBD | Pending |
-| NOSTR-06 | TBD | Pending |
-| NOSTR-07 | TBD | Pending |
-| NOSTR-08 | TBD | Pending |
-| BRIDGE-01 | TBD | Pending |
-| BRIDGE-02 | TBD | Pending |
-| BRIDGE-03 | TBD | Pending |
-| BRIDGE-04 | TBD | Pending |
-| BRIDGE-05 | TBD | Pending |
-| BRIDGE-06 | TBD | Pending |
-| BRIDGE-07 | TBD | Pending |
-| NAPLET-01 | TBD | Pending |
-| NAPLET-02 | TBD | Pending |
-| NAPLET-03 | TBD | Pending |
-| NAPLET-04 | TBD | Pending |
-| NAPLET-05 | TBD | Pending |
-| NAPLET-06 | TBD | Pending |
-| NAPLET-07 | TBD | Pending |
-| NAP-01 | TBD | Pending |
-| NAP-02 | TBD | Pending |
-| NAP-03 | TBD | Pending |
-| NAP-04 | TBD | Pending |
-| NAP-05 | TBD | Pending |
-| NAP-06 | TBD | Pending |
-| NAP-07 | TBD | Pending |
-| NAP-08 | TBD | Pending |
-| NAP-09 | TBD | Pending |
-| NAP-10 | TBD | Pending |
-| NAP-11 | TBD | Pending |
-| NAP-12 | TBD | Pending |
-| UX-01 | TBD | Pending |
-| UX-02 | TBD | Pending |
-| UX-03 | TBD | Pending |
-| UX-04 | TBD | Pending |
-| UX-05 | TBD | Pending |
-| UX-06 | TBD | Pending |
-| SEC-01 | TBD | Pending |
-| SEC-02 | TBD | Pending |
-| SEC-03 | TBD | Pending |
-| SEC-04 | TBD | Pending |
-| SEC-05 | TBD | Pending |
-| SEC-06 | TBD | Pending |
-| SEC-07 | TBD | Pending |
+| SHELL-01 | Phase 1 | Pending |
+| SHELL-02 | Phase 1 | Pending |
+| SHELL-03 | Phase 1 | Pending |
+| SHELL-04 | Phase 1 | Pending |
+| SHELL-05 | Phase 1 | Pending |
+| AUTH-01 | Phase 1 | Pending |
+| AUTH-02 | Phase 1 | Pending |
+| AUTH-03 | Phase 1 | Pending |
+| AUTH-04 | Phase 1 | Pending |
+| AUTH-05 | Phase 1 | Pending |
+| AUTH-06 | Phase 1 | Pending |
+| AUTH-07 | Phase 1 | Pending |
+| NOSTR-01 | Phase 2 | Pending |
+| NOSTR-02 | Phase 2 | Pending |
+| NOSTR-03 | Phase 2 | Pending |
+| NOSTR-04 | Phase 2 | Pending |
+| NOSTR-05 | Phase 2 | Pending |
+| NOSTR-06 | Phase 2 | Pending |
+| NOSTR-07 | Phase 2 | Pending |
+| NOSTR-08 | Phase 2 | Pending |
+| BRIDGE-01 | Phase 3 | Pending |
+| BRIDGE-02 | Phase 3 | Pending |
+| BRIDGE-03 | Phase 3 | Pending |
+| BRIDGE-04 | Phase 3 | Pending |
+| BRIDGE-05 | Phase 3 | Pending |
+| BRIDGE-06 | Phase 3 | Pending |
+| BRIDGE-07 | Phase 3 | Pending |
+| NAPLET-01 | Phase 2 | Pending |
+| NAPLET-02 | Phase 2 | Pending |
+| NAPLET-03 | Phase 2 | Pending |
+| NAPLET-04 | Phase 2 | Pending |
+| NAPLET-05 | Phase 2 | Pending |
+| NAPLET-06 | Phase 2 | Pending |
+| NAPLET-07 | Phase 2 | Pending |
+| NAP-01 | Phase 3 | Pending |
+| NAP-02 | Phase 3 | Pending |
+| NAP-03 | Phase 3 | Pending |
+| NAP-04 | Phase 3 | Pending |
+| NAP-05 | Phase 3 | Pending |
+| NAP-06 | Phase 3 | Pending |
+| NAP-07 | Phase 3 | Pending |
+| NAP-08 | Phase 3 | Pending |
+| NAP-09 | Phase 3 | Pending |
+| NAP-10 | Phase 3 | Pending |
+| NAP-11 | Phase 3 | Pending |
+| NAP-12 | Phase 3 | Pending |
+| UX-01 | Phase 4 | Pending |
+| UX-02 | Phase 1 | Pending |
+| UX-03 | Phase 4 | Pending |
+| UX-04 | Phase 3 | Pending |
+| UX-05 | Phase 4 | Pending |
+| UX-06 | Phase 4 | Pending |
+| SEC-01 | Phase 4 | Pending |
+| SEC-02 | Phase 4 | Pending |
+| SEC-03 | Phase 3 | Pending |
+| SEC-04 | Phase 4 | Pending |
+| SEC-05 | Phase 4 | Pending |
+| SEC-06 | Phase 4 | Pending |
+| SEC-07 | Phase 4 | Pending |
 
 **Coverage:**
-- v1 requirements: 60 total
-- Mapped to phases: 0
-- Unmapped: 60
+- v1 requirements: 59 explicit IDs (note: this section previously stated 60, but the v1 requirement list contains 59 explicit IDs)
+- Mapped to phases: 59
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-07-30*
