@@ -6,9 +6,9 @@ current_phase: 01
 current_phase_name: one-day-napplet-runtime-mvp
 status: executing
 stopped_at: Completed 01-05-PLAN.md
-last_updated: "2026-07-30T18:14:44+01:00"
+last_updated: "2026-07-30T18:31:05+01:00"
 last_activity: 2026-07-30
-last_activity_desc: "Completed quick task 260730-par: Fix napplet iframe element not filling the available height"
+last_activity_desc: "Completed quick task 260730-phe: Restore Applesauce active account into signer runtime on startup"
 progress:
   total_phases: 1
   completed_phases: 0
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-07-30)
 Phase: 01 (one-day-napplet-runtime-mvp) — EXECUTING
 Plan: 6 of 6
 Status: Ready to execute
-Last activity: 2026-07-30 — Completed quick task 260730-par: Fix napplet iframe element not filling the available height
+Last activity: 2026-07-30 — Completed quick task 260730-phe: Restore Applesauce active account into signer runtime on startup
 
 Progress: [████████░░] 83%
 
@@ -104,6 +104,7 @@ None yet.
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 260730-par | Fix napplet iframe element not filling the available height | 2026-07-30 | 3000f4d | [260730-par-fix-napplet-iframe-element-not-filling-t](./quick/260730-par-fix-napplet-iframe-element-not-filling-t/) |
+| 260730-phe | Restore Applesauce active account into signer runtime on startup | 2026-07-30 | 0fe5bd1 | [260730-phe-restore-applesauce-active-account-into-s](./quick/260730-phe-restore-applesauce-active-account-into-s/) |
 
 ## Deferred Items
 

@@ -55,7 +55,7 @@ Local-first caching is part of the long-term runtime value. The runtime should b
 - **Frontend architecture**: Use Fresh routes for server-rendered pages and islands only for browser-side interactivity; avoid moving backend runtime logic into islands.
 - **Nostr libraries**: Use Applesauce packages as much as possible for Nostr primitives, networking, relay connections, database integration, event storage, and relay workflows.
 - **Local cache backends**: Runtime design must allow local Nostr relay and local Blossom server connections for event/blob/artifact caching.
-- **Reactive style**: Applesauce usage should respect RxJS/functional stream patterns. Avoid nested subscriptions and avoid unnecessary `async`/`await` flows that wait for all data to load.
+- **Reactive style**: Applesauce usage should respect RxJS/functional stream patterns. Avoid nested subscriptions and avoid unnecessary `async`/`await` flows that wait for all data to load. Keep class/service structures simple; when Applesauce exposes a reactive source such as `active$` or `accounts$`, prefer deriving portal state from it instead of duplicating a second state machine.
 - **Nostr loading model**: Nostr data is a stream, not a finished request. UI should handle partial, empty, stale, and updating states rather than waiting for completeness.
 - **Local dependencies**: Use sibling packages `../kehto` and `../napplet` as reference-only contract sources. Production application dependencies and imports must use pinned npm packages, including `@napplet/core@0.31.0` and `@napplet/nap@0.31.0`, never file, path, or workspace imports from `../napplet`.
 - **Sandboxing**: Napplets run in sandboxed iframes, and NAP API access crosses an explicit proxy/message boundary.
@@ -73,6 +73,7 @@ Local-first caching is part of the long-term runtime value. The runtime should b
 | Treat Nostr data as streams rather than complete loads | Relay data is open-ended; the UI and backend should update incrementally. | - Pending |
 | Support local relay and Blossom cache backends | Loaded napplets, events, and blobs should not always depend on public relays/servers after first fetch. | - Pending |
 | Use RxJS composition with Applesauce and avoid nested subscriptions | Functional stream composition keeps backend runtime flows predictable and avoids subscription leaks. | - Pending |
+| Keep service structures simple and derive from Applesauce reactive state | Duplicating Applesauce `AccountManager.active$`/`accounts$` into custom status machines caused restored accounts and runtime auth to drift. Use Applesauce reactive interfaces as source of truth and keep only truly extra portal state, such as a pending remote-signer attempt. | 2026-07-30 |
 | Keep heavy runtime and Nostr logic on the backend | Mobile browser pages should remain responsive and simple while the server handles relay/runtime work. | - Pending |
 
 ## Evolution
