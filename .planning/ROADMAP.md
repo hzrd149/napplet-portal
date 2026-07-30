@@ -173,3 +173,12 @@ Plans:
 
 Plans:
 - [ ] TBD (promote with $gsd-review-backlog when ready)
+
+### Phase 999.4: NAP-UPLOAD API with configured Blossom servers (BACKLOG)
+
+**Goal:** Investigate and support the NAP-UPLOAD API using the user's configured Blossom servers and the `blossom-client-sdk` library, with optional upload to a local Blossom server after successful upload to the configured remote servers.
+**Requirements:** TBD
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (promote with $gsd-review-backlog when ready)
