@@ -8,7 +8,7 @@ status: executing
 stopped_at: "Phase 1 planned with verification override: accepted tracer task size and artifact-prerequisite research classification findings"
 last_updated: "2026-07-30T12:03:11.731Z"
 last_activity: 2026-07-30
-last_activity_desc: Project docs realigned to a one-day vertical MVP, stream-first Applesauce/RxJS architecture, and future local relay/Blossom cache backends.
+last_activity_desc: Phase 1 plans finalized for the full locked runtime MVP, with a one-day target only for the first vertical tracer checkpoint.
 progress:
   total_phases: 1
   completed_phases: 0
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-07-30)
 Phase: 1 of 3 (One-Day Napplet Runtime MVP)
 Plan: TBD in current phase
 Status: Ready to execute
-Last activity: 2026-07-30 - Project docs realigned to a one-day vertical MVP, stream-first Applesauce/RxJS architecture, and future local relay/Blossom cache backends.
+Last activity: 2026-07-30 - Phase 1 plans finalized for the full locked runtime MVP, with a one-day target only for the first vertical tracer checkpoint.
 
 Progress: [----------] 0%
 
@@ -63,9 +63,9 @@ Progress: [----------] 0%
 
 Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecting current work:
 
-- [MVP Scope]: Phase 1 is a one-day vertical slice, not the full server-side Nostr/NAP runtime.
-- [MVP Scope]: The first proof is sign in, load one sandboxed napplet, and proxy minimal backend stream data.
-- [Sign-in]: MVP sign-in should support NIP-46 bunker URI, Nostr Connect QR/handoff, and isolated `nsec` dev mode; read-only `npub` remains near-term scope.
+- [MVP Scope]: The first Phase 1 checkpoint targets one day and proves sign-in, verified sandboxed napplet launch, and initial-plus-live backend stream data; full Phase 1 completion has no one-day deadline.
+- [MVP Scope]: Phase 1 retains every locked decision D-01 through D-47 and implements SHELL, IDENTITY, RELAY, and OUTBOX without pulling deferred NAP domains into scope.
+- [Sign-in]: Nostr Connect QR/URI is primary; bunker URI and nsec are secondary, with nsec labeled `Not recommended` rather than developer-only.
 - [Runtime Style]: Applesauce/RxJS usage should be stream-first, avoid nested subscriptions, and avoid UI flows that wait for Nostr data to be complete.
 - [Cache Backends]: Runtime should support local Nostr relays and local Blossom servers so napplet events/blobs can be cached locally instead of always loading from public relays/servers.
 - [Roadmap]: Future phases expand backend Nostr runtime, Kehto/napplet-web contracts, NAP API breadth, policy, diagnostics, and production hardening.
@@ -76,9 +76,9 @@ None yet.
 
 ### Blockers/Concerns
 
-- The generated research remains broader than the one-day MVP. Use it as future-context, not as mandatory Phase 1 scope.
-- Phase 1 planning must aggressively defer broad relay sync, catalog, full NAP coverage, production persistence, and complete settings/approval UX.
-- Local relay/Blossom cache support is important for runtime value, but Phase 1 should only create an adapter/configuration seam unless there is spare time.
+- The user-supplied napplet coordinate/artifact is a blocking Wave 0 prerequisite; no authored or synthetic example may substitute for its contract fixture.
+- Plan verification proceeded by explicit user override with two accepted findings: the Wave 0 tracer task is larger than the checker threshold, and artifact-dependent research questions remain execution prerequisites until the supplied artifact is available.
+- Catalog breadth, multi-user authentication, approval UX, durable cache policy, and NAP domains beyond SHELL, IDENTITY, RELAY, and OUTBOX remain deferred.
 
 ## Deferred Items
 
