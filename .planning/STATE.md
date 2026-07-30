@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 01
 current_phase_name: one-day-napplet-runtime-mvp
 status: executing
-stopped_at: Completed 01-02-PLAN.md
-last_updated: "2026-07-30T12:58:11.839Z"
+stopped_at: Completed 01-03-PLAN.md
+last_updated: "2026-07-30T13:06:31.054Z"
 last_activity: 2026-07-30
 last_activity_desc: Phase 01 execution started
 progress:
   total_phases: 1
   completed_phases: 0
   total_plans: 6
-  completed_plans: 2
+  completed_plans: 3
 ---
 
 # Project State
@@ -28,11 +28,11 @@ See: .planning/PROJECT.md (updated 2026-07-30)
 ## Current Position
 
 Phase: 01 (one-day-napplet-runtime-mvp) — EXECUTING
-Plan: 3 of 6
+Plan: 4 of 6
 Status: Ready to execute
 Last activity: 2026-07-30 — Phase 01 execution started
 
-Progress: [███░░░░░░░] 33%
+Progress: [█████░░░░░] 50%
 
 ## Performance Metrics
 
@@ -62,6 +62,7 @@ Progress: [███░░░░░░░] 33%
 |------|----------|-------|-------|
 | Phase 01 P01 | 18min | 3 tasks | 32 files |
 | Phase 01 P02 | 5min | 2 tasks | 4 files |
+| Phase 01 P03 | 6min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -79,6 +80,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase ?]: Verify manifest signature, aggregate, and Blossom bytes before srcdoc injection.
 - [Phase ?]: PortalAccounts requires the process-wide NIP-46 relay methods and never creates a second pool.
 - [Phase ?]: Persist complete Applesauce account JSON with a portal-owned activeAccountId sidecar.
+- [Phase ?]: Hold each verified artifact version until process restart or explicit retry.
+- [Phase ?]: Reconnect replaces the socket sender while preserving connection-owned windows and logical subscriptions through grace.
 
 ### Pending Todos
 
@@ -100,6 +103,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-07-30T12:58:11.830Z
-Stopped at: Completed 01-02-PLAN.md
+Last session: 2026-07-30T13:06:31.044Z
+Stopped at: Completed 01-03-PLAN.md
 Resume file: None
