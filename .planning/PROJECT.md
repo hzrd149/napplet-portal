@@ -6,6 +6,17 @@ Napplet Portal is a Deno Fresh server-side runtime for napplets. It serves light
 
 Phase 1 delivered the mobile shell, backend-owned sign-in, verified sandboxed napplet launch, and continuing RELAY/OUTBOX runtime seam. The immediate goal is now to expand that proven boundary into durable backend event, relay, account, and local cache foundations without moving authority into the browser.
 
+## Current Milestone: v1.1 Runtime & UX Expansion
+
+**Goal:** Turn the proven backend runtime seam into a broader, resilient mobile napplet platform with installed-app discovery, additional NAP capabilities, and a polished shell.
+
+**Target features:**
+- Installed napplet catalog, `naddr` installation and launch, and home-page search
+- NAP-RESOURCE, NAP-UPLOAD, NAP-COMMON, NAP-INTENT, NAP-STORAGE, and shared cross-tab NAP-MEDIA support
+- Dark/light themes, a custom SVG icon, redesigned account/navigation chrome, and polished runtime connection states
+- Backoff reconnection and visible backend connection status for mobile browser tabs
+- `blossom-client-sdk`-based multi-server transfers through configured Blossom servers
+
 ## Core Value
 
 A napplet can run in a mobile browser while a server-side Deno runtime handles the heavy Nostr/runtime work.
@@ -23,9 +34,10 @@ A napplet can run in a mobile browser while a server-side Deno runtime handles t
 
 ### Active
 
-- [ ] Add durable Applesauce event persistence, relay synchronization, and lifecycle-safe teardown behind the Phase 1 service boundary.
-- [ ] Use local Nostr relays and local Blossom servers as read-through cache backends for events, blobs, and napplet artifacts.
-- [ ] Add operator configuration for relay and Blossom routing while separating portal sign-in, relay AUTH, signer authority, and cache trust.
+- [ ] Users can install napplets by `naddr`, launch installed napplets, and search their installed catalog.
+- [ ] Napplets can use backend-mediated RESOURCE, UPLOAD, COMMON, INTENT, STORAGE, and MEDIA capabilities.
+- [ ] The mobile shell provides coherent themes, branding, account/navigation chrome, runtime loading feedback, connection status, and reconnect recovery.
+- [ ] Blossom transfers use configured servers and the ecosystem client SDK while preserving backend verification and policy boundaries.
 
 ### Out of Scope
 
@@ -96,4 +108,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-30 after Phase 1*
+*Last updated: 2026-07-30 after starting milestone v1.1*
