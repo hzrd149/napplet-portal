@@ -54,7 +54,7 @@ export function createPortalRuntime({ fixture }: { fixture: Fixture }) {
       connections.register(connectionId, windowId, source);
       let initialized = false;
       return {
-        receive(candidate: object, message: Record<string, unknown>) {
+        receive(candidate: object, message: { readonly type?: unknown }) {
           if (!connections.owns(connectionId, windowId, candidate)) return;
           if (message.type !== "shell.ready" || initialized) return;
           initialized = true;

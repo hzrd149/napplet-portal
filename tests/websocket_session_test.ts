@@ -42,9 +42,14 @@ Deno.test("reconnect reattaches namespace without duplicating subscriptions", ()
   const first = registry.attach((message) => firstMessages.push(message));
   const window = registry.createWindow(first.connectionId);
   let unsubscribeCount = 0;
-  registry.trackSubscription(first.connectionId, window.windowId, "shared-sub", {
-    unsubscribe: () => unsubscribeCount++,
-  });
+  registry.trackSubscription(
+    first.connectionId,
+    window.windowId,
+    "shared-sub",
+    {
+      unsubscribe: () => unsubscribeCount++,
+    },
+  );
 
   registry.detach(first.connectionId);
   const secondMessages: string[] = [];
@@ -52,8 +57,14 @@ Deno.test("reconnect reattaches namespace without duplicating subscriptions", ()
     (message) => secondMessages.push(message),
     first.reconnectToken,
   );
-  assert(resumed.connectionId === first.connectionId, "token must resume connection");
-  assert(registry.subscriptionCount === 1, "resume must not duplicate subscription");
+  assert(
+    resumed.connectionId === first.connectionId,
+    "token must resume connection",
+  );
+  assert(
+    registry.subscriptionCount === 1,
+    "resume must not duplicate subscription",
+  );
   registry.send(first.connectionId, "live");
   assert(firstMessages.length === 0, "detached socket must not receive data");
   assert(secondMessages[0] === "live", "replacement socket must receive data");
@@ -95,9 +106,18 @@ Deno.test("ownership is connection-scoped and expiry deletes before unsubscribe"
   );
   registry.detach(one.connectionId);
   clock.flush();
-  assert(!ownedDuringUnsubscribe, "ownership must be deleted before unsubscribe");
-  assert(destroyed.length === 1 && destroyed[0] === oneWindow.windowId, "expiry must destroy only detached windows");
-  assert(registry.ownsWindow(two.connectionId, twoWindow.windowId), "other connection must survive");
+  assert(
+    !ownedDuringUnsubscribe,
+    "ownership must be deleted before unsubscribe",
+  );
+  assert(
+    destroyed.length === 1 && destroyed[0] === oneWindow.windowId,
+    "expiry must destroy only detached windows",
+  );
+  assert(
+    registry.ownsWindow(two.connectionId, twoWindow.windowId),
+    "other connection must survive",
+  );
   assert(registry.subscriptionCount === 1, "other subscription must survive");
 });
 
@@ -112,6 +132,8 @@ Deno.test("recognized timeout preserves original correlation ID", () => {
   });
   pending.register("opaque-request-id");
   clock.flush();
-  assert(replies[0]?.id === "opaque-request-id", "timeout must retain request ID");
+  assert(
+    replies[0]?.id === "opaque-request-id",
+    "timeout must retain request ID",
+  );
 });
-
