@@ -1,145 +1,92 @@
-# Requirements: Napplet Portal
+# Requirements: Napplet Portal v1.1
 
 **Defined:** 2026-07-30
-**Updated:** 2026-07-30 after MVP scope alignment
 **Core Value:** A napplet can run in a mobile browser while a server-side Deno runtime handles the heavy Nostr/runtime work.
 
-## v1 Requirements
+## v1.1 Requirements
 
-v1 is the complete Phase 1 MVP. Its original one-day vertical tracer remains the first delivery checkpoint, but every Phase 1 requirement remains in scope with no one-day completion deadline per D-47. It proves the locked vertical slice: sign in, load one sandboxed napplet, and proxy the specified stream-oriented runtime API through the backend.
+### Installed Napplets
 
-### Phase 1 Vertical Slice
+- [ ] **CAT-01**: User can install a napplet by submitting a valid `naddr` and approving the resolved verified manifest.
+- [ ] **CAT-02**: User can see installed napplets on the home page with partial, stale, empty, loading, and error states preserved during synchronization.
+- [ ] **CAT-03**: User can launch an installed napplet only from its accepted manifest event identity.
+- [ ] **CAT-04**: User can search installed napplets on the home page by meaningful manifest metadata without waiting for relay synchronization to finish.
 
-- [x] **MVP-01**: User can open a Napplet Portal shell that has replaced the Fresh starter UI with a simple mobile-first product shell.
-- [x] **MVP-02**: User can load one known/test napplet in a sandboxed iframe from the portal shell.
-- [x] **MVP-03**: The iframe host follows the reference-only `../napplet` contracts through pinned npm packages, or uses the canonical minimal source-bound adapter when the executable Deno import probe requires it.
-- [x] **MVP-04**: The backend has a minimal runtime boundary that receives napplet messages and routes them through server-owned TypeScript code.
-- [x] **MVP-05**: Napplet messages include correlation IDs and return success/error responses without the napplet directly accessing relays, signers, storage, or server internals.
+### Resource and Upload
 
-### Sign-In MVP
+- [ ] **RES-01**: Napplet can inspect supported resource schemes and coarse runtime limits through the pinned NAP-RESOURCE contract.
+- [ ] **RES-02**: Napplet can resolve bounded HTTP(S), Blossom, and BUD-10 resources through the backend without gaining unrestricted network access.
+- [ ] **RES-03**: Runtime tries configured local Blossom cache servers before upstream Blossom sources while preserving content hash, MIME, size, redirect, timeout, and SSRF policy checks.
+- [ ] **UPL-01**: Napplet can inspect configured upload rails and coarse limits and submit bytes through the pinned NAP-UPLOAD contract.
+- [ ] **UPL-02**: Runtime uploads through a reviewed pinned `blossom-client-sdk` using the user's configured Blossom servers and backend-owned authorization.
+- [ ] **UPL-03**: User receives explicit per-server upload outcomes, including partial failures, and optional local Blossom copying occurs only after required remote upload success.
 
-- [x] **AUTH-01**: User can start a Nostr sign-in flow from the shell.
-- [x] **AUTH-02**: MVP sign-in supports NIP-46 bunker URI input.
-- [x] **AUTH-03**: MVP sign-in supports Nostr Connect QR-code display or handoff flow.
-- [x] **AUTH-04**: MVP sign-in supports `nsec` dev mode for fast local testing, with key material isolated from napplets and excluded from URLs/logs/browser-accessible storage.
-- [x] **AUTH-05**: MVP explicitly documents read-only `npub` mode as deferred beyond the locked Phase 1 account modes; the former one-day deadline is not the reason for this boundary.
-- [x] **AUTH-06**: User can see the active account/pubkey state in the shell after sign-in.
+### Common and Storage
 
-### Stream-First Applesauce Runtime
+- [ ] **COM-01**: Napplet can use the pinned NAP-COMMON NIP-19 encode/decode and common Nostr helper actions.
+- [ ] **COM-02**: Napplet can load other users' profile and common Nostr data through Applesauce-backed, stream-oriented backend services.
+- [ ] **STO-01**: Napplet can set, get, list, and remove scoped key-value data through the pinned NAP-STORAGE contract.
+- [ ] **STO-02**: Runtime isolates storage by account and verified napplet identity, supports shared and per-instance scope where the contract requires it, and enforces quotas and deterministic serialization.
+- [ ] **STO-03**: Napplet storage persists across browser reconnects and portal restarts without becoming shell configuration or browser-owned authority.
 
-- [x] **STREAM-01**: Runtime code treats Nostr data as streams that continue updating rather than finite loads that become complete.
-- [x] **STREAM-02**: Runtime code uses Applesauce/RxJS observables for relay/event/model flows where practical.
-- [x] **STREAM-03**: Runtime code avoids nested subscriptions; stream composition should use RxJS operators or shared observable pipelines.
-- [x] **STREAM-04**: Runtime code avoids unnecessary `async` flows that wait for all Nostr data before rendering or responding.
-- [x] **STREAM-05**: UI shows partial/empty/updating stream states instead of blocking loading screens that wait for data to be complete.
-- [x] **STREAM-06**: The first napplet-facing data API can return an initial empty/partial value and then update through the selected stream/channel path.
-- [x] **STREAM-07**: MVP leaves an explicit adapter/configuration seam for local Nostr relay and local Blossom server cache backends, even if durable caching is deferred.
+### Intent and Media
 
-### Minimal NAP Surface
+- [ ] **INT-01**: Napplet can inspect available intent handlers derived from installed, verified manifest contracts.
+- [ ] **INT-02**: Napplet can invoke a supported archetype/action and receive a canonical handled, unavailable, denied, or failed result.
+- [ ] **INT-03**: Shell policy can focus or reuse the current handler, open a new browser tab, or stack a new iframe while preserving sandbox and history behavior.
+- [ ] **MED-01**: Napplet can create and control an ownership-aware NAP-MEDIA session through the backend runtime.
+- [ ] **MED-02**: Only one browser tab owns playback for the active media session, and starting playback elsewhere stops or transfers the competing owner deterministically.
+- [ ] **MED-03**: Every connected tab receives current media state, can request transfer to itself, and can stop the active session from the shell navigation.
+- [ ] **MED-04**: Closing the origin tab closes its media session, while stale or reconnected tabs cannot reclaim ownership with outdated commands.
 
-- [x] **NAP-01**: Napplet can complete a minimal shell/runtime handshake.
-- [x] **NAP-02**: Napplet can request current identity/account state from the backend through a read-oriented API.
-- [x] **NAP-03**: Napplet can receive at least one backend-proxied stream of Nostr-derived or fixture data.
-- [x] **NAP-04**: Unsupported NAP methods fail with explicit typed errors rather than silent no-ops.
+### Shell and Resilience
 
-### MVP Quality Bar
+- [ ] **SHL-01**: User can select or follow system dark/light theme across server-rendered shell views and runtime states.
+- [ ] **SHL-02**: User sees a Napplet Portal SVG icon instead of Fresh starter branding.
+- [ ] **SHL-03**: User sees sign-in/account controls in a home-page header card and a compact bottom navigation with home and current-account controls while a napplet is open.
+- [ ] **CON-01**: User sees a polished cyberpunk connection sequence driven by actual pending, connected, bootstrapping, ready, retry, and failure states, with reduced-motion and accessible status support.
+- [ ] **CON-02**: User sees a compact bottom-navigation indicator reflecting the current tab's backend runtime connection state.
+- [ ] **CON-03**: A disconnected or resumed mobile tab reconnects automatically with capped exponential backoff and jitter while preserving the existing reconnect-token/grace semantics.
+- [ ] **CON-04**: Intentional closure cancels reconnect work, and offline, hidden, or repeated-failure states do not create reconnect storms.
 
-- [x] **QUAL-01**: Implementation keeps backend runtime logic out of hydrated islands.
-- [x] **QUAL-02**: Implementation keeps signers, key material, relay connections, and event stores on the backend side of the napplet boundary.
-- [x] **QUAL-03**: `deno task check` passes for the MVP.
-- [x] **QUAL-04**: MVP documentation clearly marks what is intentionally mocked, incomplete, or deferred.
+### Quality and Security
 
-## v2 Requirements
+- [ ] **QLT-01**: Every added NAP domain is checked against the pinned production packages with contract and dispatcher tests; sibling repositories remain reference-only.
+- [ ] **QLT-02**: Napplet-controlled input cannot bypass sandboxing, capability checks, URL/resource policy, storage isolation, signer boundaries, or catalog launch authority.
+- [ ] **QLT-03**: Automated tests cover normal, empty, partial, denied, stale, reconnect, and failure behavior for each new runtime seam, and `deno task check` passes.
+- [ ] **QLT-04**: Mobile-browser UAT verifies navigation, themes, connection recovery, stacked/new-tab intent behavior, and cross-tab media ownership on supported real devices.
 
-Deferred beyond the complete locked Phase 1 MVP. These guide future phases and are excluded by the phase boundary, not by a one-day deadline.
+## Future Requirements
 
-### Backend Nostr Runtime Expansion
+### Deferred Seeds
 
-- **V2-01**: Backend runtime uses Applesauce packages for production event storage, relay pools, loaders, accounts, signers, and model derivation.
-- **V2-02**: Runtime persists Nostr events in an Applesauce-compatible database with dedupe, relay provenance, replaceable/addressable/delete semantics, and bounded sync.
-- **V2-03**: User can configure read/write/fallback relays and Blossom servers from settings.
-- **V2-04**: Runtime can connect to local Nostr relays as event cache/read-through backends for loaded napplets and user state.
-- **V2-05**: Runtime can connect to local Blossom servers as blob/artifact cache backends for napplet manifests, assets, and media.
-- **V2-06**: Runtime supports NIP-65 relay-list routing and NIP-42 relay AUTH as separate concerns from portal login and signer authorization.
-
-### Napplet Runtime Expansion
-
-- **V2-07**: Portal integrates `../kehto` as the canonical backend NAP dispatch/runtime contract.
-- **V2-08**: Portal resolves `../kehto`, `../napplet`, and `@napplet/*` version/API drift with contract tests.
-- **V2-09**: User can manage an installed napplet catalog with manifest identity, source, capabilities, and default handler state.
-- **V2-10**: Runtime-attested napplet identity comes from verified or catalog-controlled manifest data.
-
-### Additional NAP APIs and Policy
-
-- **V2-11**: Runtime implements minimal NAP-RELAY query/subscribe/publish with backend signing and publish settlement.
-- **V2-12**: Runtime implements scoped NAP-STORAGE with per-napplet namespace and quotas.
-- **V2-13**: Runtime implements mediated NAP-RESOURCE with SSRF, MIME, size, and policy controls.
-- **V2-14**: Runtime implements basic NAP-INTENT, NAP-THEME, and NAP-NOTIFY.
-- **V2-15**: User can approve, deny, remember, inspect, and revoke per-napplet capability grants.
-- **V2-16**: Runtime adds NAP-UPLOAD, NAP-LINK, NAP-INC, NAP-CONFIG, NAP-MEDIA, NAP-KEYS, NAP-VALUE, or NAP-POW only when real napplets require them.
-
-### Product Hardening
-
-- **V2-17**: Mobile shell handles safe areas, keyboard occlusion, touch-friendly approval modals, error states, diagnostics, and real-device verification.
-- **V2-18**: Production deployment documents minimal Deno permissions, CSP, Permissions-Policy, privacy model, and sensitive log redaction.
-- **V2-19**: Security tests cover iframe message validation, session enforcement, permission enforcement, resource proxy controls, local cache backend trust boundaries, and key material handling.
-- **V2-20**: Multi-account support isolates sessions, signer bindings, event state, relay settings, local cache namespaces, and napplet permissions.
+- **AUTH-07**: User can enter a read-only `npub` account mode without signer authority.
+- **NTF-01**: Napplet can request active-tab notifications and, where explicitly permitted, Web Push notifications through NAP-NOTIFY.
+- **PWA-01**: User can install Napplet Portal as a PWA and use an explicitly bounded offline experience on mobile.
 
 ## Out of Scope
 
-Explicitly excluded from the locked Phase 1 MVP.
-
 | Feature | Reason |
 |---------|--------|
-| Full Nostr social client | The MVP proves napplet runtime value, not social-client completeness. |
-| Full NAP coverage | Too large for one day; implement only the minimum handshake/identity/stream seam. |
-| Production-grade relay sync | Applesauce stream architecture matters now, but full sync/storage is future work. |
-| Durable local relay/blob cache implementation | The MVP should leave a seam, but robust event/blob cache policy belongs after the vertical slice works. |
-| Production key custody | `nsec` is dev-mode only unless a later threat model makes direct custody acceptable. |
-| Blocking loading screens for Nostr data | Nostr streams are never truly complete; the UI should show partial/updating state. |
-| Native mobile app | Mobile web first. |
-| Unsandboxed napplet execution | Violates the trust boundary. |
-| Exposing `window.nostr` or raw signer RPC to napplets | Bypasses the runtime and approval model. |
+| Read-only `npub` sign-in | SEED-001 was not selected for this milestone. |
+| NAP-NOTIFY and Web Push | SEED-003 was not selected; browser permission and background delivery need a dedicated scope. |
+| PWA installation and offline runtime | SEED-006 was not selected; offline semantics for backend-owned Nostr state need separate design. |
+| Full remaining NAP API surface | v1.1 implements only the backlog-selected domains; LINK, INC, CONFIG, KEYS, VALUE, POW, and other domains remain demand-driven. |
+| Unsandboxed napplet networking, storage, or signing | Violates the portal's explicit backend proxy and capability boundary. |
 
 ## Traceability
 
-Which phases cover which requirements. Updated during roadmap creation.
+Populated during roadmap creation. Every v1.1 requirement must map to exactly one phase.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| MVP-01 | Phase 1 | Complete |
-| MVP-02 | Phase 1 | Complete |
-| MVP-03 | Phase 1 | Complete |
-| MVP-04 | Phase 1 | Complete |
-| MVP-05 | Phase 1 | Complete |
-| AUTH-01 | Phase 1 | Complete |
-| AUTH-02 | Phase 1 | Complete |
-| AUTH-03 | Phase 1 | Complete |
-| AUTH-04 | Phase 1 | Complete |
-| AUTH-05 | Phase 1 | Complete |
-| AUTH-06 | Phase 1 | Complete |
-| STREAM-01 | Phase 1 | Complete |
-| STREAM-02 | Phase 1 | Complete |
-| STREAM-03 | Phase 1 | Complete |
-| STREAM-04 | Phase 1 | Complete |
-| STREAM-05 | Phase 1 | Complete |
-| STREAM-06 | Phase 1 | Complete |
-| STREAM-07 | Phase 1 | Complete |
-| NAP-01 | Phase 1 | Complete |
-| NAP-02 | Phase 1 | Complete |
-| NAP-03 | Phase 1 | Complete |
-| NAP-04 | Phase 1 | Complete |
-| QUAL-01 | Phase 1 | Complete |
-| QUAL-02 | Phase 1 | Complete |
-| QUAL-03 | Phase 1 | Complete |
-| QUAL-04 | Phase 1 | Complete |
 
 **Coverage:**
 
-- v1 requirements: 26 total
-- Mapped to phases: 26
-- Unmapped: 0
+- v1.1 requirements: 33 total
+- Mapped to phases: 0
+- Unmapped: 33
 
 ---
 *Requirements defined: 2026-07-30*
-*Last updated: 2026-07-30 after MVP scope alignment*
+*Last updated: 2026-07-30 after v1.1 scope definition*
