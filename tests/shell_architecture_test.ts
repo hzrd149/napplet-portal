@@ -25,6 +25,18 @@ Deno.test("signer launch and QR encode the exact same Nostr Connect URI", async 
   );
 });
 
+Deno.test("shell receives the server-owned remote signer URI", async () => {
+  const shell = await Deno.readTextFile("islands/NappletShell.tsx");
+  assert(
+    shell.includes('message.type === "runtime.signer.pending"'),
+    "shell must wait for the server-owned Nostr Connect URI",
+  );
+  assert(
+    !shell.includes("nostrconnect://napplet-portal?relay="),
+    "browser must not invent the remote signer relay",
+  );
+});
+
 Deno.test("shell keeps one exact-sandbox iframe and no backend authority", async () => {
   const shell = await Deno.readTextFile("islands/NappletShell.tsx");
   const frame = await Deno.readTextFile("components/NappletFrame.tsx");

@@ -30,6 +30,11 @@ Deno.test("runtime config is immutable, normalized, deduplicated, and loopback-s
     "relays should normalize",
   );
   assertEquals(
+    config.remoteSignerRelays,
+    ["wss://bucket.coracle.social/"],
+    "remote signer must use the dedicated Coracle bucket relay by default",
+  );
+  assertEquals(
     config.blossomServers,
     ["https://blssm.us/"],
     "servers should dedupe",

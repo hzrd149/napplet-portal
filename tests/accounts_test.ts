@@ -81,6 +81,11 @@ Deno.test("Nostr Connect leads with URI then activates and broadcasts globally",
       pending.uri.startsWith("nostrconnect://"),
       "primary flow should return copy/QR URI",
     );
+    assertEquals(
+      portal.identity.status,
+      "unavailable",
+      "URI creation must not activate an unconnected remote signer",
+    );
     connected.resolve(nip46Account());
     const identity = await pending.connected;
 
@@ -115,6 +120,22 @@ Deno.test("Nostr Connect leads with URI then activates and broadcasts globally",
       connected: connected.promise,
     }),
   });
+});
+
+Deno.test("Nostr Connect uses Applesauce pool API with signer-owned relays", async () => {
+  const source = await Deno.readTextFile("runtime/accounts.ts");
+  assert(
+    source.includes("pool: this.#factories.pool"),
+    "signer must receive the Applesauce RelayPool API",
+  );
+  assert(
+    !source.includes("NostrConnectSigner.subscriptionMethod ="),
+    "singleton signer must not mutate global connection methods",
+  );
+  assert(
+    source.includes("await signer.waitForSigner("),
+    "account activation must wait for Applesauce remote signer resolution",
+  );
 });
 
 Deno.test("bunker and Not recommended nsec paths run server-side and newest wins", async () => {
