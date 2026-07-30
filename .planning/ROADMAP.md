@@ -209,3 +209,12 @@ Plans:
 
 Plans:
 - [ ] TBD (promote with $gsd-review-backlog when ready)
+
+### Phase 999.8: NAP-INTENT cross-napplet navigation (BACKLOG)
+
+**Goal:** Runtime supports NAP-INTENT for cross-napplet navigation, including decisions for replacing the current napplet, opening a new browser tab, or stacking a new iframe napplet on top when launching a new napplet archetype.
+**Requirements:** TBD
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (promote with $gsd-review-backlog when ready)
