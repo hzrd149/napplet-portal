@@ -9,8 +9,43 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
   const [srcdoc, setSrcdoc] = useState("");
   const [status, setStatus] = useState("Sign in to load Security Lab");
   const socket = useRef<WebSocket | null>(null);
+  const iframe = useRef<HTMLIFrameElement | null>(null);
+  const initialized = useRef(false);
 
-  useEffect(() => () => socket.current?.close(), []);
+  useEffect(() => {
+    function receive(event: MessageEvent): void {
+      const target = iframe.current?.contentWindow;
+      if (!target || event.source !== target) return;
+      const message = event.data as Record<string, unknown> | null;
+      if (!message || typeof message.type !== "string") return;
+      if (message.type === "shell.ready") {
+        if (initialized.current) return;
+        initialized.current = true;
+        target.postMessage({
+          type: "shell.init",
+          capabilities: { domains: ["identity", "relay"] },
+          services: ["identity", "relay"],
+        }, "*");
+        setStatus("Security Lab handshake complete");
+        return;
+      }
+      if (!/^(identity|relay)\./.test(message.type)) return;
+      const ws = socket.current;
+      if (ws?.readyState !== WebSocket.OPEN) return;
+      ws.send(JSON.stringify({
+        type: "runtime.forward",
+        connectionId: "browser-tab",
+        windowId: "security-lab",
+        message,
+      }));
+    }
+
+    globalThis.addEventListener("message", receive);
+    return () => {
+      globalThis.removeEventListener("message", receive);
+      socket.current?.close();
+    };
+  }, []);
 
   function signIn(): void {
     const protocol = location.protocol === "https:" ? "wss:" : "ws:";
@@ -22,10 +57,18 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
     });
     ws.addEventListener("message", (event) => {
       const message = JSON.parse(String(event.data)) as Record<string, unknown>;
+      if (message.type === "runtime.event") {
+        const runtimeMessage = message.message;
+        if (runtimeMessage && typeof runtimeMessage === "object") {
+          iframe.current?.contentWindow?.postMessage(runtimeMessage, "*");
+        }
+        return;
+      }
       if (
         message.type === "runtime.artifact" &&
         typeof message.srcdoc === "string"
       ) {
+        initialized.current = false;
         setSrcdoc(message.srcdoc);
         setStatus("Verified Security Lab loaded");
       }
@@ -49,7 +92,13 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
       </header>
       <main class="min-h-0 flex-1">
         {srcdoc
-          ? <NappletFrame srcdoc={srcdoc} title="Security Lab napplet" />
+          ? (
+            <NappletFrame
+              srcdoc={srcdoc}
+              title="Security Lab napplet"
+              onFrame={(frame) => iframe.current = frame}
+            />
+          )
           : (
             <div class="grid min-h-[70vh] place-items-center text-slate-400">
               No napplet loaded

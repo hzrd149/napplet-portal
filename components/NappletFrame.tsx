@@ -1,11 +1,13 @@
 interface NappletFrameProps {
   readonly srcdoc: string;
   readonly title: string;
+  readonly onFrame: (frame: HTMLIFrameElement | null) => void;
 }
 
-export function NappletFrame({ srcdoc, title }: NappletFrameProps) {
+export function NappletFrame({ srcdoc, title, onFrame }: NappletFrameProps) {
   return (
     <iframe
+      ref={onFrame}
       sandbox="allow-scripts"
       srcDoc={srcdoc}
       title={title}
