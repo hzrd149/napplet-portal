@@ -1,7 +1,6 @@
 # Architecture Research
 
-**Domain:** Deno Fresh server-side napplet runtime
-**Researched:** 2026-07-30
+**Domain:** Deno Fresh server-side napplet runtime **Researched:** 2026-07-30
 **Confidence:** MEDIUM
 
 ## Standard Architecture
@@ -77,22 +76,22 @@
 
 ### Component Responsibilities
 
-| Component | Responsibility | Typical Implementation |
-|-----------|----------------|------------------------|
-| Fresh composition root | Register static files, global security/session middleware, typed request state, and file-system routes. Keep it composition-only. | `main.ts` with `App<State>()`, `staticFiles()`, session/account middleware, `app.fsRoutes()` |
-| Fresh page routes | Render server-first shell pages: napplet viewport, sign-in/settings/approval views, mobile navigation, active account display. Do not run Nostr sync or NAP behavior here. | `routes/index.tsx`, `routes/napplets/[id].tsx`, `routes/settings.tsx`, route layouts |
-| Fresh API routes | Provide narrow HTTP boundaries into backend services: session auth, account management, NAP RPC/stream bridge, resource fetch, artifact gateway. | `routes/api/session.tsx`, `routes/api/nap/[sessionId].tsx`, `routes/api/nap/stream/[sessionId].tsx` |
-| Fresh islands | Own browser-only behavior: iframe creation, postMessage listener, transient UI state, approval modal controls, bottom nav interactions. They pass authenticated messages to APIs but do not hold authoritative Nostr state. | `islands/NappletHost.tsx`, `islands/ApprovalModal.tsx`, `islands/SignInForm.tsx` using `IS_BROWSER` guards |
-| napplet sandbox | Browser iframe layer that hosts napplet code and exposes/uses injected `window.napplet.*` domains. It is untrusted relative to the app shell. | Sibling `../napplet` packages for SDK/shim/runtime-injected domains |
-| Sandbox message bridge | Validate `postMessage` origin/source/session, normalize NAP envelopes, assign correlation IDs, and forward to backend over same-origin authenticated channel. | Browser island bridge plus backend `/api/nap/*` handlers; optionally upgrade to WebSocket when bidirectional streaming is needed |
-| Backend runtime registry | Own process-level runtime singletons and per-account/per-napplet session objects. Map user session + iframe instance to a `NappletSession`. | `runtime/registry.ts`, `runtime/session.ts` modules outside `routes/` and `islands/` |
-| Kehto runtime adapter | Preserve Kehto boundary: browser shell owns DOM transport; runtime owns protocol dispatch, ACL gates, service routing, runtime state. Server adapter implements services using backend dependencies. | `runtime/kehto/adapter.ts`, `runtime/kehto/services/*.ts` wrapping `../kehto` APIs |
-| NAP service layer | Implement domains such as identity, outbox, relay, common, storage, config, resource, notify, keys, lists, media as backend services. | `runtime/nap/*.ts` services with explicit input/output schemas and permission checks |
-| Applesauce Nostr runtime | Own Nostr event authority, relay connections, loaders, outbox routing, publish fanout, subscriptions, relay sync, and model derivation. | Single `AsyncEventStore`/`EventStore` per process or account scope, `RelayPool`, loaders, sync workers |
-| Account/session service | Own sign-in state, active pubkey/account, signer binding policy, session cookies, CSRF controls, account-scoped runtime lookup. | `services/accounts.ts`, `services/sessions.ts`, app DB tables |
-| Approval service | Own user consent for capability grants, signing requests, destructive Nostr actions, external resource access, and notification/media permissions. | `services/approvals.ts` plus pending request table/queue and approval island |
-| Persistence layer | Separate app metadata from Nostr event storage. App DB stores sessions/accounts/grants/config; Applesauce DB stores Nostr events and queryable event state. | SQLite/LibSQL app tables; Applesauce SQLite/LibSQL event database |
-| Relay/blossom/resource boundary | Backend-only external network access. Napplets request data through NAP domains; runtime enforces policy, fetches, verifies, caches, and returns results. | `runtime/resources.ts`, `runtime/blossom.ts`, Applesauce relay pool |
+| Component                       | Responsibility                                                                                                                                                                                                              | Typical Implementation                                                                                                           |
+| ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| Fresh composition root          | Register static files, global security/session middleware, typed request state, and file-system routes. Keep it composition-only.                                                                                           | `main.ts` with `App<State>()`, `staticFiles()`, session/account middleware, `app.fsRoutes()`                                     |
+| Fresh page routes               | Render server-first shell pages: napplet viewport, sign-in/settings/approval views, mobile navigation, active account display. Do not run Nostr sync or NAP behavior here.                                                  | `routes/index.tsx`, `routes/napplets/[id].tsx`, `routes/settings.tsx`, route layouts                                             |
+| Fresh API routes                | Provide narrow HTTP boundaries into backend services: session auth, account management, NAP RPC/stream bridge, resource fetch, artifact gateway.                                                                            | `routes/api/session.tsx`, `routes/api/nap/[sessionId].tsx`, `routes/api/nap/stream/[sessionId].tsx`                              |
+| Fresh islands                   | Own browser-only behavior: iframe creation, postMessage listener, transient UI state, approval modal controls, bottom nav interactions. They pass authenticated messages to APIs but do not hold authoritative Nostr state. | `islands/NappletHost.tsx`, `islands/ApprovalModal.tsx`, `islands/SignInForm.tsx` using `IS_BROWSER` guards                       |
+| napplet sandbox                 | Browser iframe layer that hosts napplet code and exposes/uses injected `window.napplet.*` domains. It is untrusted relative to the app shell.                                                                               | Sibling `../napplet` packages for SDK/shim/runtime-injected domains                                                              |
+| Sandbox message bridge          | Validate `postMessage` origin/source/session, normalize NAP envelopes, assign correlation IDs, and forward to backend over same-origin authenticated channel.                                                               | Browser island bridge plus backend `/api/nap/*` handlers; optionally upgrade to WebSocket when bidirectional streaming is needed |
+| Backend runtime registry        | Own process-level runtime singletons and per-account/per-napplet session objects. Map user session + iframe instance to a `NappletSession`.                                                                                 | `runtime/registry.ts`, `runtime/session.ts` modules outside `routes/` and `islands/`                                             |
+| Kehto runtime adapter           | Preserve Kehto boundary: browser shell owns DOM transport; runtime owns protocol dispatch, ACL gates, service routing, runtime state. Server adapter implements services using backend dependencies.                        | `runtime/kehto/adapter.ts`, `runtime/kehto/services/*.ts` wrapping `../kehto` APIs                                               |
+| NAP service layer               | Implement domains such as identity, outbox, relay, common, storage, config, resource, notify, keys, lists, media as backend services.                                                                                       | `runtime/nap/*.ts` services with explicit input/output schemas and permission checks                                             |
+| Applesauce Nostr runtime        | Own Nostr event authority, relay connections, loaders, outbox routing, publish fanout, subscriptions, relay sync, and model derivation.                                                                                     | Single `AsyncEventStore`/`EventStore` per process or account scope, `RelayPool`, loaders, sync workers                           |
+| Account/session service         | Own sign-in state, active pubkey/account, signer binding policy, session cookies, CSRF controls, account-scoped runtime lookup.                                                                                             | `services/accounts.ts`, `services/sessions.ts`, app DB tables                                                                    |
+| Approval service                | Own user consent for capability grants, signing requests, destructive Nostr actions, external resource access, and notification/media permissions.                                                                          | `services/approvals.ts` plus pending request table/queue and approval island                                                     |
+| Persistence layer               | Separate app metadata from Nostr event storage. App DB stores sessions/accounts/grants/config; Applesauce DB stores Nostr events and queryable event state.                                                                 | SQLite/LibSQL app tables; Applesauce SQLite/LibSQL event database                                                                |
+| Relay/blossom/resource boundary | Backend-only external network access. Napplets request data through NAP domains; runtime enforces policy, fetches, verifies, caches, and returns results.                                                                   | `runtime/resources.ts`, `runtime/blossom.ts`, Applesauce relay pool                                                              |
 
 ## Recommended Project Structure
 
@@ -164,20 +163,32 @@ napplet-portal/
 
 ### Structure Rationale
 
-- **Keep Fresh conventions intact:** `routes/` owns URL behavior, `islands/` owns hydration, `components/` owns presentation, and `utils.ts` remains the typed Fresh request-state seam.
-- **Move runtime code out of routes:** backend Nostr/NAP logic belongs in `runtime/` and `services/`; API routes should validate requests, call services, and return stable envelopes.
-- **Split app DB from event DB:** app metadata has product-specific invariants; Nostr events benefit from Applesauce's event-store semantics, deduplication, replaceable/delete handling, and relay integrations.
-- **Make Kehto and napplet explicit integration boundaries:** do not invent a third protocol shape in Fresh handlers; adapt Fresh/browser/server concerns to the sibling packages' contracts.
+- **Keep Fresh conventions intact:** `routes/` owns URL behavior, `islands/`
+  owns hydration, `components/` owns presentation, and `utils.ts` remains the
+  typed Fresh request-state seam.
+- **Move runtime code out of routes:** backend Nostr/NAP logic belongs in
+  `runtime/` and `services/`; API routes should validate requests, call
+  services, and return stable envelopes.
+- **Split app DB from event DB:** app metadata has product-specific invariants;
+  Nostr events benefit from Applesauce's event-store semantics, deduplication,
+  replaceable/delete handling, and relay integrations.
+- **Make Kehto and napplet explicit integration boundaries:** do not invent a
+  third protocol shape in Fresh handlers; adapt Fresh/browser/server concerns to
+  the sibling packages' contracts.
 
 ## Architectural Patterns
 
 ### Pattern 1: Thin Fresh Boundary, Thick Runtime Services
 
-**What:** Fresh routes and islands are delivery adapters. The runtime registry, account service, NAP services, and Applesauce stores are plain TypeScript modules with no dependency on Preact components.
+**What:** Fresh routes and islands are delivery adapters. The runtime registry,
+account service, NAP services, and Applesauce stores are plain TypeScript
+modules with no dependency on Preact components.
 
-**When to use:** Always for this project. The product requirement is backend-owned Nostr/client runtime behavior with a lightweight mobile shell.
+**When to use:** Always for this project. The product requirement is
+backend-owned Nostr/client runtime behavior with a lightweight mobile shell.
 
-**Trade-offs:** Slightly more module plumbing up front, but prevents route files and islands from becoming untestable Nostr clients.
+**Trade-offs:** Slightly more module plumbing up front, but prevents route files
+and islands from becoming untestable Nostr clients.
 
 **Example:**
 
@@ -186,7 +197,11 @@ napplet-portal/
 export const handler = define.handlers({
   async POST(ctx) {
     const account = ctx.state.account;
-    if (!account) return Response.json({ ok: false, error: "unauthorized" }, { status: 401 });
+    if (!account) {
+      return Response.json({ ok: false, error: "unauthorized" }, {
+        status: 401,
+      });
+    }
 
     const envelope = await ctx.req.json();
     const result = await runtimeRegistry.forAccount(account.id)
@@ -199,11 +214,17 @@ export const handler = define.handlers({
 
 ### Pattern 2: Backend Runtime Registry
 
-**What:** A process-level registry owns initialized dependencies: app DB, Applesauce event store/database, relay pool, Kehto adapter, per-account sessions, cleanup hooks. Fresh middleware places only a lightweight account/session reference into `ctx.state`.
+**What:** A process-level registry owns initialized dependencies: app DB,
+Applesauce event store/database, relay pool, Kehto adapter, per-account
+sessions, cleanup hooks. Fresh middleware places only a lightweight
+account/session reference into `ctx.state`.
 
-**When to use:** Build this before NAP domains. Every later feature needs stable lifecycle and lookup semantics.
+**When to use:** Build this before NAP domains. Every later feature needs stable
+lifecycle and lookup semantics.
 
-**Trade-offs:** In a single Deno process this is straightforward. Multi-instance deployment later requires shared DB-backed session/grant state and either sticky runtime sessions or externalized message streams.
+**Trade-offs:** In a single Deno process this is straightforward. Multi-instance
+deployment later requires shared DB-backed session/grant state and either sticky
+runtime sessions or externalized message streams.
 
 **Example:**
 
@@ -217,11 +238,17 @@ type RuntimeRegistry = {
 
 ### Pattern 3: Explicit Sandbox Message Envelope
 
-**What:** Treat every iframe message as untrusted. The island verifies `event.source`, expected origin where possible, and session nonce before forwarding. The server validates schema, account binding, napplet identity, ACL, and domain capability before service execution.
+**What:** Treat every iframe message as untrusted. The island verifies
+`event.source`, expected origin where possible, and session nonce before
+forwarding. The server validates schema, account binding, napplet identity, ACL,
+and domain capability before service execution.
 
-**When to use:** For all NAP calls and sandbox events. `postMessage` is the correct cross-window transport, but MDN's security guidance requires origin/source and syntax validation.
+**When to use:** For all NAP calls and sandbox events. `postMessage` is the
+correct cross-window transport, but MDN's security guidance requires
+origin/source and syntax validation.
 
-**Trade-offs:** Adds ceremony to every message, but avoids ambient authority leaks and confused-deputy bugs.
+**Trade-offs:** Adds ceremony to every message, but avoids ambient authority
+leaks and confused-deputy bugs.
 
 **Example:**
 
@@ -239,19 +266,28 @@ type NapBridgeEnvelope = {
 
 ### Pattern 4: Capability-Gated NAP Services
 
-**What:** The runtime exposes only the NAP domains actually supported for a loaded napplet. Kehto capability negotiation says required capabilities fail early; optional domains are absent from `window.napplet` and napplet code must feature-detect.
+**What:** The runtime exposes only the NAP domains actually supported for a
+loaded napplet. Kehto capability negotiation says required capabilities fail
+early; optional domains are absent from `window.napplet` and napplet code must
+feature-detect.
 
 **When to use:** At napplet artifact load and before each service call.
 
-**Trade-offs:** Requires a grant inventory and approval UI, but this is the core safety model for server-owned signers, relays, storage, and resource fetches.
+**Trade-offs:** Requires a grant inventory and approval UI, but this is the core
+safety model for server-owned signers, relays, storage, and resource fetches.
 
 ### Pattern 5: Applesauce as Nostr Authority
 
-**What:** Use one Applesauce event store layer as the canonical Nostr event authority for dedupe, replaceable/delete handling, models, loaders, and persistence. Use RelayPool for relay requests, subscriptions, publish fanout, outbox subscriptions, and sync.
+**What:** Use one Applesauce event store layer as the canonical Nostr event
+authority for dedupe, replaceable/delete handling, models, loaders, and
+persistence. Use RelayPool for relay requests, subscriptions, publish fanout,
+outbox subscriptions, and sync.
 
 **When to use:** From the first relay-backed feature onward.
 
-**Trade-offs:** The LibSQL-backed store is async and requires `AsyncEventStore`; design service APIs async from the start. Avoid mixing direct relay responses into UI state without inserting verified events into the store.
+**Trade-offs:** The LibSQL-backed store is async and requires `AsyncEventStore`;
+design service APIs async from the start. Avoid mixing direct relay responses
+into UI state without inserting verified events into the store.
 
 ## Data Flow
 
@@ -303,7 +339,9 @@ Island posts response back to iframe with exact targetOrigin where possible
 SDK promise/subscription callback resolves inside napplet
 ```
 
-**Direction rule:** napplets never call relays, app DB, signer, localStorage, or arbitrary HTTPS resources directly. They request through NAP domains; backend services decide whether and how to fulfill.
+**Direction rule:** napplets never call relays, app DB, signer, localStorage, or
+arbitrary HTTPS resources directly. They request through NAP domains; backend
+services decide whether and how to fulfill.
 
 ### Sign-In / Account / Session Flow
 
@@ -329,7 +367,9 @@ App shell renders active avatar/navigation/settings from account DTO
 NAP identity domain returns public key / identity changes from AccountRuntime, not iframe state
 ```
 
-**Boundary rule:** session cookies identify the web user to Fresh; napplet session identity identifies a sandboxed iframe/runtime relation; Nostr account identity identifies the signer/pubkey. Do not collapse these into one token.
+**Boundary rule:** session cookies identify the web user to Fresh; napplet
+session identity identifies a sandboxed iframe/runtime relation; Nostr account
+identity identifies the signer/pubkey. Do not collapse these into one token.
 
 ### Persistence and Relay Sync Flow
 
@@ -357,15 +397,15 @@ Sync metadata/cursors and app-specific settings/grants persist in app DB
 
 **Storage boundary:**
 
-| Data | Owner | Store | Notes |
-|------|-------|-------|-------|
-| HTTP sessions | SessionService | App DB + httpOnly cookie ID | Cookie stores opaque ID only |
-| Accounts/signers | AccountService | App DB / secret store | Keep keys out of islands and napplet iframe |
-| Capability grants | ApprovalService/KehtoAdapter | App DB | Key by account + napplet pubkey/dTag/aggregateHash + capability |
-| Napplet config/storage | NAP storage/config services | App DB | Scope by account + napplet identity + version/instance |
-| Nostr events | Applesauce runtime | Applesauce event DB | Deduped, replaceable/delete aware |
-| Relay preferences/cursors | NostrRuntime | App DB, optionally Nostr replaceable events | Separate local sync cursor from user-published relay lists |
-| Artifact cache | ArtifactResolver | File/cache table/blob store | Cache only verified hashes; re-hash before serving |
+| Data                      | Owner                        | Store                                       | Notes                                                           |
+| ------------------------- | ---------------------------- | ------------------------------------------- | --------------------------------------------------------------- |
+| HTTP sessions             | SessionService               | App DB + httpOnly cookie ID                 | Cookie stores opaque ID only                                    |
+| Accounts/signers          | AccountService               | App DB / secret store                       | Keep keys out of islands and napplet iframe                     |
+| Capability grants         | ApprovalService/KehtoAdapter | App DB                                      | Key by account + napplet pubkey/dTag/aggregateHash + capability |
+| Napplet config/storage    | NAP storage/config services  | App DB                                      | Scope by account + napplet identity + version/instance          |
+| Nostr events              | Applesauce runtime           | Applesauce event DB                         | Deduped, replaceable/delete aware                               |
+| Relay preferences/cursors | NostrRuntime                 | App DB, optionally Nostr replaceable events | Separate local sync cursor from user-published relay lists      |
+| Artifact cache            | ArtifactResolver             | File/cache table/blob store                 | Cache only verified hashes; re-hash before serving              |
 
 ### Approval / Consent Flow
 
@@ -401,87 +441,114 @@ Napplet iframe state:
   untrusted app-local state only; no direct authority over signer, relays, storage, or account
 ```
 
-Do not store authoritative account, grants, relay state, or Nostr event cache in Preact signals. Signals are fine for rendering interaction state and live DTO snapshots from backend streams.
+Do not store authoritative account, grants, relay state, or Nostr event cache in
+Preact signals. Signals are fine for rendering interaction state and live DTO
+snapshots from backend streams.
 
 ## Scaling Considerations
 
-| Scale | Architecture Adjustments |
-|-------|--------------------------|
-| 0-1k users | Single Deno Fresh process with local SQLite/LibSQL file, in-process RuntimeRegistry, one RelayPool per account or small pool manager. Prioritize correctness and cleanup. |
+| Scale         | Architecture Adjustments                                                                                                                                                                                         |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0-1k users    | Single Deno Fresh process with local SQLite/LibSQL file, in-process RuntimeRegistry, one RelayPool per account or small pool manager. Prioritize correctness and cleanup.                                        |
 | 1k-100k users | Move app DB/event DB to remote LibSQL/Turso or managed SQLite-compatible service, add background sync workers, enforce per-account relay/subscription quotas, introduce sticky sessions or resumable stream IDs. |
-| 100k+ users | Split runtime workers from Fresh web edge, externalize message bus for NAP streams, shard event storage by account/pubkey, centralize relay connection pooling, add artifact CDN/cache with hash verification. |
+| 100k+ users   | Split runtime workers from Fresh web edge, externalize message bus for NAP streams, shard event storage by account/pubkey, centralize relay connection pooling, add artifact CDN/cache with hash verification.   |
 
 ### Scaling Priorities
 
-1. **First bottleneck: relay subscriptions and long-lived streams.** Mitigate with subscription dedupe, outbox-aware relay selection, per-account quotas, and cleanup on iframe removal.
-2. **Second bottleneck: event persistence/search.** Mitigate with Applesauce persistent DB, targeted sync, indexes/search only where needed, and pruning policies.
-3. **Third bottleneck: runtime session affinity.** Mitigate by persisting grants/session metadata and using sticky routing or external message buses before adding multiple web instances.
+1. **First bottleneck: relay subscriptions and long-lived streams.** Mitigate
+   with subscription dedupe, outbox-aware relay selection, per-account quotas,
+   and cleanup on iframe removal.
+2. **Second bottleneck: event persistence/search.** Mitigate with Applesauce
+   persistent DB, targeted sync, indexes/search only where needed, and pruning
+   policies.
+3. **Third bottleneck: runtime session affinity.** Mitigate by persisting
+   grants/session metadata and using sticky routing or external message buses
+   before adding multiple web instances.
 
 ## Anti-Patterns
 
 ### Anti-Pattern 1: Putting Nostr Runtime Logic in Islands
 
-**What people do:** Let `NappletHost.tsx` own relay pools, event caches, signing, or NAP domain behavior.
+**What people do:** Let `NappletHost.tsx` own relay pools, event caches,
+signing, or NAP domain behavior.
 
-**Why it's wrong:** It violates the core requirement that heavy Nostr and persistent runtime state live on the backend; it also exposes sensitive state to mobile browser and iframe-adjacent code.
+**Why it's wrong:** It violates the core requirement that heavy Nostr and
+persistent runtime state live on the backend; it also exposes sensitive state to
+mobile browser and iframe-adjacent code.
 
-**Do this instead:** Islands only bridge messages and render UI. Call backend runtime APIs for all NAP behavior.
+**Do this instead:** Islands only bridge messages and render UI. Call backend
+runtime APIs for all NAP behavior.
 
 ### Anti-Pattern 2: Treating postMessage as Trusted Because It Came From an iframe
 
-**What people do:** Accept any `message` event and forward `event.data` to the backend.
+**What people do:** Accept any `message` event and forward `event.data` to the
+backend.
 
-**Why it's wrong:** Any window in the frame hierarchy can send messages. MDN explicitly requires checking origin/source and validating syntax.
+**Why it's wrong:** Any window in the frame hierarchy can send messages. MDN
+explicitly requires checking origin/source and validating syntax.
 
-**Do this instead:** Track iframe `contentWindow`, expected gateway origin, session nonce, schema version, request ID, and domain allowlist. Revalidate again on the server.
+**Do this instead:** Track iframe `contentWindow`, expected gateway origin,
+session nonce, schema version, request ID, and domain allowlist. Revalidate
+again on the server.
 
 ### Anti-Pattern 3: Combining `allow-scripts` and `allow-same-origin` for Same-Origin Napplet Content
 
-**What people do:** Serve napplet gateway from the portal origin and add both iframe sandbox tokens for convenience.
+**What people do:** Serve napplet gateway from the portal origin and add both
+iframe sandbox tokens for convenience.
 
-**Why it's wrong:** MDN discourages this combination for same-origin frames because it can nullify sandboxing. It also increases risk that napplet content can access parent-origin storage/cookies/DOM.
+**Why it's wrong:** MDN discourages this combination for same-origin frames
+because it can nullify sandboxing. It also increases risk that napplet content
+can access parent-origin storage/cookies/DOM.
 
-**Do this instead:** Prefer a separate napplet content origin/subdomain. Use the narrowest sandbox tokens possible and make resource access shell-mediated.
+**Do this instead:** Prefer a separate napplet content origin/subdomain. Use the
+narrowest sandbox tokens possible and make resource access shell-mediated.
 
 ### Anti-Pattern 4: Mixing App Metadata and Nostr Events in One Ad-Hoc Table
 
-**What people do:** Store events, sessions, grants, relay settings, and napplet config in generic JSON blobs.
+**What people do:** Store events, sessions, grants, relay settings, and napplet
+config in generic JSON blobs.
 
-**Why it's wrong:** Nostr event semantics need dedupe, replaceable/addressable replacement, delete handling, filters, and relay provenance; app metadata needs product-specific constraints and migrations.
+**Why it's wrong:** Nostr event semantics need dedupe, replaceable/addressable
+replacement, delete handling, filters, and relay provenance; app metadata needs
+product-specific constraints and migrations.
 
-**Do this instead:** Use Applesauce event database for Nostr events and a separate app schema for accounts, sessions, grants, configs, and sync metadata.
+**Do this instead:** Use Applesauce event database for Nostr events and a
+separate app schema for accounts, sessions, grants, configs, and sync metadata.
 
 ### Anti-Pattern 5: Reimplementing Kehto/NAP Dispatch in Fresh Handlers
 
-**What people do:** Each `/api/nap/*` handler switches on domain/method and directly implements protocol behavior.
+**What people do:** Each `/api/nap/*` handler switches on domain/method and
+directly implements protocol behavior.
 
-**Why it's wrong:** It drifts from `../kehto` runtime contracts and duplicates service/ACL behavior.
+**Why it's wrong:** It drifts from `../kehto` runtime contracts and duplicates
+service/ACL behavior.
 
-**Do this instead:** Fresh handlers validate transport/authentication, then delegate to a Kehto adapter and registered NAP services.
+**Do this instead:** Fresh handlers validate transport/authentication, then
+delegate to a Kehto adapter and registered NAP services.
 
 ## Integration Points
 
 ### External Services
 
-| Service | Integration Pattern | Notes |
-|---------|---------------------|-------|
-| Nostr relays | Backend `RelayPool` with request/subscription/publish/sync APIs | Do not open relay WebSockets from napplet iframe or islands for core behavior |
-| Blossom/media resources | NAP resource/upload/media service proxies | Enforce scheme allowlists, byte limits, hash verification, and user consent where needed |
-| Signer/NIP-46/bunker | Account signer adapter behind AccountRuntime | Never expose private keys or raw signer authority to iframe; consent high-risk operations |
-| Napplet artifacts | Gateway route backed by resolver/cache | Verify manifest/signatures/hashes before serving; consider separate origin |
-| Browser postMessage | Island-owned iframe bridge | Verify origin/source/schema; exact `targetOrigin` where possible |
+| Service                 | Integration Pattern                                             | Notes                                                                                     |
+| ----------------------- | --------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| Nostr relays            | Backend `RelayPool` with request/subscription/publish/sync APIs | Do not open relay WebSockets from napplet iframe or islands for core behavior             |
+| Blossom/media resources | NAP resource/upload/media service proxies                       | Enforce scheme allowlists, byte limits, hash verification, and user consent where needed  |
+| Signer/NIP-46/bunker    | Account signer adapter behind AccountRuntime                    | Never expose private keys or raw signer authority to iframe; consent high-risk operations |
+| Napplet artifacts       | Gateway route backed by resolver/cache                          | Verify manifest/signatures/hashes before serving; consider separate origin                |
+| Browser postMessage     | Island-owned iframe bridge                                      | Verify origin/source/schema; exact `targetOrigin` where possible                          |
 
 ### Internal Boundaries
 
-| Boundary | Communication | Notes |
-|----------|---------------|-------|
-| Fresh routes ↔ runtime services | Direct TypeScript service calls | Routes validate HTTP/session and convert service results to `Response` |
-| Routes ↔ islands | Serializable props and backend DTOs | Fresh island props cannot include functions; keep props small and serializable |
-| Islands ↔ iframe | `postMessage` with schema, requestId, nonce | Browser-only; guarded by `IS_BROWSER`; do not trust payloads |
-| Islands ↔ backend | Same-origin fetch plus SSE/WebSocket for streams | Cookie-authenticated; add CSRF for mutating endpoints |
-| Runtime ↔ Kehto | Adapter implementing expected contracts | Preserve Kehto shell/runtime boundary: DOM transport outside runtime; dispatch/ACL inside runtime |
-| Runtime ↔ Applesauce | EventStore/RelayPool APIs | EventStore is Nostr authority; RelayPool is network edge |
-| NAP services ↔ storage | Repositories with typed methods | Avoid SQL or raw DB access from routes/islands |
+| Boundary                        | Communication                                    | Notes                                                                                             |
+| ------------------------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------- |
+| Fresh routes ↔ runtime services | Direct TypeScript service calls                  | Routes validate HTTP/session and convert service results to `Response`                            |
+| Routes ↔ islands                | Serializable props and backend DTOs              | Fresh island props cannot include functions; keep props small and serializable                    |
+| Islands ↔ iframe                | `postMessage` with schema, requestId, nonce      | Browser-only; guarded by `IS_BROWSER`; do not trust payloads                                      |
+| Islands ↔ backend               | Same-origin fetch plus SSE/WebSocket for streams | Cookie-authenticated; add CSRF for mutating endpoints                                             |
+| Runtime ↔ Kehto                 | Adapter implementing expected contracts          | Preserve Kehto shell/runtime boundary: DOM transport outside runtime; dispatch/ACL inside runtime |
+| Runtime ↔ Applesauce            | EventStore/RelayPool APIs                        | EventStore is Nostr authority; RelayPool is network edge                                          |
+| NAP services ↔ storage          | Repositories with typed methods                  | Avoid SQL or raw DB access from routes/islands                                                    |
 
 ## Suggested Build Order
 
@@ -489,20 +556,23 @@ Do not store authoritative account, grants, relay state, or Nostr event cache in
    - Extend `State` for session/account DTOs.
    - Replace starter page with app shell routes and presentational components.
    - Create `runtime/registry.ts` and no-op `NappletSession` lifecycle.
-   - Rationale: every later phase needs the same boundaries and typed request state.
+   - Rationale: every later phase needs the same boundaries and typed request
+     state.
 
 2. **Add app persistence and session/account foundation**
    - App DB connection/migrations.
    - Session cookie middleware.
    - Minimal sign-in/account selection flow.
    - Active avatar/bottom nav DTO.
-   - Rationale: NAP identity, grants, and runtime lookup all depend on account/session identity.
+   - Rationale: NAP identity, grants, and runtime lookup all depend on
+     account/session identity.
 
 3. **Build iframe sandbox host with inert/no-op NAP bridge**
    - `NappletHost` island mounts sandboxed iframe.
    - Implement postMessage schema, request IDs, nonce/source/origin checks.
    - Add `/api/nap/:sessionId` echo/no-op handler and teardown.
-   - Rationale: validates the riskiest browser/backend boundary before real authority exists.
+   - Rationale: validates the riskiest browser/backend boundary before real
+     authority exists.
 
 4. **Integrate Kehto adapter and napplet injection path**
    - Resolve sibling package APIs.
@@ -515,46 +585,91 @@ Do not store authoritative account, grants, relay state, or Nostr event cache in
    - EventStore/AsyncEventStore + persistent event DB.
    - RelayPool construction, relay settings, loaders.
    - Basic relay query/publish through backend service.
-   - Rationale: identity/outbox/common/list domains need authoritative Nostr storage and networking.
+   - Rationale: identity/outbox/common/list domains need authoritative Nostr
+     storage and networking.
 
 6. **Implement minimum NAP domains**
-   - Start with `identity`, `storage`, `resource` (restricted), `relay` read/query, then `outbox` publish.
+   - Start with `identity`, `storage`, `resource` (restricted), `relay`
+     read/query, then `outbox` publish.
    - Add stable error envelopes and stream handling.
-   - Rationale: gives napplets useful behavior while keeping signing/publish risk staged.
+   - Rationale: gives napplets useful behavior while keeping signing/publish
+     risk staged.
 
 7. **Add approval/grant system**
    - Pending approval queue, modal UI, grant persistence.
    - Gate publish/sign/resource/notify/config mutations.
-   - Rationale: must exist before exposing destructive or privacy-sensitive domains broadly.
+   - Rationale: must exist before exposing destructive or privacy-sensitive
+     domains broadly.
 
 8. **Add relay sync and richer domains**
-   - NIP-65 relay discovery, outbox subscriptions, sync cursors/Negentropy where supported.
+   - NIP-65 relay discovery, outbox subscriptions, sync cursors/Negentropy where
+     supported.
    - Common social actions, lists, config, notify, media, INC.
-   - Rationale: depends on stable accounts, event store, grants, and message streams.
+   - Rationale: depends on stable accounts, event store, grants, and message
+     streams.
 
 9. **Hardening and deployment readiness**
-   - CSP, iframe origin separation, CSRF, rate limits, stream cleanup, resource quotas, observability.
-   - Rationale: iframe sandboxing and backend proxying are the highest-risk production surfaces.
+   - CSP, iframe origin separation, CSRF, rate limits, stream cleanup, resource
+     quotas, observability.
+   - Rationale: iframe sandboxing and backend proxying are the highest-risk
+     production surfaces.
 
 ## Risks and Deeper Research Flags
 
-| Risk | Why It Matters | Mitigation / Research Needed |
-|------|----------------|------------------------------|
-| iframe sandbox token choice | Wrong tokens can break napplets or nullify sandbox isolation | Phase-specific security research for exact `sandbox`, `allow`, CSP, gateway origin, and cookie policy |
-| Backend proxy as confused deputy | Napplet can try to make server fetch/sign/publish beyond user intent | Schema validation, ACL, capability grants, per-domain quotas, explicit consent, audit logs |
-| Long-lived NAP subscriptions over HTTP | Fetch request/response is insufficient for relay-like streams | Decide SSE vs WebSocket vs polling once Kehto/napplet message semantics are confirmed |
-| Applesauce Deno compatibility details | SQLite implementations differ by runtime and async/sync APIs | Validate LibSQL/native package behavior in Deno before committing storage implementation |
-| Multi-instance runtime sessions | In-process iframe session maps break under horizontal scaling | Keep session metadata persistent and design request routing/stream IDs for future sticky sessions |
-| Sibling package API drift | `../kehto` and `../napplet` are local evolving packages | Pin versions/paths and add contract tests around adapter boundaries |
+| Risk                                   | Why It Matters                                                       | Mitigation / Research Needed                                                                          |
+| -------------------------------------- | -------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| iframe sandbox token choice            | Wrong tokens can break napplets or nullify sandbox isolation         | Phase-specific security research for exact `sandbox`, `allow`, CSP, gateway origin, and cookie policy |
+| Backend proxy as confused deputy       | Napplet can try to make server fetch/sign/publish beyond user intent | Schema validation, ACL, capability grants, per-domain quotas, explicit consent, audit logs            |
+| Long-lived NAP subscriptions over HTTP | Fetch request/response is insufficient for relay-like streams        | Decide SSE vs WebSocket vs polling once Kehto/napplet message semantics are confirmed                 |
+| Applesauce Deno compatibility details  | SQLite implementations differ by runtime and async/sync APIs         | Validate LibSQL/native package behavior in Deno before committing storage implementation              |
+| Multi-instance runtime sessions        | In-process iframe session maps break under horizontal scaling        | Keep session metadata persistent and design request routing/stream IDs for future sticky sessions     |
+| Sibling package API drift              | `../kehto` and `../napplet` are local evolving packages              | Pin versions/paths and add contract tests around adapter boundaries                                   |
 
 ## Sources
 
-- Fresh official docs: Architecture, Islands, Session management (fetched 2026-07-30; source confidence from seam: LOW for webfetch despite official-source content).
-- Applesauce docs: EventStore, LibSQL event database, RelayPool (fetched via Applesauce documentation tools; confidence MEDIUM from seam for Context7/docs provider).
-- Kehto local docs: `docs/concepts/runtime-shell-boundaries.md`, `docs/concepts/capability-negotiation.md`, `docs/tutorials/runtime-implementation.md` (local sibling-package source; used as project-specific evidence).
-- napplet local docs: `.planning/codebase/ARCHITECTURE.md`, `packages/sdk/README.md` (local sibling-package source; used as project-specific evidence).
-- MDN: `Window.postMessage()` and `<iframe>` reference (fetched 2026-07-30; source confidence from seam: LOW for webfetch despite official-source content).
+- Fresh official docs: Architecture, Islands, Session management (fetched
+  2026-07-30; source confidence from seam: LOW for webfetch despite
+  official-source content).
+- Applesauce docs: EventStore, LibSQL event database, RelayPool (fetched via
+  Applesauce documentation tools; confidence MEDIUM from seam for Context7/docs
+  provider).
+- Kehto local docs: `docs/concepts/runtime-shell-boundaries.md`,
+  `docs/concepts/capability-negotiation.md`,
+  `docs/tutorials/runtime-implementation.md` (local sibling-package source; used
+  as project-specific evidence).
+- napplet local docs: `.planning/codebase/ARCHITECTURE.md`,
+  `packages/sdk/README.md` (local sibling-package source; used as
+  project-specific evidence).
+- MDN: `Window.postMessage()` and `<iframe>` reference (fetched 2026-07-30;
+  source confidence from seam: LOW for webfetch despite official-source
+  content).
 
 ---
-*Architecture research for: Deno Fresh server-side napplet runtime*
-*Researched: 2026-07-30*
+
+_Architecture research for: Deno Fresh server-side napplet runtime_ _Researched:
+2026-07-30_
+
+# v1.1 Runtime & UX Expansion Addendum (2026-07-30)
+
+## Integration Shape
+
+1. Extend the existing runtime dispatcher with isolated services for resource,
+   upload, common, intent, storage, and media domains.
+2. Keep resource fetching and Blossom transport behind server policy adapters;
+   never allow napplet-provided URLs to become unrestricted backend fetches.
+3. Extend the process-owned catalog as the source for home search and intent
+   handler selection; accepted manifest event IDs remain launch authority.
+4. Add a durable, per-account/per-napplet storage adapter with shared and
+   per-instance namespaces, quotas, and deterministic serialization.
+5. Model media as a process-owned session registry keyed by account and session,
+   with one active playback owner tab and projections broadcast over existing
+   runtime sockets.
+6. Treat connection state as one shell transport state machine: initial connect,
+   retry wait, connecting, bootstrapping, connected, stale/error, and
+   intentionally closed.
+
+## Suggested Build Order
+
+Shell resilience and navigation → catalog install/search → resource and upload
+foundations → common and storage → intent routing → media coordination →
+integrated polish and verification.
