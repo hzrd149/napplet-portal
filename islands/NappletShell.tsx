@@ -44,6 +44,7 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
   const [view, setView] = useState<View>("home");
   const [notice, setNotice] = useState<Notice>(null);
   const [connecting, setConnecting] = useState(false);
+  const [awaitingSigner, setAwaitingSigner] = useState(false);
   const [connectionUri, setConnectionUri] = useState("");
   const [copied, setCopied] = useState(false);
   const [signInError, setSignInError] = useState("");
@@ -84,12 +85,6 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
     }), []);
 
   useEffect(() => {
-    const relay = `${
-      location.protocol === "https:" ? "wss:" : "ws:"
-    }//${location.host}/api/runtime`;
-    setConnectionUri(
-      `nostrconnect://napplet-portal?relay=${encodeURIComponent(relay)}`,
-    );
     const receive = (event: MessageEvent) => bridge.receive(event);
     globalThis.addEventListener("message", receive);
     const back = (event: PopStateEvent) => {
@@ -97,6 +92,7 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
       setView(next === "profile" || next === "napplet" ? next : "home");
     };
     globalThis.addEventListener("popstate", back);
+    openSocket("connect");
     return () => {
       globalThis.removeEventListener("message", receive);
       globalThis.removeEventListener("popstate", back);
@@ -164,6 +160,24 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
       iframe.current?.contentWindow?.postMessage(message.message, "*");
       return;
     }
+    if (
+      message.type === "runtime.signer.pending" &&
+      typeof message.uri === "string" &&
+      message.uri.startsWith("nostrconnect://")
+    ) {
+      setConnectionUri(message.uri);
+      setConnecting(false);
+      setAwaitingSigner(true);
+      return;
+    }
+    if (message.type === "runtime.signer.error") {
+      setConnecting(false);
+      setAwaitingSigner(false);
+      setSignInError(
+        "Remote signer connection failed or timed out. Try again.",
+      );
+      return;
+    }
     if (message.type === "runtime.error") {
       setConnecting(false);
       setNotice("integrity");
@@ -190,6 +204,7 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
       setProfile({ pubkey: account.pubkey, status: "active" });
     }
     setConnecting(false);
+    setAwaitingSigner(false);
     navigate("napplet");
   }
 
@@ -220,6 +235,7 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
           <SignInPanel
             uri={connectionUri}
             connecting={connecting}
+            awaitingSigner={awaitingSigner}
             error={signInError}
             copied={copied}
             onCopy={copyUri}
@@ -306,6 +322,7 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
 interface SignInPanelProps {
   readonly uri: string;
   readonly connecting: boolean;
+  readonly awaitingSigner: boolean;
   readonly error: string;
   readonly copied: boolean;
   readonly onCopy: () => void;
@@ -334,17 +351,22 @@ function SignInPanel(props: SignInPanelProps) {
         <a
           class="primary-button"
           href={launch.href || undefined}
-          aria-disabled={!launch.href || props.connecting}
+          aria-disabled={!launch.href}
           onClick={(event) => {
-            if (!launch.href || props.connecting) {
+            if (!launch.href) {
               event.preventDefault();
-              return;
             }
-            props.onConnect("connect");
           }}
         >
-          {props.connecting ? "Connecting…" : "Connect signer"}
+          Connect signer
         </a>
+        {(props.connecting || props.awaitingSigner) && (
+          <p class="stream-status" aria-live="polite">
+            {props.awaitingSigner
+              ? "Awaiting remote signer connection…"
+              : "Preparing secure signer connection…"}
+          </p>
+        )}
         <details>
           <summary>Use bunker URI</summary>
           <label for="bunker-uri">Bunker URI</label>

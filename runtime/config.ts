@@ -2,6 +2,7 @@ export interface RuntimeConfig {
   readonly coordinate: string;
   readonly bind: "127.0.0.1" | "::1";
   readonly relays: readonly string[];
+  readonly remoteSignerRelays: readonly string[];
   readonly blossomServers: readonly string[];
   readonly reconnectGraceMs: number;
 }
@@ -9,6 +10,10 @@ export interface RuntimeConfig {
 export const DEFAULT_RELAYS = Object.freeze([
   "wss://relay.damus.io/",
   "wss://nos.lol/",
+]);
+
+export const DEFAULT_REMOTE_SIGNER_RELAYS = Object.freeze([
+  "wss://bucket.coracle.social/",
 ]);
 
 export const DEFAULT_BLOSSOM_SERVERS = Object.freeze([
@@ -68,6 +73,14 @@ export function loadRuntimeConfig(
     relays: environment.NOSTR_RELAYS === undefined
       ? DEFAULT_RELAYS
       : endpoints(environment.NOSTR_RELAYS, ["ws:", "wss:"], "relay", warn),
+    remoteSignerRelays: environment.REMOTE_SIGNER_RELAYS === undefined
+      ? DEFAULT_REMOTE_SIGNER_RELAYS
+      : endpoints(
+        environment.REMOTE_SIGNER_RELAYS,
+        ["ws:", "wss:"],
+        "remote signer relay",
+        warn,
+      ),
     blossomServers: endpoints(
       environment.BLOSSOM_SERVERS === undefined
         ? DEFAULT_BLOSSOM_SERVERS.join(",")

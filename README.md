@@ -34,6 +34,7 @@ Configuration is read once when the process starts. Restart after changing it.
 | --------------------------- | --------------------------------------------------- | ---------------------------------------- |
 | `NAPPLET_COORDINATE`        | Required NIP-5D `naddr` for the one active napplet  | Empty; Home explains how to configure it |
 | `NOSTR_RELAYS`              | Comma-separated `ws:`/`wss:` relay URLs             | Small built-in public fallback list      |
+| `REMOTE_SIGNER_RELAYS`      | NIP-46 signer transport relays                      | `wss://bucket.coracle.social`            |
 | `BLOSSOM_SERVERS`           | Comma-separated `http:`/`https:` Blossom bases      | Small built-in public fallback list      |
 | `PORTAL_RECONNECT_GRACE_MS` | Detached-tab retention, from 1000 through 120000 ms | `10000`                                  |
 | `PORTAL_BIND`               | Server bind address                                 | `127.0.0.1`; `::1` is also accepted      |

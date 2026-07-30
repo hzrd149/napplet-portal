@@ -5,18 +5,44 @@ import type {
   RelayQueryMessage,
   RelaySubscribeMessage,
 } from "@napplet/nap/relay";
+import { RelayPool } from "applesauce-relay";
+import { AccountStore } from "../../runtime/account_store.ts";
+import { PortalAccounts } from "../../runtime/accounts.ts";
+import type { RuntimeConfig } from "../../runtime/config.ts";
 import { ConnectionRegistry } from "../../runtime/connections.ts";
 import { createPortalRuntime } from "../../runtime/portal_runtime.ts";
 import { decodeClientMessage } from "../../runtime/transport.ts";
 import { define } from "../../utils.ts";
 
 export const runtime = createPortalRuntime({ fixture });
+const signerPool = new RelayPool();
+let signerAccounts: PortalAccounts | undefined;
+let restoreAccounts: Promise<unknown> | undefined;
+
+async function accountAuthority(
+  config: RuntimeConfig,
+): Promise<PortalAccounts> {
+  if (!signerAccounts) {
+    signerAccounts = new PortalAccounts(
+      new AccountStore(".data/accounts.json"),
+      {
+        remoteSignerRelays: config.remoteSignerRelays,
+        pool: signerPool,
+      },
+    );
+    restoreAccounts = signerAccounts.restore();
+  }
+  await restoreAccounts;
+  return signerAccounts;
+}
+
 const sessions = new Map<
   string,
   {
     readonly windowId: string;
     readonly source: object;
     readonly bridge: ReturnType<typeof runtime.openWindow>;
+    signerAbort?: AbortController;
   }
 >();
 const connections = new ConnectionRegistry({
@@ -64,6 +90,7 @@ export const handler = define.handlers({
       }));
     });
     socket.addEventListener("close", () => {
+      session?.signerAbort?.abort();
       connections.detach(connection.connectionId);
     });
     socket.addEventListener("message", async (event) => {
@@ -81,7 +108,31 @@ export const handler = define.handlers({
           message.type === "runtime.start" &&
           message.coordinate === fixture.coordinate
         ) {
-          const account = runtime.signIn(fixture.identity.pubkey);
+          if (message.method !== "connect") {
+            socket.send(JSON.stringify({
+              type: "runtime.signer.error",
+              error: "This sign-in method is not available in the tracer",
+            }));
+            return;
+          }
+          session.signerAbort?.abort();
+          const controller = new AbortController();
+          session.signerAbort = controller;
+          const abort = AbortSignal.any([
+            controller.signal,
+            AbortSignal.timeout(120_000),
+          ]);
+          const accounts = await accountAuthority(ctx.state.config);
+          const pending = await accounts.startNostrConnect(abort);
+          socket.send(JSON.stringify({
+            type: "runtime.signer.pending",
+            uri: pending.uri,
+          }));
+          const identity = await pending.connected;
+          if (!identity.pubkey) {
+            throw new Error("Remote signer has no public key");
+          }
+          const account = runtime.signIn(identity.pubkey);
           const artifact = await runtime.resolveArtifact();
           socket.send(JSON.stringify({
             type: "runtime.artifact",
@@ -92,6 +143,7 @@ export const handler = define.handlers({
             },
             account,
           }));
+          session.signerAbort = undefined;
           return;
         }
         if (message.type === "runtime.signout") {
@@ -143,8 +195,8 @@ export const handler = define.handlers({
       } catch {
         socket.send(
           JSON.stringify({
-            type: "runtime.error",
-            error: "artifact verification failed",
+            type: "runtime.signer.error",
+            error: "Remote signer connection failed or timed out",
           }),
         );
       }

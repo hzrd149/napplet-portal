@@ -4,11 +4,7 @@ import {
   type IAccount,
   type SerializedAccount,
 } from "applesauce-accounts";
-import {
-  NostrConnectSigner,
-  type NostrPublishMethod,
-  type NostrSubscriptionMethod,
-} from "applesauce-signers";
+import { NostrConnectSigner, type NostrPool } from "applesauce-signers";
 import type { EventTemplate, NostrEvent } from "@napplet/core";
 import { BehaviorSubject } from "npm:rxjs@7.8.2";
 import { type AccountSnapshot, AccountStore } from "./account_store.ts";
@@ -27,10 +23,9 @@ export interface PendingNostrConnect {
 }
 
 export interface PortalAccountFactories {
-  readonly relays: readonly string[];
-  readonly subscriptionMethod: NostrSubscriptionMethod;
-  readonly publishMethod: NostrPublishMethod;
-  readonly createNostrConnect?: () =>
+  readonly remoteSignerRelays: readonly string[];
+  readonly pool: NostrPool;
+  readonly createNostrConnect?: (abort?: AbortSignal) =>
     | PendingNostrConnect
     | Promise<PendingNostrConnect>;
   readonly connectBunker?: (uri: string) => Promise<IAccount>;
@@ -76,8 +71,9 @@ export class PortalAccounts {
   constructor(store: AccountStore, factories: PortalAccountFactories) {
     this.#store = store;
     this.#factories = factories;
-    NostrConnectSigner.subscriptionMethod = factories.subscriptionMethod;
-    NostrConnectSigner.publishMethod = factories.publishMethod;
+    // Account deserialization constructs the signer internally, so Applesauce's
+    // documented class fallback must share the same process-owned RelayPool.
+    NostrConnectSigner.pool = factories.pool;
     this.#manager.registerType(Accounts.NostrConnectAccount);
     this.#manager.registerType(Accounts.PrivateKeyAccount);
   }
@@ -106,9 +102,9 @@ export class PortalAccounts {
     return identity;
   }
 
-  async startNostrConnect(): Promise<NostrConnectResult> {
-    const pending = await (this.#factories.createNostrConnect?.() ??
-      this.#createNostrConnect());
+  async startNostrConnect(abort?: AbortSignal): Promise<NostrConnectResult> {
+    const pending = await (this.#factories.createNostrConnect?.(abort) ??
+      this.#createNostrConnect(abort));
     return {
       uri: pending.uri,
       connected: pending.connected.then((account) => this.#activate(account)),
@@ -177,11 +173,10 @@ export class PortalAccounts {
     await this.#store.write(snapshot);
   }
 
-  async #createNostrConnect(): Promise<PendingNostrConnect> {
+  async #createNostrConnect(abort?: AbortSignal): Promise<PendingNostrConnect> {
     const signer = new NostrConnectSigner({
-      relays: [...this.#factories.relays],
-      subscriptionMethod: this.#factories.subscriptionMethod,
-      publishMethod: this.#factories.publishMethod,
+      relays: [...this.#factories.remoteSignerRelays],
+      pool: this.#factories.pool,
     });
     await signer.open();
     const uri = signer.getNostrConnectURI({
@@ -190,7 +185,7 @@ export class PortalAccounts {
     });
     return {
       uri,
-      connected: signer.waitForSigner().then(async () => {
+      connected: signer.waitForSigner(abort).then(async () => {
         const pubkey = await signer.getPublicKey();
         return new Accounts.NostrConnectAccount(pubkey, signer);
       }),
@@ -199,8 +194,7 @@ export class PortalAccounts {
 
   async #connectBunker(uri: string): Promise<IAccount> {
     const signer = await NostrConnectSigner.fromBunkerURI(uri, {
-      subscriptionMethod: this.#factories.subscriptionMethod,
-      publishMethod: this.#factories.publishMethod,
+      pool: this.#factories.pool,
     });
     const pubkey = await signer.getPublicKey();
     return new Accounts.NostrConnectAccount(pubkey, signer);

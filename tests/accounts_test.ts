@@ -8,7 +8,7 @@ import {
   type PortalAccountFactories,
   PortalAccounts,
 } from "../runtime/accounts.ts";
-import { EMPTY } from "npm:rxjs@7.8.2";
+import { EMPTY, NEVER } from "npm:rxjs@7.8.2";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -56,9 +56,11 @@ async function withPortal(
   try {
     const path = `${directory}/accounts.json`;
     const portal = new PortalAccounts(new AccountStore(path), {
-      relays: ["wss://relay.example/"],
-      subscriptionMethod: () => EMPTY,
-      publishMethod: () => Promise.resolve(),
+      remoteSignerRelays: ["wss://relay.example/"],
+      pool: {
+        subscription: () => EMPTY,
+        publish: () => Promise.resolve(),
+      },
       ...factories,
     });
     await portal.restore();
@@ -133,9 +135,38 @@ Deno.test("Nostr Connect uses Applesauce pool API with signer-owned relays", asy
     "singleton signer must not mutate global connection methods",
   );
   assert(
-    source.includes("await signer.waitForSigner("),
+    source.includes("signer.waitForSigner(abort).then"),
     "account activation must wait for Applesauce remote signer resolution",
   );
+});
+
+Deno.test("Nostr Connect URI and RelayPool subscription share signer relays", async () => {
+  const subscriptions: string[][] = [];
+  const controller = new AbortController();
+  await withPortal(async (portal) => {
+    const pending = await portal.startNostrConnect(controller.signal);
+    const uri = new URL(pending.uri);
+    assertEquals(
+      uri.searchParams.getAll("relay"),
+      ["wss://relay.example/"],
+      "connection URI must advertise the server-owned signer relay",
+    );
+    assertEquals(
+      subscriptions,
+      [["wss://relay.example/"]],
+      "Applesauce RelayPool subscription must receive relays first",
+    );
+    controller.abort();
+    await pending.connected.catch(() => undefined);
+  }, {
+    pool: {
+      subscription: (relays) => {
+        subscriptions.push([...relays]);
+        return NEVER;
+      },
+      publish: () => Promise.resolve(),
+    },
+  });
 });
 
 Deno.test("bunker and Not recommended nsec paths run server-side and newest wins", async () => {
@@ -176,9 +207,11 @@ Deno.test("restored unavailable NIP-46 remains active offline and retries", asyn
     });
     let retries = 0;
     const portal = new PortalAccounts(store, {
-      relays: ["wss://relay.example/"],
-      subscriptionMethod: () => EMPTY,
-      publishMethod: () => Promise.resolve(),
+      remoteSignerRelays: ["wss://relay.example/"],
+      pool: {
+        subscription: () => EMPTY,
+        publish: () => Promise.resolve(),
+      },
       reconnectNostrConnect: () => {
         retries++;
         return Promise.reject(new Error("offline"));
