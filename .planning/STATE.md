@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 2
 current_phase_name: Backend Runtime Expansion
 status: executing
-stopped_at: Completed 02-04-PLAN.md
-last_updated: "2026-07-30T20:37:31.097Z"
+stopped_at: Completed 02-05-PLAN.md
+last_updated: "2026-07-30T20:44:53.629Z"
 last_activity: 2026-07-30
 last_activity_desc: Completed 02-01 persisted runtime tracer
 progress:
   total_phases: 2
   completed_phases: 1
   total_plans: 13
-  completed_plans: 10
+  completed_plans: 11
 ---
 
 # Project State
@@ -28,11 +28,11 @@ See: .planning/PROJECT.md (updated 2026-07-30)
 ## Current Position
 
 Phase: 2 — Backend Runtime Expansion
-Plan: 5 of 7
+Plan: 6 of 7
 Status: Ready to execute
 Last activity: 2026-07-30 — Completed 02-01 persisted runtime tracer
 
-Progress: [████████░░] 77%
+Progress: [█████████░] 85%
 
 ## Performance Metrics
 
@@ -70,6 +70,7 @@ Progress: [████████░░] 77%
 | Phase 02 P02 | 5min | 2 tasks | 7 files |
 | Phase 02 P03 | 3min | 1 tasks | 5 files |
 | Phase 02 P04 | 10min | 1 tasks | 5 files |
+| Phase 02 P05 | 4min | 1 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -99,6 +100,9 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase ?]: Public catalog content is an exact versioned codec containing only coordinate and accepted manifest event ID.
 - [Phase ?]: Catalog mutations serialize, re-read the latest active-account replacement, and advance locally only after complete required-relay acceptance.
 - [Phase ?]: Launch identity is projected only after the exact accepted manifest event ID crosses the verified artifact boundary.
+- [Phase ?]: [Phase 02]: Extend version-1 runtime settings snapshots additively so existing persisted state remains valid.
+- [Phase ?]: [Phase 02]: Keep server-rendered settings inside a shell-owned history view so the napplet frame stays mounted.
+- [Phase ?]: [Phase 02]: Project relay and Blossom cache health independently without gating settings or launch.
 
 ### Pending Todos
 
@@ -127,6 +131,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-07-30T20:37:31.085Z
-Stopped at: Completed 02-04-PLAN.md
+Last session: 2026-07-30T20:44:53.617Z
+Stopped at: Completed 02-05-PLAN.md
 Resume file: None
