@@ -60,7 +60,10 @@ Deno.test("settings canonicalize, persist queued writes, and emit reactively", a
     assertEquals(service.settings.relays, ["wss://last.example/"]);
     assertEquals((await store.read())?.relays, ["wss://last.example/"]);
     assertEquals(emissions.at(-1), ["wss://last.example/"]);
-    assertEquals(emissions.includes(["wss://relay.example/"]), false);
+    assertEquals(
+      emissions.some((value) => value[0] === "wss://relay.example/"),
+      true,
+    );
 
     subscription.unsubscribe();
     service.destroy();

@@ -6,6 +6,7 @@ import { debug as rootDebug, shortId } from "../debug.ts";
 import { AccountRuntime, type IdentitySnapshot } from "./accounts.ts";
 import { resolveVerifiedArtifact } from "./artifacts.ts";
 import { ConnectionRegistry } from "./connections.ts";
+import { createEventRuntime, type EventRuntime } from "./event_runtime.ts";
 import type {
   OutboxAdapter,
   OutboxStreamMessage,
@@ -18,6 +19,7 @@ import {
   type RelaySubscribeRequest,
   TracerRelayAdapter,
 } from "./relay_adapter.ts";
+import type { RuntimeSettingsService } from "./settings.ts";
 
 const debug = rootDebug.extend("runtime");
 
@@ -165,7 +167,16 @@ export class RuntimeServiceHub {
   }
 }
 
-export function createPortalRuntime({ fixture }: { fixture: Fixture }) {
+interface PortalRuntimeOptions {
+  readonly fixture: Fixture;
+  readonly settings?: RuntimeSettingsService;
+  readonly eventRuntime?: EventRuntime;
+}
+
+export function createPortalRuntime(
+  { fixture, settings, eventRuntime = createEventRuntime() }:
+    PortalRuntimeOptions,
+) {
   debug(
     "create portal runtime fixture=%s",
     shortId(fixture.identity.aggregateHash),
@@ -174,15 +185,21 @@ export function createPortalRuntime({ fixture }: { fixture: Fixture }) {
   const connections = new ConnectionRegistry();
   const relay = new TracerRelayAdapter(fixture.events.initial);
   const events = new RuntimeEvents();
+  let destroyed = false;
 
   return {
     events,
     relay,
+    eventRuntime,
     get activeAccount() {
       return accounts.active;
     },
     signIn: (pubkey: string) => accounts.signIn(pubkey),
     signOut: () => accounts.signOut(),
+    loadEvent: (id: string) => {
+      if (!settings) throw new Error("runtime settings unavailable");
+      return eventRuntime.loadEvent(id, settings.settings.relays);
+    },
     resolveArtifact: async () => {
       debug("resolve artifact started");
       const resolved = await resolveVerifiedArtifact(fixture);
@@ -255,6 +272,12 @@ export function createPortalRuntime({ fixture }: { fixture: Fixture }) {
           return relay.subscribe(message, listener);
         },
       };
+    },
+    destroy() {
+      if (destroyed) return;
+      destroyed = true;
+      eventRuntime.destroy();
+      settings?.destroy();
     },
   };
 }

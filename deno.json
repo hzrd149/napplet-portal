@@ -33,6 +33,7 @@
     "@napplet/nap": "npm:@napplet/nap@0.31.0",
     "applesauce-accounts": "npm:applesauce-accounts@6.2.0",
     "applesauce-core": "npm:applesauce-core@6.2.0",
+    "applesauce-loaders": "npm:applesauce-loaders@6.2.0",
     "applesauce-relay": "npm:applesauce-relay@6.2.1",
     "applesauce-signers": "npm:applesauce-signers@6.2.2",
     "fresh": "jsr:@fresh/core@2.3.3",

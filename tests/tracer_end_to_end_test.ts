@@ -6,6 +6,8 @@ import type {
   RelayEventMessage,
   RelaySubscribeMessage,
 } from "@napplet/nap/relay";
+import { finalizeEvent } from "nostr-tools";
+import { getSeenRelays } from "applesauce-core/helpers";
 import { of } from "npm:rxjs@7.8.2";
 import { loadRuntimeConfig } from "../runtime/config.ts";
 import { createEventRuntime } from "../runtime/event_runtime.ts";
@@ -90,10 +92,14 @@ Deno.test("persisted settings reach a process-wide loader without restart", asyn
     loadRuntimeConfig({}, () => undefined),
   );
   let requestedRelays: readonly string[] = [];
+  const loadedEvent = finalizeEvent(
+    { kind: 1, created_at: 1, content: "loader tracer", tags: [] },
+    crypto.getRandomValues(new Uint8Array(32)),
+  );
   const eventRuntime = createEventRuntime({
     request: (relays) => {
       requestedRelays = [...relays];
-      return of(fixture.events.initial);
+      return of(loadedEvent);
     },
   });
   const runtime = createPortalRuntime({ fixture, settings, eventRuntime });
@@ -104,9 +110,9 @@ Deno.test("persisted settings reach a process-wide loader without restart", asyn
       remoteSignerRelays: [],
       blossomServers: ["https://blossom.example"],
     });
-    const loaded = await runtime.loadEvent(fixture.events.initial.id);
+    const loaded = await runtime.loadEvent(loadedEvent.id);
 
-    assert(loaded?.id === fixture.events.initial.id, "loader should find event");
+    assert(loaded?.id === loadedEvent.id, "loader should find event");
     assert(
       requestedRelays[0] === "wss://tracer.example/",
       "next loader operation should use saved settings",
@@ -121,6 +127,59 @@ Deno.test("persisted settings reach a process-wide loader without restart", asyn
     await Deno.remove(directory, { recursive: true });
   }
 
-  assert(eventRuntime.destroyed, "event runtime should tear down deterministically");
+  assert(
+    eventRuntime.destroyed,
+    "event runtime should tear down deterministically",
+  );
   assert(settings.destroyed, "settings stream should be released");
+});
+
+Deno.test("shared EventStore owns empty, duplicate, provenance, replacement, and delete semantics", () => {
+  const eventRuntime = createEventRuntime();
+  const secret = crypto.getRandomValues(new Uint8Array(32));
+  const original = finalizeEvent(
+    { kind: 0, created_at: 1, content: "old", tags: [] },
+    secret,
+  );
+  const replacement = finalizeEvent(
+    { kind: 0, created_at: 2, content: "new", tags: [] },
+    secret,
+  );
+  const deletion = finalizeEvent(
+    { kind: 5, created_at: 3, content: "", tags: [["e", replacement.id]] },
+    secret,
+  );
+
+  try {
+    assert(
+      eventRuntime.eventStore.getEvent(original.id) === undefined,
+      "empty store should return no event",
+    );
+    const stored = eventRuntime.eventStore.add(original, "wss://one.example/");
+    const duplicate = eventRuntime.eventStore.add(
+      { ...original },
+      "wss://two.example/",
+    );
+    assert(
+      stored === duplicate,
+      "duplicates should resolve to one event instance",
+    );
+    assert(
+      getSeenRelays(stored!)?.size === 2,
+      "duplicate observations should retain relay provenance",
+    );
+    eventRuntime.eventStore.add(replacement);
+    assert(
+      eventRuntime.eventStore.getReplaceable(0, replacement.pubkey) ===
+        replacement,
+      "newest replaceable event should win",
+    );
+    eventRuntime.eventStore.add(deletion);
+    assert(
+      eventRuntime.eventStore.getEvent(replacement.id) === undefined,
+      "authorized deletion should remove its target",
+    );
+  } finally {
+    eventRuntime.destroy();
+  }
 });
