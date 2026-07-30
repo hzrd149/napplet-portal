@@ -77,5 +77,5 @@
   ],
   "uncommitted_files": [],
   "next_action": "Independently verify the exact npm package set, obtain explicit approval, then resume Plan 01-01 Task 1 through $gsd-resume-work or $gsd-execute-phase 1.",
-  "context_notes": "Planning, research, UI specification, pattern mapping, six execution plans, and all 73 requirement/decision coverage checks are complete. Planning was force-approved after the bounded checker loop. Execution started but made no source changes because Plan 01-01 immediately reached its package-legitimacy blocking-human gate."
+  "context_notes": "Planning, research, UI specification, pattern mapping, six execution plans, and all 73 requirement/decision coverage checks are complete. Planning was force-approved after the bounded checker loop. Execution started but made no source changes because Plan 01-01 immediately reached its package-legitimacy blocking-human gate. Source lint and type-check pass (`deno lint .`, `deno check`). The combined `deno task check` currently fails at `deno fmt --check .` because 40 existing planning Markdown files are not in Deno's preferred format; it does not reach lint/type-check."
 }
