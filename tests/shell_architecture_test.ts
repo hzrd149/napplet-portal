@@ -105,6 +105,14 @@ Deno.test("shell structure reserves content and safe-area navigation rows", asyn
     "nav must reserve safe area",
   );
   assert(
+    styles.includes("grid-row: 2"),
+    "napplet iframe must occupy the flexible content row",
+  );
+  assert(
+    styles.includes("height: 100%"),
+    "napplet iframe must have a full-height containing block",
+  );
+  assert(
     styles.includes("prefers-reduced-motion"),
     "fade must respect reduced motion",
   );
