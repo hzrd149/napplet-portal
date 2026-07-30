@@ -3,19 +3,16 @@ status: testing
 phase: 01-one-day-napplet-runtime-mvp
 source: [01-VERIFICATION.md]
 started: 2026-07-30T18:08:00Z
-updated: 2026-07-30T18:08:00Z
+updated: 2026-07-30T18:18:09Z
 ---
 
 ## Current Test
 
-number: 1
-name: Package legitimacy approval
+number: 2
+name: Supplied napplet identity acceptance
 expected: |
-  Confirm applesauce-accounts@6.2.0, applesauce-core@6.2.0, applesauce-relay@6.2.1,
-  applesauce-signers@6.2.2, @kehto/runtime@0.20.1, @kehto/shell@0.19.1,
-  @kehto/services@0.18.1, @kehto/nip@0.5.1, @napplet/core@0.31.0,
-  @napplet/nap@0.31.0, and nostr-tools@2.24.1 on npm/jsr before trusting the
-  pinned set.
+  Confirm the captured Security Lab coordinate/artifact is the user's intended
+  supplied napplet.
 awaiting: user response
 
 ## Tests
@@ -23,7 +20,7 @@ awaiting: user response
 ### 1. Package legitimacy approval
 
 expected: Confirm each pinned package/version on npm/jsr and approve the set.
-result: pending
+result: passed
 
 ### 2. Supplied napplet identity acceptance
 
@@ -43,9 +40,9 @@ result: pending
 ## Summary
 
 total: 4
-passed: 0
+passed: 1
 issues: 0
-pending: 4
+pending: 3
 skipped: 0
 blocked: 0
 
