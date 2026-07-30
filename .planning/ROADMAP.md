@@ -182,3 +182,12 @@ Plans:
 
 Plans:
 - [ ] TBD (promote with $gsd-review-backlog when ready)
+
+### Phase 999.5: Searchable installed napplets on the home page (BACKLOG)
+
+**Goal:** The home page can search installed napplets so users can quickly find a napplet when many are installed.
+**Requirements:** TBD
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (promote with $gsd-review-backlog when ready)
