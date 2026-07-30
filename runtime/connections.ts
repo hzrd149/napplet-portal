@@ -1,3 +1,7 @@
+import { debug as rootDebug, shortId } from "../debug.ts";
+
+const debug = rootDebug.extend("connections");
+
 export interface SubscriptionHandle {
   unsubscribe(): void;
 }
@@ -47,6 +51,7 @@ export class ConnectionRegistry {
       ((callback, delay) => setTimeout(callback, delay));
     this.#clearTimeout = options.clearTimeout ?? clearTimeout;
     this.#destroyWindow = options.destroyWindow ?? (() => {});
+    debug("initialized graceMs=%d", this.#graceMs);
   }
 
   get subscriptionCount(): number {
@@ -65,6 +70,11 @@ export class ConnectionRegistry {
       if (known.timer !== undefined) this.#clearTimeout(known.timer);
       known.timer = undefined;
       known.send = send;
+      debug(
+        "attached resumed connection=%s windows=%d",
+        shortId(known.connectionId),
+        known.windows.size,
+      );
       return {
         connectionId: known.connectionId,
         reconnectToken: known.reconnectToken,
@@ -82,23 +92,44 @@ export class ConnectionRegistry {
     };
     this.#connections.set(connectionId, record);
     this.#tokens.set(token, connectionId);
+    debug("attached new connection=%s", shortId(connectionId));
     return { connectionId, reconnectToken: token, resumed: false };
   }
 
   detach(connectionId: string): void {
     const connection = this.#connections.get(connectionId);
-    if (!connection || connection.timer !== undefined) return;
+    if (!connection || connection.timer !== undefined) {
+      debug(
+        "detach ignored connection=%s known=%s",
+        shortId(connectionId),
+        Boolean(connection),
+      );
+      return;
+    }
     connection.send = undefined;
     connection.timer = this.#setTimeout(
       () => this.#expire(connectionId),
+      this.#graceMs,
+    );
+    debug(
+      "detached connection=%s graceMs=%d",
+      shortId(connectionId),
       this.#graceMs,
     );
   }
 
   send(connectionId: string, message: string): boolean {
     const send = this.#connections.get(connectionId)?.send;
-    if (!send) return false;
+    if (!send) {
+      debug(
+        "send skipped disconnected connection=%s bytes=%d",
+        shortId(connectionId),
+        message.length,
+      );
+      return false;
+    }
     send(message);
+    debug("sent connection=%s bytes=%d", shortId(connectionId), message.length);
     return true;
   }
 
@@ -108,6 +139,11 @@ export class ConnectionRegistry {
     }
     const windowId = this.#createId();
     this.register(connectionId, windowId);
+    debug(
+      "created window connection=%s window=%s",
+      shortId(connectionId),
+      shortId(windowId),
+    );
     return { windowId };
   }
 
@@ -118,6 +154,12 @@ export class ConnectionRegistry {
     }
     this.#windows.set(windowId, { connectionId, source });
     this.#connections.get(connectionId)?.windows.add(windowId);
+    debug(
+      "registered window connection=%s window=%s source=%s",
+      shortId(connectionId),
+      shortId(windowId),
+      Boolean(source),
+    );
   }
 
   ownsWindow(connectionId: string, windowId: string): boolean {
@@ -142,6 +184,14 @@ export class ConnectionRegistry {
     const previous = this.#subscriptions.get(key);
     this.#subscriptions.set(key, handle);
     previous?.unsubscribe();
+    debug(
+      "tracked subscription connection=%s window=%s sub=%s replaced=%s count=%d",
+      shortId(connectionId),
+      shortId(windowId),
+      subId,
+      Boolean(previous),
+      this.#subscriptions.size,
+    );
   }
 
   closeSubscription(
@@ -153,11 +203,22 @@ export class ConnectionRegistry {
     const subscription = this.#subscriptions.get(key);
     this.#subscriptions.delete(key);
     subscription?.unsubscribe();
+    debug(
+      "closed subscription connection=%s window=%s sub=%s found=%s count=%d",
+      shortId(connectionId),
+      shortId(windowId),
+      subId,
+      Boolean(subscription),
+      this.#subscriptions.size,
+    );
   }
 
   remove(windowId: string): void {
     const window = this.#windows.get(windowId);
-    if (!window) return;
+    if (!window) {
+      debug("remove window ignored window=%s", shortId(windowId));
+      return;
+    }
     this.#windows.delete(windowId);
     this.#connections.get(window.connectionId)?.windows.delete(windowId);
     const prefix = `${window.connectionId}:${windowId}:`;
@@ -167,14 +228,34 @@ export class ConnectionRegistry {
       subscription.unsubscribe();
     }
     this.#destroyWindow(windowId);
+    debug(
+      "removed window connection=%s window=%s subscriptions=%d",
+      shortId(window.connectionId),
+      shortId(windowId),
+      this.#subscriptions.size,
+    );
   }
 
   #expire(connectionId: string): void {
     const connection = this.#connections.get(connectionId);
-    if (!connection || connection.send) return;
+    if (!connection || connection.send) {
+      debug(
+        "expire ignored connection=%s known=%s connected=%s",
+        shortId(connectionId),
+        Boolean(connection),
+        Boolean(connection?.send),
+      );
+      return;
+    }
+    debug(
+      "expiring connection=%s windows=%d",
+      shortId(connectionId),
+      connection.windows.size,
+    );
     for (const windowId of [...connection.windows]) this.remove(windowId);
     this.#connections.delete(connectionId);
     this.#tokens.delete(connection.reconnectToken);
+    debug("expired connection=%s", shortId(connectionId));
   }
 
   #subscriptionKey(
@@ -210,6 +291,12 @@ export class PendingCorrelations {
       this.#options.onTimeout(id);
     }, this.#options.timeoutMs);
     this.#timers.set(id, timer);
+    debug(
+      "registered pending correlation id=%s timeoutMs=%d count=%d",
+      shortId(id),
+      this.#options.timeoutMs,
+      this.#timers.size,
+    );
   }
 
   resolve(id: string): void {
@@ -217,5 +304,10 @@ export class PendingCorrelations {
     if (timer === undefined) return;
     (this.#options.clearTimeout ?? clearTimeout)(timer);
     this.#timers.delete(id);
+    debug(
+      "resolved pending correlation id=%s count=%d",
+      shortId(id),
+      this.#timers.size,
+    );
   }
 }

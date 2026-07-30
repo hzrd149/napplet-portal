@@ -2,6 +2,10 @@
  * Sensitive at-rest account state. This file contains complete signer records
  * and must never be exposed through a browser transport or diagnostic message.
  */
+import { debug as rootDebug } from "../debug.ts";
+
+const debug = rootDebug.extend("account-store");
+
 export interface AccountSnapshot {
   readonly version: 1;
   readonly activeAccountId: string | null;
@@ -38,21 +42,38 @@ export class AccountStore {
   }
 
   async read(): Promise<AccountSnapshot | null> {
+    debug("read started");
     try {
-      return parseSnapshot(await Deno.readTextFile(this.#path));
+      const snapshot = parseSnapshot(await Deno.readTextFile(this.#path));
+      debug(
+        "read complete accounts=%d active=%s",
+        snapshot.accounts.length,
+        snapshot.activeAccountId ? "present" : "none",
+      );
+      return snapshot;
     } catch (error) {
-      if (error instanceof Deno.errors.NotFound) return null;
+      if (error instanceof Deno.errors.NotFound) {
+        debug("read skipped snapshot missing");
+        return null;
+      }
       if (
         error instanceof Error &&
         error.message === "Account snapshot is invalid"
       ) {
+        debug("read failed invalid snapshot");
         throw error;
       }
+      debug("read failed");
       throw new Error("Account snapshot could not be read");
     }
   }
 
   write(snapshot: AccountSnapshot): Promise<void> {
+    debug(
+      "write queued accounts=%d active=%s",
+      snapshot.accounts.length,
+      snapshot.activeAccountId ? "present" : "none",
+    );
     const serialized = JSON.stringify(snapshot);
     const operation = this.#writeQueue.then(() =>
       this.#writeAtomically(serialized)
@@ -62,6 +83,7 @@ export class AccountStore {
   }
 
   async #writeAtomically(serialized: string): Promise<void> {
+    debug("atomic write started");
     const separator = this.#path.lastIndexOf("/");
     const directory = separator < 0
       ? "."
@@ -77,6 +99,7 @@ export class AccountStore {
       });
       if (Deno.build.os !== "windows") await Deno.chmod(temporary, 0o600);
       await Deno.rename(temporary, this.#path);
+      debug("atomic write complete");
     } catch {
       try {
         await Deno.remove(temporary);
@@ -85,6 +108,7 @@ export class AccountStore {
           // Cleanup is best effort. Never include a sensitive path or payload.
         }
       }
+      debug("atomic write failed");
       throw new Error("Account snapshot could not be written");
     }
   }

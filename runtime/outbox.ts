@@ -1,7 +1,10 @@
 import type { EventTemplate, NostrEvent, NostrFilter } from "@napplet/core";
 import { finalize, type Observable } from "npm:rxjs@7.8.2";
+import { debug as rootDebug, shortId } from "../debug.ts";
 import type { IdentitySnapshot } from "./accounts.ts";
 import type { RelayOwner } from "./relay_adapter.ts";
+
+const debug = rootDebug.extend("outbox");
 
 export type OutboxRawItem =
   | {
@@ -82,8 +85,22 @@ export class OutboxAdapter {
   ): { close(): void } {
     const subscriptionKey = key(owner, request.subId);
     this.#close(subscriptionKey);
+    debug(
+      "subscribe started connection=%s window=%s sub=%s filters=%d",
+      shortId(owner.connectionId),
+      shortId(owner.windowId),
+      request.subId,
+      request.filters.length,
+    );
     const seen = new Set<string>();
     const relays = this.#relays();
+    debug(
+      "subscribe relays connection=%s window=%s sub=%s relays=%d",
+      shortId(owner.connectionId),
+      shortId(owner.windowId),
+      request.subId,
+      relays.length,
+    );
     const pending = { unsubscribe() {} };
     this.#subscriptions.set(subscriptionKey, pending);
     const stream = this.#options.pool.req(relays, request.filters).pipe(
@@ -94,6 +111,14 @@ export class OutboxAdapter {
       }
       if (seen.has(item.event.id)) return;
       seen.add(item.event.id);
+      debug(
+        "event connection=%s window=%s sub=%s event=%s from=%s",
+        shortId(owner.connectionId),
+        shortId(owner.windowId),
+        request.subId,
+        shortId(item.event.id),
+        item.from || "unknown",
+      );
       listener({
         type: "outbox.event",
         subId: request.subId,
@@ -113,6 +138,12 @@ export class OutboxAdapter {
       close: () => {
         if (closed) return;
         closed = true;
+        debug(
+          "subscription close requested connection=%s window=%s sub=%s",
+          shortId(owner.connectionId),
+          shortId(owner.windowId),
+          request.subId,
+        );
         this.#close(subscriptionKey);
         listener({ type: "outbox.closed", subId: request.subId });
       },
@@ -125,12 +156,23 @@ export class OutboxAdapter {
   ): Promise<OutboxPublishResult> {
     const identity = this.#options.identity();
     if (identity.status !== "active" || !identity.pubkey) {
+      debug(
+        "publish rejected signer unavailable id=%s status=%s",
+        shortId(id),
+        identity.status,
+      );
       return { id, ok: false, error: "signer unavailable", outcomes: [] };
     }
     let event: NostrEvent;
     try {
+      debug(
+        "publish signing started id=%s pubkey=%s",
+        shortId(id),
+        shortId(identity.pubkey),
+      );
       event = await this.#options.signEvent(template);
     } catch {
+      debug("publish signing failed id=%s", shortId(id));
       return { id, ok: false, error: "event signing failed", outcomes: [] };
     }
     const outcomes = await Promise.all(
@@ -146,8 +188,21 @@ export class OutboxAdapter {
       }),
     );
     if (outcomes.length > 0 && outcomes.every((outcome) => outcome.accepted)) {
+      debug(
+        "publish accepted id=%s event=%s relays=%d",
+        shortId(id),
+        shortId(event.id),
+        outcomes.length,
+      );
       return { id, ok: true, event, outcomes };
     }
+    debug(
+      "publish rejected id=%s event=%s accepted=%d total=%d",
+      shortId(id),
+      shortId(event.id),
+      outcomes.filter((outcome) => outcome.accepted).length,
+      outcomes.length,
+    );
     return {
       id,
       ok: false,
@@ -157,9 +212,11 @@ export class OutboxAdapter {
   }
 
   destroy(): void {
+    debug("destroy started subscriptions=%d", this.#subscriptions.size);
     for (const subscriptionKey of [...this.#subscriptions.keys()]) {
       this.#close(subscriptionKey);
     }
+    debug("destroy complete");
   }
 
   #relays(): readonly string[] {
@@ -176,5 +233,11 @@ export class OutboxAdapter {
     const subscription = this.#subscriptions.get(subscriptionKey);
     this.#subscriptions.delete(subscriptionKey);
     subscription?.unsubscribe();
+    debug(
+      "closed subscription key=%s found=%s count=%d",
+      subscriptionKey,
+      Boolean(subscription),
+      this.#subscriptions.size,
+    );
   }
 }

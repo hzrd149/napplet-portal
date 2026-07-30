@@ -6,8 +6,20 @@ import { loadRuntimeConfig, type RuntimeConfig } from "./runtime/config.ts";
 import { runtime as portalRuntime } from "./routes/api/runtime.ts";
 import { SignerConnectionService } from "./runtime/signer_service.ts";
 import { type State } from "./utils.ts";
+import { debug as rootDebug } from "./debug.ts";
+
+const debug = rootDebug.extend("backend");
 
 export const runtimeConfig = loadRuntimeConfig();
+debug(
+  "loaded runtime config bind=%s coordinate=%s relays=%d signerRelays=%d blossom=%d reconnectGraceMs=%d",
+  runtimeConfig.bind,
+  runtimeConfig.coordinate ? "configured" : "empty",
+  runtimeConfig.relays.length,
+  runtimeConfig.remoteSignerRelays.length,
+  runtimeConfig.blossomServers.length,
+  runtimeConfig.reconnectGraceMs,
+);
 export const processRuntime = portalRuntime;
 const signerAccounts = new PortalAccounts(
   new AccountStore(".data/accounts.json"),
@@ -19,10 +31,15 @@ const signerAccounts = new PortalAccounts(
 let restoredSignerAccounts: Promise<unknown> | undefined;
 export const signerService = new SignerConnectionService({
   startNostrConnect: async (abort) => {
+    debug("restoring signer accounts before nostr connect");
     await (restoredSignerAccounts ??= signerAccounts.restore());
+    debug("starting signer accounts nostr connect");
     return await signerAccounts.startNostrConnect(abort);
   },
-  signOut: () => signerAccounts.signOut(),
+  signOut: () => {
+    debug("signing out signer accounts");
+    return signerAccounts.signOut();
+  },
 });
 
 export function startupSummary(
@@ -52,3 +69,4 @@ app.use((ctx) => {
 app.fsRoutes();
 
 console.info(startupSummary(runtimeConfig, "unavailable"));
+debug("startup complete");

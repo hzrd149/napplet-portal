@@ -6,6 +6,9 @@ import {
   type WriteVerifiedResolutionInput,
 } from "@kehto/nip/5d";
 import type { NostrEvent } from "@napplet/core";
+import { debug as rootDebug, shortId } from "../debug.ts";
+
+const debug = rootDebug.extend("artifacts");
 
 export type ArtifactResolutionErrorCode =
   | "manifest-unavailable"
@@ -34,11 +37,14 @@ export class InMemoryNappletArtifactCache implements NappletArtifactCache {
   readonly #blobs = new Map<string, Uint8Array>();
 
   readBlob(hash: string): Promise<Uint8Array | undefined> {
-    return Promise.resolve(this.#blobs.get(hash)?.slice());
+    const blob = this.#blobs.get(hash)?.slice();
+    debug("cache read blob hash=%s hit=%s", shortId(hash), Boolean(blob));
+    return Promise.resolve(blob);
   }
 
   deleteBlob(hash: string): Promise<void> {
     this.#blobs.delete(hash);
+    debug("cache delete blob hash=%s", shortId(hash));
     return Promise.resolve();
   }
 
@@ -47,6 +53,11 @@ export class InMemoryNappletArtifactCache implements NappletArtifactCache {
       const bytes = input.files.get(path.path);
       if (bytes) this.#blobs.set(path.sha256, bytes.slice());
     }
+    debug(
+      "cache wrote verified resolution paths=%d blobs=%d",
+      input.manifest.paths.length,
+      this.#blobs.size,
+    );
     return Promise.resolve();
   }
 
@@ -112,17 +123,29 @@ export class PortalArtifactResolver {
 
   resolve(): Promise<ArtifactState> {
     if (!this.#options.coordinate) {
+      debug("resolve skipped empty coordinate");
       return Promise.resolve({ state: "configured-empty" });
     }
+    debug(
+      "resolve requested coordinate=%s held=%s",
+      this.#options.coordinate,
+      Boolean(this.#held),
+    );
     return this.#held ??= this.#resolveOnce();
   }
 
   retry(): Promise<ArtifactState> {
+    debug("retry requested coordinate=%s", this.#options.coordinate);
     this.#held = undefined;
     return this.resolve();
   }
 
   async #resolveOnce(): Promise<ArtifactState> {
+    debug(
+      "resolve manifest started coordinate=%s relays=%d",
+      this.#options.coordinate,
+      this.#options.relays.length,
+    );
     let event: NostrEvent;
     try {
       event = await this.#options.resolveManifest(
@@ -130,6 +153,7 @@ export class PortalArtifactResolver {
         this.#options.relays,
       );
     } catch (cause) {
+      debug("resolve manifest failed coordinate=%s", this.#options.coordinate);
       throw new ArtifactResolutionError(
         "manifest-unavailable",
         "configured napplet manifest is unavailable",
@@ -138,6 +162,11 @@ export class PortalArtifactResolver {
     }
 
     try {
+      debug(
+        "resolve artifact started manifest=%s blossom=%d",
+        shortId(event.id),
+        this.#options.blossomServers.length,
+      );
       const resolved = await resolveNapplet({
         event,
         cache: this.#options.cache,
@@ -156,14 +185,36 @@ export class PortalArtifactResolver {
           for (const server of servers) {
             const url = `${server.replace(/\/$/, "")}/${hash}`;
             try {
+              debug(
+                "fetch blob started hash=%s server=%s",
+                shortId(hash),
+                server,
+              );
               if (this.#options.fetchBytes) {
-                return await this.#options.fetchBytes(url);
+                const bytes = await this.#options.fetchBytes(url);
+                debug(
+                  "fetch blob complete hash=%s bytes=%d",
+                  shortId(hash),
+                  bytes.byteLength,
+                );
+                return bytes;
               }
               const response = await fetch(url);
               if (!response.ok) throw new Error(`HTTP ${response.status}`);
-              return new Uint8Array(await response.arrayBuffer());
+              const bytes = new Uint8Array(await response.arrayBuffer());
+              debug(
+                "fetch blob complete hash=%s bytes=%d",
+                shortId(hash),
+                bytes.byteLength,
+              );
+              return bytes;
             } catch (error) {
               lastError = error;
+              debug(
+                "fetch blob failed hash=%s server=%s",
+                shortId(hash),
+                server,
+              );
             }
           }
           throw lastError ?? new Error("artifact unavailable");
@@ -176,12 +227,19 @@ export class PortalArtifactResolver {
         !supported.includes(domain)
       );
       if (missing.length > 0) {
+        debug("resolve failed missing capabilities=%s", missing.join(","));
         throw new ArtifactResolutionError(
           "missing-capability",
           `napplet requires unsupported capabilities: ${missing.join(", ")}`,
         );
       }
 
+      debug(
+        "resolve complete dTag=%s aggregate=%s domains=%d",
+        resolved.dTag,
+        shortId(resolved.aggregateHash),
+        supported.length,
+      );
       return {
         state: "ready",
         identity: {
@@ -195,8 +253,10 @@ export class PortalArtifactResolver {
     } catch (cause) {
       if (cause instanceof ArtifactResolutionError) throw cause;
       if (cause instanceof NappletResolutionError) {
+        debug("resolve failed code=%s", cause.code);
         throw new ArtifactResolutionError(cause.code, cause.message, { cause });
       }
+      debug("resolve failed blob unavailable");
       throw new ArtifactResolutionError(
         "blob-unavailable",
         "verified napplet artifact is unavailable",
@@ -215,6 +275,7 @@ export async function resolveVerifiedArtifact(
   fixture: ArtifactFixture,
   fetcher: typeof fetch = fetch,
 ): Promise<ResolvedNapplet> {
+  debug("resolve fixture artifact started");
   const resolver = new PortalArtifactResolver({
     coordinate: "fixture",
     relays: [],
@@ -228,5 +289,10 @@ export async function resolveVerifiedArtifact(
   });
   const result = await resolver.resolve();
   if (result.state !== "ready") throw new Error("fixture coordinate is empty");
+  debug(
+    "resolve fixture artifact complete dTag=%s aggregate=%s",
+    result.resolved.dTag,
+    shortId(result.resolved.aggregateHash),
+  );
   return result.resolved;
 }

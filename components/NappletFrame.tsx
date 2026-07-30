@@ -1,4 +1,7 @@
 import { useEffect, useRef } from "preact/hooks";
+import { debug as rootDebug, shortId } from "../debug.ts";
+
+const debug = rootDebug.extend("iframe");
 
 export interface VerifiedNappletIdentity {
   readonly dTag: string;
@@ -22,6 +25,12 @@ export function mountVerifiedFrame(
   if (!source) throw new Error("napplet frame window is unavailable");
   registry.register(source, identity);
   frame.srcdoc = srcdoc;
+  debug(
+    "mounted verified frame dTag=%s aggregate=%s bytes=%d",
+    identity.dTag,
+    shortId(identity.aggregateHash),
+    srcdoc.length,
+  );
 }
 
 interface BridgeEvent {
@@ -42,13 +51,31 @@ export function createIframeBridge(options: IframeBridgeOptions) {
   return {
     receive(event: BridgeEvent): void {
       const source = options.source();
-      if (!source || event.source !== source) return;
-      if (!event.data || typeof event.data !== "object") return;
+      if (!source || event.source !== source) {
+        debug(
+          "ignored message source trusted=%s",
+          Boolean(source && event.source === source),
+        );
+        return;
+      }
+      if (!event.data || typeof event.data !== "object") {
+        debug("ignored non-object message");
+        return;
+      }
       const message = event.data as Record<string, unknown>;
-      if (typeof message.type !== "string") return;
+      if (typeof message.type !== "string") {
+        debug("ignored message without type");
+        return;
+      }
+      debug(
+        "received iframe message type=%s initialized=%s",
+        message.type,
+        initialized,
+      );
       if (message.type === "shell.ready") {
         if (initialized) return;
         initialized = true;
+        debug("posting shell init services=%d", DOMAINS.length);
         options.post({
           type: "shell.init",
           capabilities: { domains: [...DOMAINS] },
@@ -56,11 +83,16 @@ export function createIframeBridge(options: IframeBridgeOptions) {
         });
         return;
       }
-      if (!/^(identity|relay|outbox)\./.test(message.type)) return;
+      if (!/^(identity|relay|outbox)\./.test(message.type)) {
+        debug("ignored unsupported iframe message type=%s", message.type);
+        return;
+      }
+      debug("forward iframe message type=%s", message.type);
       options.forward(message);
     },
     reset(): void {
       initialized = false;
+      debug("bridge reset");
     },
   };
 }

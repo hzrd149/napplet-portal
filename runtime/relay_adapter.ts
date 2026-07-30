@@ -17,6 +17,9 @@ import {
   type Observable,
   tap,
 } from "npm:rxjs@7.8.2";
+import { debug as rootDebug, shortId } from "../debug.ts";
+
+const debug = rootDebug.extend("relay");
 
 export type RawRelayItem =
   | {
@@ -87,6 +90,14 @@ export class BackendRelayAdapter {
   ): RelaySubscription {
     const key = relayKey(owner, message.subId);
     this.close(owner, message.subId);
+    debug(
+      "subscribe started connection=%s window=%s sub=%s relay=%s filters=%d",
+      shortId(owner.connectionId),
+      shortId(owner.windowId),
+      message.subId,
+      message.relay,
+      message.filters.length,
+    );
     const seen = new Set<string>();
     let eose = false;
     let closed = false;
@@ -109,11 +120,25 @@ export class BackendRelayAdapter {
       if (item.type === "EOSE") {
         if (eose) return;
         eose = true;
+        debug(
+          "eose connection=%s window=%s sub=%s",
+          shortId(owner.connectionId),
+          shortId(owner.windowId),
+          message.subId,
+        );
         listener({ type: "relay.eose", subId: message.subId });
         return;
       }
       if (seen.has(item.event.id)) return;
       seen.add(item.event.id);
+      debug(
+        "event connection=%s window=%s sub=%s event=%s from=%s",
+        shortId(owner.connectionId),
+        shortId(owner.windowId),
+        message.subId,
+        shortId(item.event.id),
+        item.from || "cache",
+      );
       listener({
         type: "relay.event",
         subId: message.subId,
@@ -135,6 +160,12 @@ export class BackendRelayAdapter {
       close: () => {
         if (closed) return;
         closed = true;
+        debug(
+          "subscription close requested connection=%s window=%s sub=%s",
+          shortId(owner.connectionId),
+          shortId(owner.windowId),
+          message.subId,
+        );
         this.close(owner, message.subId);
         listener({ type: "relay.closed", subId: message.subId, message: "" });
       },
@@ -146,6 +177,14 @@ export class BackendRelayAdapter {
     const subscription = this.#subscriptions.get(key);
     this.#subscriptions.delete(key);
     subscription?.unsubscribe();
+    debug(
+      "closed subscription connection=%s window=%s sub=%s found=%s count=%d",
+      shortId(owner.connectionId),
+      shortId(owner.windowId),
+      subId,
+      Boolean(subscription),
+      this.#subscriptions.size,
+    );
   }
 
   async publishSigned(
@@ -154,8 +193,21 @@ export class BackendRelayAdapter {
     relays: readonly string[],
   ): Promise<RelayPublishResult> {
     if (!event.id || !event.sig || !this.#pool.publish) {
+      debug(
+        "publish signed rejected id=%s hasEventId=%s hasSig=%s canPublish=%s",
+        shortId(id),
+        Boolean(event.id),
+        Boolean(event.sig),
+        Boolean(this.#pool.publish),
+      );
       return { id, ok: false, error: "invalid signed event", outcomes: [] };
     }
+    debug(
+      "publish signed started id=%s event=%s relays=%d",
+      shortId(id),
+      shortId(event.id),
+      relays.length,
+    );
     return await this.#publish(id, event, relays);
   }
 
@@ -170,10 +222,17 @@ export class BackendRelayAdapter {
     },
   ): Promise<RelayPublishResult> {
     try {
+      debug(
+        "publish encrypted started id=%s recipient=%s relays=%d",
+        shortId(id),
+        shortId(recipient),
+        relays.length,
+      );
       const content = await authority.encrypt(recipient, template.content);
       const event = await authority.signEvent({ ...template, content });
       return await this.#publish(id, event, relays);
     } catch {
+      debug("publish encrypted failed id=%s", shortId(id));
       return {
         id,
         ok: false,
@@ -189,6 +248,7 @@ export class BackendRelayAdapter {
     relays: readonly string[],
   ): Promise<RelayPublishResult> {
     if (!this.#pool.publish) {
+      debug("publish unavailable id=%s", shortId(id));
       return {
         id,
         ok: false,
@@ -205,16 +265,25 @@ export class BackendRelayAdapter {
         }
       }),
     );
+    debug(
+      "publish complete id=%s event=%s accepted=%d total=%d",
+      shortId(id),
+      shortId(event.id),
+      outcomes.filter((outcome) => outcome.accepted).length,
+      outcomes.length,
+    );
     return outcomes.length > 0 && outcomes.every((outcome) => outcome.accepted)
       ? { id, ok: true, event, outcomes }
       : { id, ok: false, error: "required relay rejected publish", outcomes };
   }
 
   destroy(): void {
+    debug("destroy started subscriptions=%d", this.#subscriptions.size);
     for (const [key, subscription] of this.#subscriptions) {
       this.#subscriptions.delete(key);
       subscription.unsubscribe();
     }
+    debug("destroy complete");
   }
 }
 
@@ -238,6 +307,11 @@ export class TracerRelayAdapter {
       new Set<TracerListener>();
     listeners.add(listener);
     this.#listeners.set(message.subId, listeners);
+    debug(
+      "tracer subscribe sub=%s listeners=%d",
+      message.subId,
+      listeners.size,
+    );
     listener({
       type: "relay.event",
       subId: message.subId,
@@ -252,11 +326,21 @@ export class TracerRelayAdapter {
       close: () => {
         closed = true;
         listeners.delete(listener);
+        debug(
+          "tracer close sub=%s listeners=%d",
+          message.subId,
+          listeners.size,
+        );
       },
     };
   }
 
   emitLive(event: NostrEvent): void {
+    debug(
+      "tracer emit live event=%s subs=%d",
+      shortId(event.id),
+      this.#listeners.size,
+    );
     for (const [subId, listeners] of this.#listeners) {
       for (const listener of listeners) {
         listener({ type: "relay.event", subId, result: { event } });

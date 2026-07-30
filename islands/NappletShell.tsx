@@ -12,6 +12,9 @@ import {
   type PublicProfile,
   UserIcon,
 } from "../components/ProfileView.tsx";
+import { debug as rootDebug, shortId } from "../debug.ts";
+
+const debug = rootDebug.extend("shell");
 
 interface NappletShellProps {
   readonly coordinate: string;
@@ -77,18 +80,39 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
   const registry = useMemo<FrameIdentityRegistry>(() => ({
     register(source, nextIdentity) {
       registered.current = { source, identity: nextIdentity };
+      debug(
+        "registered frame identity dTag=%s aggregate=%s",
+        nextIdentity.dTag,
+        shortId(nextIdentity.aggregateHash),
+      );
     },
   }), []);
 
   const bridge = useMemo(() =>
     createIframeBridge({
       source: () => iframe.current?.contentWindow ?? null,
-      post: (message) =>
-        iframe.current?.contentWindow?.postMessage(message, "*"),
+      post: (message) => {
+        debug("post iframe message type=%s", String(message.type));
+        iframe.current?.contentWindow?.postMessage(message, "*");
+      },
       forward: (message) => {
         const ws = socket.current;
         const currentOwner = owner.current;
-        if (ws?.readyState !== WebSocket.OPEN || !currentOwner) return;
+        if (ws?.readyState !== WebSocket.OPEN || !currentOwner) {
+          debug(
+            "skip runtime forward type=%s readyState=%s owner=%s",
+            String(message.type),
+            ws?.readyState ?? "none",
+            Boolean(currentOwner),
+          );
+          return;
+        }
+        debug(
+          "send runtime forward connection=%s window=%s type=%s",
+          shortId(currentOwner.connectionId),
+          shortId(currentOwner.windowId),
+          String(message.type),
+        );
         ws.send(JSON.stringify({
           type: "runtime.forward",
           ...currentOwner,
@@ -98,6 +122,7 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
     }), []);
 
   useEffect(() => {
+    debug("shell mounted coordinate=%s", coordinate ? "configured" : "empty");
     const receive = (event: MessageEvent) => bridge.receive(event);
     globalThis.addEventListener("message", receive);
     const back = (event: PopStateEvent) => {
@@ -107,6 +132,7 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
     globalThis.addEventListener("popstate", back);
     openSocket("connect");
     return () => {
+      debug("shell unmounting");
       globalThis.removeEventListener("message", receive);
       globalThis.removeEventListener("popstate", back);
       if (copyTimer.current !== null) clearTimeout(copyTimer.current);
@@ -116,7 +142,15 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
   }, []);
 
   function openSocket(method: "connect" | "bunker" | "nsec" = "connect"): void {
-    if (!coordinate) return;
+    if (!coordinate) {
+      debug("open socket skipped empty coordinate");
+      return;
+    }
+    debug(
+      "open socket started method=%s reconnect=%s",
+      method,
+      Boolean(reconnectToken.current),
+    );
     setConnecting(true);
     signInMethod.current = method;
     setSignInError("");
@@ -133,6 +167,7 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
     if (connectTimer.current !== null) clearTimeout(connectTimer.current);
     connectTimer.current = setTimeout(() => {
       if (socket.current !== ws || ws.readyState === WebSocket.OPEN) return;
+      debug("socket connect timeout method=%s", method);
       ws.close();
       setConnecting(false);
       setAwaitingSigner(false);
@@ -140,6 +175,7 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
       setSignInError(CONNECT_FAILED);
     }, CONNECT_TIMEOUT_MS);
     ws.addEventListener("open", () => {
+      debug("socket open method=%s", method);
       if (connectTimer.current !== null) clearTimeout(connectTimer.current);
       connectTimer.current = null;
     });
@@ -147,11 +183,13 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
     ws.addEventListener("error", () => {
       // A superseded socket must not report failure for its replacement.
       if (socket.current !== ws) return;
+      debug("socket error method=%s", method);
       setConnecting(false);
       setSignInError(CONNECT_FAILED);
     });
     ws.addEventListener("close", () => {
       if (socket.current !== ws) return;
+      debug("socket close method=%s", method);
       if (connectTimer.current !== null) clearTimeout(connectTimer.current);
       connectTimer.current = null;
       setConnecting(false);
@@ -169,8 +207,10 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
     try {
       message = JSON.parse(String(event.data)) as Record<string, unknown>;
     } catch {
+      debug("ignored invalid runtime JSON");
       return;
     }
+    debug("received runtime message type=%s", String(message.type));
     if (
       message.type === "runtime.connected" &&
       typeof message.connectionId === "string" &&
@@ -182,6 +222,12 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
         windowId: message.windowId,
       };
       reconnectToken.current = message.reconnectToken;
+      debug(
+        "runtime connected connection=%s window=%s resumed=%s",
+        shortId(message.connectionId),
+        shortId(message.windowId),
+        Boolean(message.resumed),
+      );
       socket.current?.send(JSON.stringify({
         type: "runtime.start",
         coordinate,
@@ -190,6 +236,7 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
       return;
     }
     if (message.type === "runtime.event" && message.message) {
+      debug("post runtime event to iframe");
       iframe.current?.contentWindow?.postMessage(message.message, "*");
       return;
     }
@@ -199,12 +246,14 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
       message.uri.startsWith("nostrconnect://")
     ) {
       setConnectionUri(message.uri);
+      debug("signer pending uri=present");
       setConnecting(false);
       setAwaitingSigner(true);
       setCanRestartSigner(false);
       return;
     }
     if (message.type === "runtime.signer.preparing") {
+      debug("signer preparing");
       setConnectionUri("");
       setConnecting(true);
       setAwaitingSigner(false);
@@ -212,6 +261,7 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
       return;
     }
     if (message.type === "runtime.signer.idle") {
+      debug("signer idle");
       setConnectionUri("");
       setConnecting(false);
       setAwaitingSigner(false);
@@ -220,6 +270,7 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
       return;
     }
     if (message.type === "runtime.signer.error") {
+      debug("signer error");
       setConnecting(false);
       setAwaitingSigner(false);
       setCanRestartSigner(true);
@@ -229,6 +280,7 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
       return;
     }
     if (message.type === "runtime.error") {
+      debug("runtime integrity error");
       setConnecting(false);
       setNotice("integrity");
       return;
@@ -245,6 +297,12 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
       typeof nextIdentity.aggregateHash !== "string"
     ) return;
     bridge.reset();
+    debug(
+      "runtime artifact received dTag=%s aggregate=%s account=%s",
+      nextIdentity.dTag,
+      shortId(nextIdentity.aggregateHash),
+      typeof account?.pubkey === "string" ? shortId(account.pubkey) : "none",
+    );
     setIdentity({
       dTag: nextIdentity.dTag,
       aggregateHash: nextIdentity.aggregateHash,
@@ -260,18 +318,21 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
   }
 
   function navigate(next: View): void {
+    debug("navigate view=%s", next);
     setView(next);
     history.pushState({ view: next }, "", location.href);
   }
 
   async function copyUri(): Promise<void> {
     await navigator.clipboard.writeText(connectionUri);
+    debug("copied signer URI");
     setCopied(true);
     if (copyTimer.current !== null) clearTimeout(copyTimer.current);
     copyTimer.current = setTimeout(() => setCopied(false), 2_000);
   }
 
   function signOut(): void {
+    debug("signout requested");
     socket.current?.send(JSON.stringify({ type: "runtime.signout" }));
     setProfile(null);
     signOutDialog.current?.close();
@@ -279,18 +340,21 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
   }
 
   function cancelSigner(): void {
+    debug("cancel signer requested");
     socket.current?.send(JSON.stringify({ type: "runtime.signer.cancel" }));
   }
 
   function restartSigner(): void {
     const ws = socket.current;
     if (ws?.readyState === WebSocket.OPEN) {
+      debug("restart signer over existing socket");
       ws.send(JSON.stringify({
         type: "runtime.start",
         coordinate,
         method: "connect",
       }));
     } else {
+      debug("restart signer opening socket");
       openSocket("connect");
     }
   }
