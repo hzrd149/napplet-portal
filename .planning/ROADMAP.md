@@ -200,3 +200,12 @@ Plans:
 
 Plans:
 - [ ] TBD (promote with $gsd-review-backlog when ready)
+
+### Phase 999.7: Custom SVG vector app icon (BACKLOG)
+
+**Goal:** The app uses a proper simple SVG vector icon instead of the default Deno Fresh icon.
+**Requirements:** TBD
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (promote with $gsd-review-backlog when ready)
