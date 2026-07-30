@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 01
 current_phase_name: one-day-napplet-runtime-mvp
 status: executing
-stopped_at: Completed 01-04-PLAN.md
-last_updated: "2026-07-30T13:16:05.207Z"
+stopped_at: Completed 01-05-PLAN.md
+last_updated: "2026-07-30T13:24:09.749Z"
 last_activity: 2026-07-30
 last_activity_desc: Phase 01 execution started
 progress:
   total_phases: 1
   completed_phases: 0
   total_plans: 6
-  completed_plans: 4
+  completed_plans: 5
 ---
 
 # Project State
@@ -28,11 +28,11 @@ See: .planning/PROJECT.md (updated 2026-07-30)
 ## Current Position
 
 Phase: 01 (one-day-napplet-runtime-mvp) — EXECUTING
-Plan: 5 of 6
+Plan: 6 of 6
 Status: Ready to execute
 Last activity: 2026-07-30 — Phase 01 execution started
 
-Progress: [███████░░░] 67%
+Progress: [████████░░] 83%
 
 ## Performance Metrics
 
@@ -64,6 +64,7 @@ Progress: [███████░░░] 67%
 | Phase 01 P02 | 5min | 2 tasks | 4 files |
 | Phase 01 P03 | 6min | 2 tasks | 6 files |
 | Phase 01 P04 | 8min | 2 tasks | 12 files |
+| Phase 01 P05 | 7min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -85,6 +86,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase ?]: Reconnect replaces the socket sender while preserving connection-owned windows and logical subscriptions through grace.
 - [Phase ?]: Register verified iframe identity before assigning srcdoc bytes.
 - [Phase ?]: Keep Home, Profile, and napplet views mounted and switch visibility with inert state.
+- [Phase ?]: Compose RELAY cache and pool sources in one RxJS subscription with centralized dedupe.
+- [Phase ?]: OUTBOX publishes succeed only after every required preset/NIP-65 relay accepts.
 
 ### Pending Todos
 
@@ -106,6 +109,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-07-30T13:16:05.198Z
-Stopped at: Completed 01-04-PLAN.md
+Last session: 2026-07-30T13:24:09.739Z
+Stopped at: Completed 01-05-PLAN.md
 Resume file: None

@@ -29,10 +29,10 @@ v1 is the complete Phase 1 MVP. Its original one-day vertical tracer remains the
 
 - [x] **STREAM-01**: Runtime code treats Nostr data as streams that continue updating rather than finite loads that become complete.
 - [x] **STREAM-02**: Runtime code uses Applesauce/RxJS observables for relay/event/model flows where practical.
-- [ ] **STREAM-03**: Runtime code avoids nested subscriptions; stream composition should use RxJS operators or shared observable pipelines.
+- [x] **STREAM-03**: Runtime code avoids nested subscriptions; stream composition should use RxJS operators or shared observable pipelines.
 - [x] **STREAM-04**: Runtime code avoids unnecessary `async` flows that wait for all Nostr data before rendering or responding.
 - [x] **STREAM-05**: UI shows partial/empty/updating stream states instead of blocking loading screens that wait for data to be complete.
-- [ ] **STREAM-06**: The first napplet-facing data API can return an initial empty/partial value and then update through the selected stream/channel path.
+- [x] **STREAM-06**: The first napplet-facing data API can return an initial empty/partial value and then update through the selected stream/channel path.
 - [x] **STREAM-07**: MVP leaves an explicit adapter/configuration seam for local Nostr relay and local Blossom server cache backends, even if durable caching is deferred.
 
 ### Minimal NAP Surface
@@ -120,10 +120,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | AUTH-06 | Phase 1 | Complete |
 | STREAM-01 | Phase 1 | Complete |
 | STREAM-02 | Phase 1 | Complete |
-| STREAM-03 | Phase 1 | Pending |
+| STREAM-03 | Phase 1 | Complete |
 | STREAM-04 | Phase 1 | Complete |
 | STREAM-05 | Phase 1 | Complete |
-| STREAM-06 | Phase 1 | Pending |
+| STREAM-06 | Phase 1 | Complete |
 | STREAM-07 | Phase 1 | Complete |
 | NAP-01 | Phase 1 | Complete |
 | NAP-02 | Phase 1 | Complete |
