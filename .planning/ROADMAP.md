@@ -256,3 +256,13 @@ Plans:
 Plans:
 
 - [ ] TBD (promote with $gsd-review-backlog when ready)
+
+### Phase 999.12: NAP-STORAGE key-value API support (BACKLOG)
+
+**Goal:** Runtime supports the `NAP-STORAGE` API so napplets can store and retrieve scoped key-value data through the backend runtime boundary.
+**Requirements:** TBD
+**Plans:** 0 plans
+
+Plans:
+
+- [ ] TBD (promote with $gsd-review-backlog when ready)
