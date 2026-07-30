@@ -69,10 +69,22 @@ Deno.test("supplied manifest resolves once, merges sources, and holds version", 
 
   const first = await resolver.resolve();
   assert(first.state === "ready", "valid supplied fixture must resolve");
-  assert(first.identity.dTag === fixture.identity.identifier, "dTag must bind identity");
-  assert(first.identity.aggregateHash === fixture.identity.aggregateHash, "aggregate must bind identity");
-  assert(first.srcdoc.includes("Security Lab"), "verified HTML must reach srcdoc");
-  assert(fetchedUrls[0]?.startsWith("https://cache.example/"), "configured Blossom must be tried");
+  assert(
+    first.identity.dTag === fixture.identity.identifier,
+    "dTag must bind identity",
+  );
+  assert(
+    first.identity.aggregateHash === fixture.identity.aggregateHash,
+    "aggregate must bind identity",
+  );
+  assert(
+    first.srcdoc.includes("Security Lab"),
+    "verified HTML must reach srcdoc",
+  );
+  assert(
+    fetchedUrls[0]?.startsWith("https://cache.example/"),
+    "configured Blossom must be tried",
+  );
   const second = await resolver.resolve();
   assert(second === first, "resolved version must be held until retry");
   assert(manifestCalls === 1, "held version must not re-resolve");
@@ -87,8 +99,7 @@ Deno.test("integrity failures and unsupported capabilities fail closed", async (
       relays: [],
       blossomServers: [],
       resolveManifest: () => Promise.resolve(invalid),
-    }).resolve()
-  );
+    }).resolve());
 
   await expectCode("missing-capability", () =>
     new PortalArtifactResolver({
@@ -97,8 +108,7 @@ Deno.test("integrity failures and unsupported capabilities fail closed", async (
       blossomServers: [],
       resolveManifest: () => Promise.resolve(fixture.manifestEvent),
       supportedDomains: ["identity", "relay", "outbox"],
-    }).resolve()
-  );
+    }).resolve());
 
   await expectCode("blob-hash-mismatch", () =>
     new PortalArtifactResolver({
@@ -107,7 +117,5 @@ Deno.test("integrity failures and unsupported capabilities fail closed", async (
       blossomServers: [],
       resolveManifest: () => Promise.resolve(fixture.manifestEvent),
       fetchBytes: () => Promise.resolve(new TextEncoder().encode("altered")),
-    }).resolve()
-  );
+    }).resolve());
 });
-
