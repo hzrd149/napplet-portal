@@ -71,7 +71,7 @@ Plans:
   4. User can configure relays and Blossom servers while runtime keeps portal login, signer authority, cache trust, and relay AUTH separate.
   5. Developer can verify `../kehto`, `../napplet`, and `@napplet/*` contracts through documented adapters and tests.
 
-**Plans**: 5/7 plans executed
+**Plans**: 6/7 plans executed
 
 Plans:
 
@@ -91,7 +91,7 @@ Plans:
 
 **Wave 4**
 
-- [ ] 02-06-PLAN.md — Responsive installed catalog, update approval, and uninstall UX
+- [x] 02-06-PLAN.md — Responsive installed catalog, update approval, and uninstall UX
 
 **Wave 5**
 
@@ -123,7 +123,7 @@ Phases execute in numeric order: 1 -> 2 -> 3
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Napplet Runtime MVP | 6/6 | Complete    | 2026-07-30 |
-| 2. Backend Runtime Expansion | 5/7 | In Progress|  |
+| 2. Backend Runtime Expansion | 6/7 | In Progress|  |
 | 3. NAP Coverage, Policy, and Production Hardening | 0/TBD | Future expansion | - |
 
 ## Requirement Coverage

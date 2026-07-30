@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 2
 current_phase_name: Backend Runtime Expansion
 status: executing
-stopped_at: Completed 02-05-PLAN.md
-last_updated: "2026-07-30T20:44:53.629Z"
+stopped_at: Completed 02-06-PLAN.md
+last_updated: "2026-07-30T20:59:44.411Z"
 last_activity: 2026-07-30
 last_activity_desc: Completed 02-01 persisted runtime tracer
 progress:
   total_phases: 2
   completed_phases: 1
   total_plans: 13
-  completed_plans: 11
+  completed_plans: 12
 ---
 
 # Project State
@@ -28,11 +28,11 @@ See: .planning/PROJECT.md (updated 2026-07-30)
 ## Current Position
 
 Phase: 2 — Backend Runtime Expansion
-Plan: 6 of 7
+Plan: 7 of 7
 Status: Ready to execute
 Last activity: 2026-07-30 — Completed 02-01 persisted runtime tracer
 
-Progress: [█████████░] 85%
+Progress: [█████████░] 92%
 
 ## Performance Metrics
 
@@ -71,6 +71,7 @@ Progress: [█████████░] 85%
 | Phase 02 P03 | 3min | 1 tasks | 5 files |
 | Phase 02 P04 | 10min | 1 tasks | 5 files |
 | Phase 02 P05 | 4min | 1 tasks | 12 files |
+| Phase 02 P06 | 13min | 2 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -103,6 +104,9 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase ?]: [Phase 02]: Extend version-1 runtime settings snapshots additively so existing persisted state remains valid.
 - [Phase ?]: [Phase 02]: Keep server-rendered settings inside a shell-owned history view so the napplet frame stays mounted.
 - [Phase ?]: [Phase 02]: Project relay and Blossom cache health independently without gating settings or launch.
+- [Phase ?]: Accepted manifest event IDs remain the only launch authority; unresolved entries cannot launch.
+- [Phase ?]: Catalog projections emit from one process-owned CatalogService after verified loads or fully accepted mutations.
+- [Phase ?]: Native catalog dialogs invalidate on replacement event identity and return focus to the invoking card.
 
 ### Pending Todos
 
@@ -131,6 +135,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-07-30T20:44:53.617Z
-Stopped at: Completed 02-05-PLAN.md
+Last session: 2026-07-30T20:59:44.399Z
+Stopped at: Completed 02-06-PLAN.md
 Resume file: None
