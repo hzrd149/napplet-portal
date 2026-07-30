@@ -12,7 +12,7 @@ v1 is the complete Phase 1 MVP. Its original one-day vertical tracer remains the
 
 - [ ] **MVP-01**: User can open a Napplet Portal shell that has replaced the Fresh starter UI with a simple mobile-first product shell.
 - [ ] **MVP-02**: User can load one known/test napplet in a sandboxed iframe from the portal shell.
-- [ ] **MVP-03**: The iframe host uses `../napplet-web` where practical, or the canonical minimal source-bound adapter when the executable Deno import probe requires it.
+- [ ] **MVP-03**: The iframe host follows the reference-only `../napplet` contracts through pinned npm packages, or uses the canonical minimal source-bound adapter when the executable Deno import probe requires it.
 - [ ] **MVP-04**: The backend has a minimal runtime boundary that receives napplet messages and routes them through server-owned TypeScript code.
 - [ ] **MVP-05**: Napplet messages include correlation IDs and return success/error responses without the napplet directly accessing relays, signers, storage, or server internals.
 
@@ -65,7 +65,7 @@ Deferred beyond the complete locked Phase 1 MVP. These guide future phases and a
 ### Napplet Runtime Expansion
 
 - **V2-07**: Portal integrates `../kehto` as the canonical backend NAP dispatch/runtime contract.
-- **V2-08**: Portal resolves `../kehto`, `../napplet-web`, and `@napplet/*` version/API drift with contract tests.
+- **V2-08**: Portal resolves `../kehto`, `../napplet`, and `@napplet/*` version/API drift with contract tests.
 - **V2-09**: User can manage an installed napplet catalog with manifest identity, source, capabilities, and default handler state.
 - **V2-10**: Runtime-attested napplet identity comes from verified or catalog-controlled manifest data.
 

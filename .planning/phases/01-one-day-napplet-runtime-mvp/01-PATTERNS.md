@@ -394,8 +394,8 @@ Use relative imports with explicit `.ts`/`.tsx`, double quotes, two-space Deno f
 
 ## Metadata
 
-**Analog search scope:** portal root, `../kehto/packages`, `../napplet-web/packages`, `../hyprgate-gui/apps/shell/src`
+**Analog search scope:** portal root, `../kehto/packages`, `../napplet/packages`, `../hyprgate-gui/apps/shell/src`
 **Primary analogs read:** 15 files (portal Fresh shell, Kehto NIP/runtime, Hyprgate relay/Kehto/iframe)
 **Pattern extraction date:** 2026-07-30
 
-Planner note: local Kehto checkout manifests are on an older peer line than sibling napplet-web. Follow the research checkpoint and pin one coherent published dependency line before implementation; use sibling source as contract reference, not a mixed local runtime dependency.
+Planner note: local Kehto checkout manifests are on an older peer line than sibling napplet. Follow the research checkpoint and pin one coherent published dependency line before implementation; use sibling source as contract reference, not a mixed local runtime dependency.

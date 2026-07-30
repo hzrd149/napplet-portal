@@ -109,10 +109,10 @@ Deliver the full locked Phase 1 vertical slice in which one single-user Deno/Fre
 - `../kehto/packages/runtime/src/relay-result.ts` — Canonical `RelayEventResult` and relay-hint helpers.
 
 ### Napplet package contracts
-- `../napplet-web/README.md` — NIP-5D web projection and package roles.
-- `../napplet-web/packages/core/src/types/nostr.ts` — Shared event, filter, result, sidecar, and subscription types.
-- `../napplet-web/packages/nap/src/relay/types.ts` — Current NAP-RELAY wire shapes.
-- `../napplet-web/packages/nap/src/outbox/types.ts` — Current NAP-OUTBOX wire shapes and fanout fields.
+- `../napplet/README.md` — NIP-5D web projection and package roles.
+- `../napplet/packages/core/src/types/nostr.ts` — Shared event, filter, result, sidecar, and subscription types.
+- `../napplet/packages/nap/src/relay/types.ts` — Current NAP-RELAY wire shapes.
+- `../napplet/packages/nap/src/outbox/types.ts` — Current NAP-OUTBOX wire shapes and fanout fields.
 
 ### Hyprgate Applesauce reference implementation
 - `../hyprgate-gui/apps/shell/src/lib/relay/relay-pool-service.ts` — Shared pool and per-window subscription cleanup.
@@ -145,7 +145,7 @@ Deliver the full locked Phase 1 vertical slice in which one single-user Deno/Fre
 - Replace `routes/index.tsx` starter UI with the server-rendered mobile shell and one interactive client boundary.
 - Add a focused backend runtime module layer imported from the Fresh composition/API boundary.
 - Add a WebSocket endpoint/upgrade path that maps browser connections to backend runtime window namespaces.
-- Adapt sibling `../kehto` and `../napplet-web` packages rather than reimplementing NAP envelope contracts.
+- Adapt sibling `../kehto` and `../napplet` packages rather than reimplementing NAP envelope contracts.
 - Add Applesauce dependency imports and account/relay/store initialization at backend startup.
 
 </code_context>

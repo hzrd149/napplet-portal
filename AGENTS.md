@@ -19,7 +19,7 @@ The immediate goal is the complete Phase 1 MVP: sign in, load one known sandboxe
 - **Local cache backends**: Runtime design must allow local Nostr relay and local Blossom server connections for event/blob/artifact caching.
 - **Reactive style**: Applesauce usage should respect RxJS/functional stream patterns. Avoid nested subscriptions and avoid unnecessary `async`/`await` flows that wait for all data to load.
 - **Nostr loading model**: Nostr data is a stream, not a finished request. UI should handle partial, empty, stale, and updating states rather than waiting for completeness.
-- **Local dependencies**: Integrate with sibling packages `../kehto` and `../napplet-web`; for MVP, use the smallest compatible subset instead of solving every contract concern at once.
+- **Local dependencies**: Use sibling packages `../kehto` and `../napplet` as reference-only contract sources. Production application dependencies and imports must use the pinned npm packages, including `@napplet/core@0.31.0` and `@napplet/nap@0.31.0`, never file, path, or workspace imports from `../napplet`.
 - **Sandboxing**: Napplets run in sandboxed iframes, and NAP API access crosses an explicit proxy/message boundary.
 - **Mobile web**: The app shell must work acceptably in mobile browsers, especially fullscreen napplet usage.
 - **State ownership**: Persistent application state and complex Nostr processing belong to the backend runtime.

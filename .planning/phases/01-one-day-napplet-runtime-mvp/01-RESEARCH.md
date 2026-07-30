@@ -90,7 +90,7 @@
 
 The shortest credible plan is a server-first vertical slice with three narrow boundaries: a Fresh island owns only navigation, iframe `postMessage`, and WebSocket reconnection; one process-wide backend runtime owns accounts, Kehto dispatch, Applesauce `RelayPool`/`EventStore`, subscriptions, and artifacts; an explicit transport codec connects them. `@kehto/runtime` is browser-agnostic and exposes `createRuntime()`, `handleMessage(windowId, message)`, service registration, session registration, and window destruction, while `@kehto/shell` is explicitly browser integration. Therefore, do not move `createRuntime()` into the island merely to reuse the complete browser bridge. Adapt the Kehto shell handshake and injected namespace at the iframe boundary, then forward recognized domain envelopes to the server runtime. [VERIFIED: codebase grep — `../kehto/packages/runtime/README.md`, `../kehto/packages/shell/README.md`]
 
-There is a current version seam that must be settled before feature work: the checked-out Kehto manifests are `@kehto/runtime` 0.19.0, shell 0.18.0, services 0.17.0 with `@napplet/* >=0.29 <0.30`, while the sibling `../napplet-web` source is 0.31.0. The npm registry's latest coherent line is runtime 0.20.1, shell 0.19.1, services 0.18.1, nip 0.5.1 with `@napplet/core` and `@napplet/nap >=0.31 <0.32`. Use that single coherent published line and use sibling sources as canonical contract/reference code; do not mix the older local Kehto build with napplet 0.31. [VERIFIED: npm registry and codebase package manifests]
+There is a current version seam that must be settled before feature work: the checked-out Kehto manifests are `@kehto/runtime` 0.19.0, shell 0.18.0, services 0.17.0 with `@napplet/* >=0.29 <0.30`, while the sibling `../napplet` source is 0.31.0. The npm registry's latest coherent line is runtime 0.20.1, shell 0.19.1, services 0.18.1, nip 0.5.1 with `@napplet/core` and `@napplet/nap >=0.31 <0.32`. Use that single coherent published line and use sibling sources as canonical contract/reference code; do not mix the older local Kehto build with napplet 0.31. [VERIFIED: npm registry and codebase package manifests]
 
 The largest planning risk is breadth, not unclear architecture. The locked decisions require real verified napplet loading, three sign-in mechanisms, sensitive account persistence, reconnectable per-window live subscriptions, exact provenance, NIP-65 outbox routing, encryption/signing, and settled publishing. Plan this as sequential vertical waves with contract tests first. Per D-47, the first executable checkpoint must cross sign-in, the actual supplied verified iframe, Kehto handshake, and initial-plus-updating backend stream; it is targeted for one day, while full locked Phase 1 completion has no one-day deadline. [VERIFIED: `.planning/phases/01-one-day-napplet-runtime-mvp/01-CONTEXT.md`]
 
@@ -115,7 +115,7 @@ The largest planning risk is breadth, not unclear architecture. The locked decis
 |---|---|---|
 | MVP-01 | Replace starter UI with mobile-first shell | Fresh SSR + one narrow shell island and safe-area layout. |
 | MVP-02 | Load one napplet in sandboxed iframe | Verified `srcdoc`, `sandbox="allow-scripts"`, persistent mounted iframe. |
-| MVP-03 | Use napplet-web or compatible adapter | Pin `@napplet/core/@napplet/nap` 0.31 and inject only four supported domains. |
+| MVP-03 | Use napplet or compatible adapter | Pin `@napplet/core/@napplet/nap` 0.31 and inject only four supported domains. |
 | MVP-04 | Backend runtime message boundary | Fresh WebSocket routes envelopes to process-wide Kehto runtime. |
 | MVP-05 | Correlated success/errors without direct authority | Typed codec and pending-command timeout table; iframe receives no signer/relay objects. |
 | AUTH-01 | Start Nostr sign-in | Account command envelopes over WebSocket. |
@@ -147,7 +147,7 @@ The largest planning risk is breadth, not unclear architecture. The locked decis
 - Use Deno/Fresh; use routes for SSR/API boundaries and islands only for browser interaction. [VERIFIED: AGENTS.md]
 - Prefer Applesauce for Nostr primitives, networking, relay connections, event storage, and workflows; preserve RxJS stream composition with no nested subscriptions or completeness waits. [VERIFIED: AGENTS.md]
 - Keep persistent state, signing, relay connections, event stores, and complex Nostr logic on the backend. [VERIFIED: AGENTS.md]
-- Integrate `../kehto` and `../napplet-web` using the smallest compatible subset; napplets remain sandboxed behind an explicit proxy boundary. [VERIFIED: AGENTS.md]
+- Integrate `../kehto` and `../napplet` using the smallest compatible subset; napplets remain sandboxed behind an explicit proxy boundary. [VERIFIED: AGENTS.md]
 - Preserve local relay and local Blossom endpoints as future-compatible cache seams. [VERIFIED: AGENTS.md]
 - Use Fresh file-route conventions, explicit local extensions, Deno formatting, two-space indentation, double quotes, Preact `class`, and direct imports without new barrels. [VERIFIED: AGENTS.md]
 - Put file-routed APIs under `routes/api/`; type request state through `utils.ts`; return explicit status codes after input validation. [VERIFIED: AGENTS.md]
@@ -364,7 +364,7 @@ Write the whole snapshot via a temporary sibling file followed by rename and res
 
 ### Pitfall 1: Package/API Drift Breaks the First Compile
 **What goes wrong:** Local Kehto and napplet source versions compile individually but not together.
-**Why it happens:** Checked-out Kehto peers target 0.29 while napplet-web is 0.31; npm has a newer aligned Kehto line. [VERIFIED: manifests and npm]
+**Why it happens:** Checked-out Kehto peers target 0.29 while napplet is 0.31; npm has a newer aligned Kehto line. [VERIFIED: manifests and npm]
 **How to avoid:** First plan task pins one coherent line and runs a Deno import/check smoke test before implementation.
 **Warning signs:** Peer warnings, missing exports, envelope types resolving twice.
 
@@ -501,7 +501,7 @@ These are governed prerequisites, not open design choices. The package-only Deno
 | Node/npm | Registry/package audit and Vite npm ecosystem | ✓ | Node 26.5.0 / npm 11.17.0 | Deno npm resolver for implementation |
 | pnpm | Sibling package builds/tests if needed | ✓ | 11.16.0 | Use published pinned packages |
 | `../kehto` | Canonical runtime contracts/source | ✓ | local runtime 0.19.0 line | Published coherent 0.20.1 line |
-| `../napplet-web` | Canonical NAP contracts/source | ✓ | local core/nap 0.31.0 | Published 0.31.0 |
+| `../napplet` | Canonical NAP contracts/source | ✓ | local core/nap 0.31.0 | Published 0.31.0 |
 | `../hyprgate-gui` | Applesauce adapter patterns | ✓ | private app | Reference only |
 | Kehto built `dist` | Optional local import spike | ✓ | local checkout | npm packages |
 | Napplet built `dist` | Optional local import spike | ✓ | local checkout | npm packages |
@@ -584,7 +584,7 @@ Security enforcement is enabled at ASVS Level 1. Production hardening is deferre
 - `../kehto/RUNTIME-SPEC.md` and package source — handshake, sandbox, verified identity, unknown-type behavior.
 - `../kehto/packages/runtime/src/relay-handler.ts`, `relay-result.ts`, and services source — dispatch/lifecycle/result contracts.
 - `../kehto/packages/nip/src/5d/index.ts` — verified artifact pipeline.
-- `../napplet-web/packages/core/src/types/nostr.ts`, relay/outbox types — current wire shapes.
+- `../napplet/packages/core/src/types/nostr.ts`, relay/outbox types — current wire shapes.
 - `../hyprgate-gui/apps/shell/src/lib/relay/*` and Kehto bootstrap/outbox sources — adapter/cleanup patterns.
 - Installed official Applesauce 6.2 package README, JS, and declarations — accounts, signers, pool, store APIs.
 - [Fresh 2.3.3 JSR API](https://jsr.io/%40fresh/core/doc/all_symbols) — `App.ws` and context upgrade.

@@ -185,7 +185,7 @@ NAP-UPLOAD / NAP-VALUE / NAP-POW
 Minimum viable product — what's needed to validate the concept.
 
 - [ ] Fresh app shell with mobile fullscreen napplet route, bottom navigation, active account avatar, and shell error states.
-- [ ] Sandboxed iframe host using `../napplet-web` where practical, with strict postMessage source/session binding.
+- [ ] Sandboxed iframe host using `../napplet` where practical, with strict postMessage source/session binding.
 - [ ] Backend proxy path for napplet envelopes: browser session ↔ Fresh API/channel ↔ backend runtime handler ↔ browser response/push.
 - [ ] NAP-SHELL handshake and per-napplet `shell.supports()` environment.
 - [ ] Installed napplet catalog seeded from local/test manifests, with capability/archetype metadata.
@@ -281,7 +281,7 @@ Features to defer until runtime-market fit is established.
 1. **Define v1 around the runtime seam, not around social-client completeness.** Requirements should test whether a napplet can safely load, discover capabilities, request relay/identity/storage/resource/intent APIs, and receive results from a backend runtime.
 2. **Make approvals a first-class requirement, not a UI afterthought.** Publish/sign/encrypt/resource/upload operations initiated by untrusted napplets must have visible policy, remembered grants, denial paths, and revocation settings.
 3. **Require backend-owned Nostr state.** Relay sync, event storage, NIP-65 routing, relay AUTH, profile/list cache, and Blossom settings belong behind server APIs, not hydrated islands.
-4. **Treat NAP contracts as volatile.** Wrap `../kehto` and `../napplet-web` behind local integration seams so draft NAP changes do not rewrite route/island code.
+4. **Treat NAP contracts as volatile.** Wrap `../kehto` and `../napplet` behind local integration seams so draft NAP changes do not rewrite route/island code.
 5. **Ship with a small NAP set.** Must-have: shell, relay, identity, storage, resource, intent. Nice-to-have v1: theme and notify. Defer upload/inc/config/link unless a specific launch napplet requires them.
 6. **Keep mobile constraints explicit.** Bottom nav, fullscreen iframe, safe-area layout, touch-friendly modals, and recoverable reload/session restore are table stakes for the target use case.
 

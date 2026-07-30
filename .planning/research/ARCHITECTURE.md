@@ -27,7 +27,7 @@
 │  └──────────────┬────────────┘                                            │  │
 │                 │ creates iframe, owns DOM listener                       │  │
 │                 ▼                                                        │  │
-│  napplet-web sandbox iframe                                               │  │
+│  napplet sandbox iframe                                               │  │
 │  ┌───────────────────────────┐                                            │  │
 │  │ sandboxed napplet page    │ -- window.napplet.* NAP calls ------------┘  │
 │  │ @napplet/sdk              │                                               │
@@ -83,7 +83,7 @@
 | Fresh page routes | Render server-first shell pages: napplet viewport, sign-in/settings/approval views, mobile navigation, active account display. Do not run Nostr sync or NAP behavior here. | `routes/index.tsx`, `routes/napplets/[id].tsx`, `routes/settings.tsx`, route layouts |
 | Fresh API routes | Provide narrow HTTP boundaries into backend services: session auth, account management, NAP RPC/stream bridge, resource fetch, artifact gateway. | `routes/api/session.tsx`, `routes/api/nap/[sessionId].tsx`, `routes/api/nap/stream/[sessionId].tsx` |
 | Fresh islands | Own browser-only behavior: iframe creation, postMessage listener, transient UI state, approval modal controls, bottom nav interactions. They pass authenticated messages to APIs but do not hold authoritative Nostr state. | `islands/NappletHost.tsx`, `islands/ApprovalModal.tsx`, `islands/SignInForm.tsx` using `IS_BROWSER` guards |
-| napplet-web sandbox | Browser iframe layer that hosts napplet code and exposes/uses injected `window.napplet.*` domains. It is untrusted relative to the app shell. | Sibling `../napplet-web` packages for SDK/shim/runtime-injected domains |
+| napplet sandbox | Browser iframe layer that hosts napplet code and exposes/uses injected `window.napplet.*` domains. It is untrusted relative to the app shell. | Sibling `../napplet` packages for SDK/shim/runtime-injected domains |
 | Sandbox message bridge | Validate `postMessage` origin/source/session, normalize NAP envelopes, assign correlation IDs, and forward to backend over same-origin authenticated channel. | Browser island bridge plus backend `/api/nap/*` handlers; optionally upgrade to WebSocket when bidirectional streaming is needed |
 | Backend runtime registry | Own process-level runtime singletons and per-account/per-napplet session objects. Map user session + iframe instance to a `NappletSession`. | `runtime/registry.ts`, `runtime/session.ts` modules outside `routes/` and `islands/` |
 | Kehto runtime adapter | Preserve Kehto boundary: browser shell owns DOM transport; runtime owns protocol dispatch, ACL gates, service routing, runtime state. Server adapter implements services using backend dependencies. | `runtime/kehto/adapter.ts`, `runtime/kehto/services/*.ts` wrapping `../kehto` APIs |
@@ -167,7 +167,7 @@ napplet-portal/
 - **Keep Fresh conventions intact:** `routes/` owns URL behavior, `islands/` owns hydration, `components/` owns presentation, and `utils.ts` remains the typed Fresh request-state seam.
 - **Move runtime code out of routes:** backend Nostr/NAP logic belongs in `runtime/` and `services/`; API routes should validate requests, call services, and return stable envelopes.
 - **Split app DB from event DB:** app metadata has product-specific invariants; Nostr events benefit from Applesauce's event-store semantics, deduplication, replaceable/delete handling, and relay integrations.
-- **Make Kehto and napplet-web explicit integration boundaries:** do not invent a third protocol shape in Fresh handlers; adapt Fresh/browser/server concerns to the sibling packages' contracts.
+- **Make Kehto and napplet explicit integration boundaries:** do not invent a third protocol shape in Fresh handlers; adapt Fresh/browser/server concerns to the sibling packages' contracts.
 
 ## Architectural Patterns
 
@@ -270,7 +270,7 @@ NappletHost island creates sandboxed iframe for /napplet-gateway/:dTag/:aggregat
     ↓
 Artifact gateway serves verified manifest/blobs with restrictive headers
     ↓
-napplet-web/shim injects or uses window.napplet domains before authored napplet code executes
+napplet/shim injects or uses window.napplet domains before authored napplet code executes
     ↓
 Napplet sends ready/auth/capability messages to host bridge
     ↓
@@ -504,7 +504,7 @@ Do not store authoritative account, grants, relay state, or Nostr event cache in
    - Add `/api/nap/:sessionId` echo/no-op handler and teardown.
    - Rationale: validates the riskiest browser/backend boundary before real authority exists.
 
-4. **Integrate Kehto adapter and napplet-web injection path**
+4. **Integrate Kehto adapter and napplet injection path**
    - Resolve sibling package APIs.
    - Register runtime services as stubs.
    - Serve verified or fixture artifacts through `/napplet-gateway/*`.
@@ -542,17 +542,17 @@ Do not store authoritative account, grants, relay state, or Nostr event cache in
 |------|----------------|------------------------------|
 | iframe sandbox token choice | Wrong tokens can break napplets or nullify sandbox isolation | Phase-specific security research for exact `sandbox`, `allow`, CSP, gateway origin, and cookie policy |
 | Backend proxy as confused deputy | Napplet can try to make server fetch/sign/publish beyond user intent | Schema validation, ACL, capability grants, per-domain quotas, explicit consent, audit logs |
-| Long-lived NAP subscriptions over HTTP | Fetch request/response is insufficient for relay-like streams | Decide SSE vs WebSocket vs polling once Kehto/napplet-web message semantics are confirmed |
+| Long-lived NAP subscriptions over HTTP | Fetch request/response is insufficient for relay-like streams | Decide SSE vs WebSocket vs polling once Kehto/napplet message semantics are confirmed |
 | Applesauce Deno compatibility details | SQLite implementations differ by runtime and async/sync APIs | Validate LibSQL/native package behavior in Deno before committing storage implementation |
 | Multi-instance runtime sessions | In-process iframe session maps break under horizontal scaling | Keep session metadata persistent and design request routing/stream IDs for future sticky sessions |
-| Sibling package API drift | `../kehto` and `../napplet-web` are local evolving packages | Pin versions/paths and add contract tests around adapter boundaries |
+| Sibling package API drift | `../kehto` and `../napplet` are local evolving packages | Pin versions/paths and add contract tests around adapter boundaries |
 
 ## Sources
 
 - Fresh official docs: Architecture, Islands, Session management (fetched 2026-07-30; source confidence from seam: LOW for webfetch despite official-source content).
 - Applesauce docs: EventStore, LibSQL event database, RelayPool (fetched via Applesauce documentation tools; confidence MEDIUM from seam for Context7/docs provider).
 - Kehto local docs: `docs/concepts/runtime-shell-boundaries.md`, `docs/concepts/capability-negotiation.md`, `docs/tutorials/runtime-implementation.md` (local sibling-package source; used as project-specific evidence).
-- napplet-web local docs: `.planning/codebase/ARCHITECTURE.md`, `packages/sdk/README.md` (local sibling-package source; used as project-specific evidence).
+- napplet local docs: `.planning/codebase/ARCHITECTURE.md`, `packages/sdk/README.md` (local sibling-package source; used as project-specific evidence).
 - MDN: `Window.postMessage()` and `<iframe>` reference (fetched 2026-07-30; source confidence from seam: LOW for webfetch despite official-source content).
 
 ---

@@ -1,6 +1,6 @@
 # Pitfalls Research
 
-**Domain:** Server-side napplet runtime for mobile web using Nostr, Applesauce, sandboxed iframes, Kehto, and napplet-web  
+**Domain:** Server-side napplet runtime for mobile web using Nostr, Applesauce, sandboxed iframes, Kehto, and napplet
 **Researched:** 2026-07-30  
 **Confidence:** MEDIUM
 
@@ -129,7 +129,7 @@ A napplet escapes isolation, navigates the top page, exfiltrates user/session da
 
 **How to avoid:**
 - Serve untrusted napplet iframe content from a separate origin where possible.
-- Default to restrictive `sandbox`; only add tokens required by napplet-web/Kehto contracts. Be extremely cautious with `allow-scripts`, `allow-same-origin`, popups, downloads, forms, and top navigation.
+- Default to restrictive `sandbox`; only add tokens required by napplet/Kehto contracts. Be extremely cautious with `allow-scripts`, `allow-same-origin`, popups, downloads, forms, and top navigation.
 - Use exact `targetOrigin`, exact `event.origin`, and expected `event.source === iframe.contentWindow` checks.
 - Validate every message with a schema: `{version, nappletId, requestId, method, params}`; reject unknown methods and oversized payloads.
 - Add page-level and iframe `Permissions-Policy` to deny camera, microphone, geolocation, local-network, clipboard, payment, USB/HID/serial, etc. unless explicitly granted.
@@ -144,7 +144,7 @@ A napplet escapes isolation, navigates the top page, exfiltrates user/session da
 XSS across the app shell, data exfiltration, unauthorized NAP execution, clickjacking/navigation abuse, browser permission abuse, and compromise of active Nostr account operations.
 
 **Phase to address:**
-Phase 3: napplet-web iframe integration and NAP bridge. Establish before exposing any privileged NAP method.
+Phase 3: napplet iframe integration and NAP bridge. Establish before exposing any privileged NAP method.
 
 ---
 
@@ -314,7 +314,7 @@ Common mistakes when connecting to external services and sibling packages.
 | Applesauce EventStore | Using it only as an array cache | Let it handle replaceable/delete/model behavior; wrap it in backend runtime services |
 | Applesauce RelayPool | Infinite subscriptions with no owner | Tie subscriptions to session/napplet/runtime lifecycle and unsubscribe on teardown |
 | Kehto/NAP | Inventing portal-specific methods before mapping contracts | Build a typed adapter against Kehto interfaces and NAP specs; deny unknown methods |
-| napplet-web | Trusting iframe payload identity | Bind iframe instance, origin, napplet manifest/version, and backend session before accepting messages |
+| napplet | Trusting iframe payload identity | Bind iframe instance, origin, napplet manifest/version, and backend session before accepting messages |
 | Fresh routes/islands | Putting runtime state into islands | Keep routes as transport and islands as UX; backend services own runtime state |
 
 ## Performance Traps
@@ -396,7 +396,7 @@ How roadmap phases should address these pitfalls.
 | Auth/relay/signer confusion | Phase 1 and Phase 3 | Separate session, relay auth, and grant stores; tests for each boundary |
 | Relay sync/storage inconsistency | Phase 2: Nostr runtime/storage | NIP-65 relay tests; replaceable/addressable indexes; EOSE/CLOSED/auth-required handling |
 | Applesauce bypass/reimplementation | Phase 2 | Runtime service wraps EventStore/RelayPool/loaders; route files do not own relay lifecycle |
-| Iframe sandbox weakness | Phase 3: napplet-web iframe integration | Sandbox token audit; exact origin/source/schema tests; Permissions-Policy headers |
+| Iframe sandbox weakness | Phase 3: napplet iframe integration | Sandbox token audit; exact origin/source/schema tests; Permissions-Policy headers |
 | NAP permission bypass | Phase 3: NAP bridge | Direct unauthorized API calls fail; grants scoped by method/napplet/user/params; replay rejected |
 | Mobile web UX failures | Phase 4: mobile shell UX | Real-device UAT passes for safe areas, keyboard, back navigation, approvals, reconnect states |
 | Metadata/privacy leakage | Phase 2 and Phase 5 | Privacy model; minimized logs; operational telemetry excludes raw pubkeys/secrets by default |

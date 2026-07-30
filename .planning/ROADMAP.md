@@ -30,7 +30,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Success Criteria** (what must be TRUE):
 
   1. User can open a non-starter Fresh shell on mobile, sign in with NIP-46 bunker URI, Nostr Connect QR/handoff, or isolated `nsec` dev mode, and see active account/pubkey state.
-  2. User can launch one known/test napplet in a sandboxed iframe using `../napplet-web` where practical or a minimal compatible iframe adapter where necessary.
+  2. User can launch one known/test napplet in a sandboxed iframe using pinned npm packages aligned with the reference-only `../napplet` contracts, or a minimal compatible iframe adapter where necessary.
   3. Napplet can complete a minimal shell/runtime handshake, send correlated messages to the backend, and receive typed success/error responses without direct relay, signer, storage, or server access.
   4. Backend exposes at least one napplet-facing identity or Nostr-derived stream that can emit partial/empty/updating values without waiting for all relay data to finish loading.
   5. Runtime code follows pragmatic Applesauce/RxJS stream composition: avoid nested subscriptions, avoid blocking on complete data, and reserve `async`/`await` for one-shot setup or commands.
@@ -69,7 +69,7 @@ Plans:
   2. Runtime persists Nostr events with dedupe, relay provenance, replaceable/addressable/delete semantics, bounded sync, and teardown.
   3. Runtime can use local Nostr relays as event cache/read-through backends and local Blossom servers as blob/artifact cache backends for loaded napplets.
   4. User can configure relays and Blossom servers while runtime keeps portal login, signer authority, cache trust, and relay AUTH separate.
-  5. Developer can verify `../kehto`, `../napplet-web`, and `@napplet/*` contracts through documented adapters and tests.
+  5. Developer can verify `../kehto`, `../napplet`, and `@napplet/*` contracts through documented adapters and tests.
 
 **Plans**: TBD
 **UI hint**: yes

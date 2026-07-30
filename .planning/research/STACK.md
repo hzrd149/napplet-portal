@@ -6,7 +6,7 @@
 
 ## Recommendation in One Sentence
 
-Keep the existing Fresh 2 + Deno 2 scaffold, upgrade Fresh to 2.4+ before building WebSocket-backed proxy channels, put Applesauce 6.x on the server for Nostr event stores/relays/accounts/signers, use LibSQL through `applesauce-sqlite` for persistent event storage, and integrate sibling `../kehto` and `../napplet-web` as protocol/runtime authorities rather than inventing local NAP contracts.
+Keep the existing Fresh 2 + Deno 2 scaffold, upgrade Fresh to 2.4+ before building WebSocket-backed proxy channels, put Applesauce 6.x on the server for Nostr event stores/relays/accounts/signers, use LibSQL through `applesauce-sqlite` for persistent event storage, and integrate sibling `../kehto` and `../napplet` as protocol/runtime authorities rather than inventing local NAP contracts.
 
 ## Recommended Stack
 
@@ -47,9 +47,9 @@ Keep the existing Fresh 2 + Deno 2 scaffold, upgrade Fresh to 2.4+ before buildi
 | `../kehto/packages/acl` / `@kehto/acl` | local `0.16.0` | Capability grants, blocks, quotas, policy checks | Use for approval modal outcomes and per-napplet NAP permission enforcement. | LOW |
 | `../kehto/packages/firewall` / `@kehto/firewall` | local `0.4.0` | Behavioral anti-abuse/rate-limit policy engine | Use to rate-limit napplet NAP calls and tighten policy on unfocused/background napplets. | LOW |
 | `../kehto/packages/nip` / `@kehto/nip` | local `0.4.2` | NIP-5A/5D manifest verification and NIP-51/65/66/89 utilities | Use for content-addressed napplet resolution, manifest verification, Blossom hash verification, and NIP-65 relay discovery. | LOW |
-| `../napplet-web/packages/nap` / `@napplet/nap` | local `0.31.0` | Active NAP domain helper package with subpaths for relay, storage, inc, identity, resource, outbox, intent, etc. | Use as the canonical NAP type/export source for portal implementation, but resolve version drift with Kehto first. | LOW |
-| `@napplet/core` | Kehto expects `>=0.29.0 <0.30.0`; napplet-web local line likely newer | Envelope types, `createDispatch`, `registerNap`, constants | Do not pick a version blindly. First inspect sibling package lockfiles/exports and decide whether portal follows Kehto's pinned 0.29 line or napplet-web's current 0.31 line. | LOW |
-| `@napplet/shim` | Kehto docs mention `0.27.0`; napplet-web local package exists | Runtime-side injection of `window.napplet.<domain>` objects | Use only for iframe bootstrap/injection if compatible with Kehto's mandatory shell exception. Portal must not assume shim supplies mandatory `window.napplet.shell`. | LOW |
+| `../napplet/packages/nap` / `@napplet/nap` | local `0.31.0` | Active NAP domain helper package with subpaths for relay, storage, inc, identity, resource, outbox, intent, etc. | Use as the canonical NAP type/export source for portal implementation, but resolve version drift with Kehto first. | LOW |
+| `@napplet/core` | Kehto expects `>=0.29.0 <0.30.0`; napplet local line likely newer | Envelope types, `createDispatch`, `registerNap`, constants | Do not pick a version blindly. First inspect sibling package lockfiles/exports and decide whether portal follows Kehto's pinned 0.29 line or napplet's current 0.31 line. | LOW |
+| `@napplet/shim` | Kehto docs mention `0.27.0`; napplet local package exists | Runtime-side injection of `window.napplet.<domain>` objects | Use only for iframe bootstrap/injection if compatible with Kehto's mandatory shell exception. Portal must not assume shim supplies mandatory `window.napplet.shell`. | LOW |
 
 ### Persistence / Storage
 
@@ -72,7 +72,7 @@ Keep the existing Fresh 2 + Deno 2 scaffold, upgrade Fresh to 2.4+ before buildi
 
 | Technology | Version | Purpose | Why Recommended | Confidence |
 |------------|---------|---------|-----------------|------------|
-| Sandboxed iframe with `sandbox="allow-scripts"` and **no `allow-same-origin`** | Web platform | Napplet execution isolation | Kehto/napplet-web specs explicitly require sandboxed iframe execution and forbid `allow-same-origin`; identity is bound by message source and verified manifest, not origin. | MEDIUM |
+| Sandboxed iframe with `sandbox="allow-scripts"` and **no `allow-same-origin`** | Web platform | Napplet execution isolation | Kehto/napplet specs explicitly require sandboxed iframe execution and forbid `allow-same-origin`; identity is bound by message source and verified manifest, not origin. | MEDIUM |
 | `postMessage` JSON envelopes | Web platform | Napplet-to-shell message transport | This is the NIP-5D/NAP transport used by sibling packages. Portal should bridge postMessage to backend API/WebSocket, not expose direct Nostr APIs. | MEDIUM |
 | Fresh WebSockets | Fresh 2.4+ | Long-lived NAP proxy channel and relay event streaming to the app shell | Use for subscriptions, NAP calls that stream, and relay events. Fresh docs specifically support `app.ws()` and route-level `ctx.upgrade()` after Fresh 2.4+. | HIGH |
 | Server-Sent Events | Web platform | One-way backend-to-browser updates | Use only for simpler read-only streams. WebSocket is the better default because NAP proxy traffic is bidirectional. | MEDIUM |
@@ -87,7 +87,7 @@ Keep the existing Fresh 2 + Deno 2 scaffold, upgrade Fresh to 2.4+ before buildi
 | `deno outdated` / `deno update` | Dependency currency | Use before roadmap implementation to update Fresh to 2.4+ and refresh lockfile. | HIGH |
 | Deno test | Unit/integration tests | Prefer Deno tests for portal backend modules. Use browser tests only for iframe/message behavior. | HIGH |
 | Playwright | Browser conformance and iframe sandbox verification | Add when implementing iframe sandbox, postMessage bridge, mobile shell, and NAP conformance flows. Sibling repos already use Playwright. | MEDIUM |
-| `@napplet/conformance` / `@napplet/conformance-cli` | NAP/manifest conformance checks | Use once portal can serve/run napplets; source from `../napplet-web` line after version alignment. | LOW |
+| `@napplet/conformance` / `@napplet/conformance-cli` | NAP/manifest conformance checks | Use once portal can serve/run napplets; source from `../napplet` line after version alignment. | LOW |
 
 ## Installation / Import Map Direction
 
@@ -114,11 +114,11 @@ For sibling packages, prefer Deno `links` or explicit local import-map aliases o
 
 ```jsonc
 {
-  "links": ["../kehto/packages/*", "../napplet-web/packages/*"]
+  "links": ["../kehto/packages/*", "../napplet/packages/*"]
 }
 ```
 
-Do **not** add this blindly: Kehto currently peers against `@napplet/core`/`@napplet/nap >=0.29.0 <0.30.0`, while local `../napplet-web/packages/nap` is `0.31.0`. Resolve this drift before linking both trees into the same portal runtime.
+Do **not** add this blindly: Kehto currently peers against `@napplet/core`/`@napplet/nap >=0.29.0 <0.30.0`, while local `../napplet/packages/nap` is `0.31.0`. Resolve this drift before linking both trees into the same portal runtime.
 
 ## Alternatives Considered
 
@@ -128,7 +128,7 @@ Do **not** add this blindly: Kehto currently peers against `@napplet/core`/`@nap
 | Applesauce RelayPool/EventStore | Raw `nostr-tools` relay primitives | Only for very small compatibility helpers. Applesauce handles dedupe, replaceables, models, relay pools, loaders, and storage integration. |
 | `AsyncEventStore` + LibSQL | Deno KV as event store | Only if a future Applesauce adapter exists or event volume is tiny. KV is not the documented Applesauce event database path. |
 | Server-side runtime state | Browser-only islands | Never for core runtime. Mobile browser UX is the product reason to move heavy Nostr work server-side. |
-| Kehto/napplet-web contracts | Portal-specific NAP schema | Only if source inspection proves sibling APIs unusable. Otherwise local schema forks guarantee conformance drift. |
+| Kehto/napplet contracts | Portal-specific NAP schema | Only if source inspection proves sibling APIs unusable. Otherwise local schema forks guarantee conformance drift. |
 | WebSocket NAP proxy | Pure REST POST endpoints | REST is fine for one-shot calls, but subscriptions, relay events, and long-running NAP flows need bidirectional or streaming transport. |
 
 ## What NOT to Use
@@ -174,16 +174,16 @@ Do **not** add this blindly: Kehto currently peers against `@napplet/core`/`@nap
 ## Roadmap Implications
 
 1. **Stack refresh phase first:** upgrade Fresh to 2.4+, add Applesauce/LibSQL imports, replace `-A` production start with scoped permissions later.
-2. **Sibling API inspection phase before runtime build:** map exact exports from `../kehto` and `../napplet-web`, resolve `@napplet/*` version mismatch, and decide whether to link local packages or import published versions.
+2. **Sibling API inspection phase before runtime build:** map exact exports from `../kehto` and `../napplet`, resolve `@napplet/*` version mismatch, and decide whether to link local packages or import published versions.
 3. **Backend runtime foundation:** create server-owned event store, relay pool, account manager, signer abstraction, and storage module before building iframe UI.
 4. **Iframe/message bridge:** only after runtime boundaries are typed; implement sandbox, postMessage validation, WebSocket proxy, and CSP together.
-5. **NAP services:** implement relay/outbox/identity/storage/resource/intent via Kehto/napplet-web contracts, backed by Applesauce and hardened resource proxy policy.
+5. **NAP services:** implement relay/outbox/identity/storage/resource/intent via Kehto/napplet contracts, backed by Applesauce and hardened resource proxy policy.
 
 ## Unknowns Requiring Source Inspection
 
 - Exact `@kehto/runtime` exports and whether they are browser-agnostic enough for a Fresh backend process without DOM assumptions.
 - Whether `@kehto/shell` can be reused directly inside Fresh islands or should be treated as reference code for a smaller portal-specific island adapter.
-- Which `@napplet/*` version line to standardize on: Kehto's `>=0.29.0 <0.30.0` peer range or napplet-web local `0.31.0` packages.
+- Which `@napplet/*` version line to standardize on: Kehto's `>=0.29.0 <0.30.0` peer range or napplet local `0.31.0` packages.
 - Current NAP specs in `https://github.com/napplet/naps`, especially relay/outbox/storage/resource/identity/intent wire contracts and drift from local packages.
 - Production deployment target. Deno Deploy, Docker/VPS, and edge platforms differ materially for SQLite files, long-lived WebSockets, filesystem writes, and environment secrets.
 - Server-side key custody policy: private-key upload/storage vs Nostr Connect vs delegated signing.
@@ -195,7 +195,7 @@ Do **not** add this blindly: Kehto currently peers against `@napplet/core`/`@nap
 - Deno docs, configuration and `deno.json` permissions, updated June 2026 — LOW per source classifier, but official docs; used for Deno config/permission recommendations.
 - Applesauce docs via applesauce documentation tools: EventStore, RelayPool, LibSQL/Event Databases, package/method search — MEDIUM.
 - npm registry version checks for Applesauce, LibSQL, RxJS, nostr-tools, Arctic — MEDIUM for current package versions.
-- Local sibling sources: `../kehto/README.md`, `../kehto/RUNTIME-SPEC.md`, `../kehto/packages/*/package.json`, `../napplet-web/README.md`, `../napplet-web/packages/nap/package.json`, `../napplet-web/specs/SHELL-RESOURCE-POLICY.md` — LOW confidence by classifier because local alpha sources require deeper export-level inspection.
+- Local sibling sources: `../kehto/README.md`, `../kehto/RUNTIME-SPEC.md`, `../kehto/packages/*/package.json`, `../napplet/README.md`, `../napplet/packages/nap/package.json`, `../napplet/specs/SHELL-RESOURCE-POLICY.md` — LOW confidence by classifier because local alpha sources require deeper export-level inspection.
 
 ---
 *Stack research for: Deno Fresh server-side Nostr napplet runtime*  

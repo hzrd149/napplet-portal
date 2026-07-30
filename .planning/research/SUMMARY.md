@@ -9,7 +9,7 @@
 
 Napplet Portal is not primarily a social client; it is a mobile web runtime for untrusted napplets. Experts should build it as a thin Fresh/Preact shell around sandboxed iframes, with all authoritative Nostr state, signer boundaries, relay/blossom networking, persistence, and NAP API execution owned by backend TypeScript services. The product succeeds when a napplet can load safely on mobile, discover runtime capabilities, request mediated APIs, and get fast server-backed Nostr behavior without direct access to browser storage, relays, or signing keys.
 
-The recommended approach is to keep the Deno Fresh scaffold, upgrade Fresh to 2.4+ before WebSocket-backed NAP channels, adopt Applesauce as the Nostr runtime backbone, and use LibSQL/SQLite-backed event storage through `applesauce-sqlite`. Integrate `../kehto` and `../napplet-web` as protocol/runtime authorities behind explicit adapters; do not invent portal-specific NAP contracts. Build in dependency order: secure scaffold and session/account model, backend runtime/storage, iframe/message bridge, Kehto/napplet-web contract integration, minimum NAP domains, approval policy, then mobile polish and hardening.
+The recommended approach is to keep the Deno Fresh scaffold, upgrade Fresh to 2.4+ before WebSocket-backed NAP channels, adopt Applesauce as the Nostr runtime backbone, and use LibSQL/SQLite-backed event storage through `applesauce-sqlite`. Integrate `../kehto` and `../napplet` as protocol/runtime authorities behind explicit adapters; do not invent portal-specific NAP contracts. Build in dependency order: secure scaffold and session/account model, backend runtime/storage, iframe/message bridge, Kehto/napplet contract integration, minimum NAP domains, approval policy, then mobile polish and hardening.
 
 The highest risks are key custody, auth/signer/relay confusion, weak iframe/postMessage boundaries, ad hoc relay sync, and UI-only permissions without backend enforcement. Mitigate these by preferring NIP-46/NIP-07-style external signing, keeping portal sessions, relay AUTH, and signer grants separate, validating every iframe message twice, routing all Nostr activity through Applesauce-backed services, and making approvals durable server-side policy decisions scoped to account, napplet identity/hash, method, parameters, and expiry.
 
@@ -26,13 +26,13 @@ The existing Deno Fresh starter is the right foundation, but it must be treated 
 - **Tailwind CSS 4 + Vite 7**: mobile shell styling and build pipeline — retain current scaffold choices for fast responsive UI iteration.
 - **Applesauce 6.x packages**: `EventStore`/`AsyncEventStore`, `RelayPool`, loaders, accounts, signers, common event helpers — use as the backend Nostr authority, not as incidental utilities.
 - **LibSQL via `@libsql/client` + `applesauce-sqlite`**: persistent Nostr event database — supports local development and later Turso/remote LibSQL without changing the event-store shape.
-- **Kehto + napplet-web sibling packages**: NAP/runtime/shell contract sources — integrate through adapters only after resolving local version/API drift.
+- **Kehto + napplet sibling packages**: NAP/runtime/shell contract sources — integrate through adapters only after resolving local version/API drift.
 
 **Critical version and compatibility requirements:**
 - Fresh must move to **2.4+** because WebSocket upgrades under Vite dev require Fresh 2.4+ and Deno 2.8+.
 - Deno 2.9.4 satisfies Fresh's runtime needs.
 - Applesauce LibSQL integration should use `AsyncEventStore` with `applesauce-sqlite` and `@libsql/client`.
-- `../kehto` peers against `@napplet/* >=0.29.0 <0.30.0`, while local `../napplet-web` appears to expose newer `@napplet/nap` 0.31.0; resolve before linking both trees.
+- `../kehto` peers against `@napplet/* >=0.29.0 <0.30.0`, while local `../napplet` appears to expose newer `@napplet/nap` 0.31.0; resolve before linking both trees.
 
 ### Expected Features
 
@@ -126,9 +126,9 @@ Based on research, suggested phase structure:
 **Addresses:** sandboxed iframe host, message proxy, NAP-SHELL session establishment, runtime-attested identity scaffolding.  
 **Avoids:** confused deputy backend calls, `postMessage("*")`, same-origin sandbox escape, trusting iframe-supplied napplet IDs.
 
-### Phase 5: Kehto / napplet-web Contract Integration and Catalog
+### Phase 5: Kehto / napplet Contract Integration and Catalog
 **Rationale:** Before implementing real domains, resolve sibling API drift and pin the exact integration contracts so Fresh code does not invent an incompatible NAP runtime.  
-**Delivers:** source inspection, version-line decision for `@napplet/*`, local import/link strategy, Kehto adapter, napplet-web injection/gateway path, installed catalog schema, fixture manifests, capability inventory, early unsupported-capability failure.  
+**Delivers:** source inspection, version-line decision for `@napplet/*`, local import/link strategy, Kehto adapter, napplet injection/gateway path, installed catalog schema, fixture manifests, capability inventory, early unsupported-capability failure.
 **Addresses:** installed napplet catalog, runtime-attested identity, NAP-SHELL `supports()`, capability-aware launcher groundwork.  
 **Avoids:** Fresh-specific NAP schema forks, trusting gateway bytes, grants keyed only by URL/title.
 
@@ -156,7 +156,7 @@ Based on research, suggested phase structure:
 - Establish account/session/signer boundaries before relay publish or NAP approvals; otherwise later permission logic will conflate login, relay AUTH, and signing authority.
 - Build Applesauce-backed relay/event storage before napplet-facing NAP domains so identity, relay, and outbox APIs use correct Nostr semantics from day one.
 - Validate the iframe/message bridge before exposing privileged domains; this confines the most dangerous browser/backend trust boundary while service methods are still inert or low risk.
-- Resolve Kehto/napplet-web version and export questions before real NAP domain work to avoid protocol drift.
+- Resolve Kehto/napplet version and export questions before real NAP domain work to avoid protocol drift.
 - Implement a small useful NAP set with policy enforcement, then polish mobile UX and harden deployment; do not implement every draft NAP in v1.
 
 ### Research Flags
@@ -165,7 +165,7 @@ Phases likely needing deeper research during planning:
 - **Phase 2:** signer strategy needs focused research/decision on NIP-46/Bunker, NIP-07 handoff, server-held development signer policy, storage of connection secrets, and logout semantics.
 - **Phase 3:** Applesauce Deno/LibSQL behavior, `AsyncEventStore` APIs, RelayPool lifecycle, NIP-65 helpers, and NIP-42 AUTH paths should be validated with code-level docs/spikes.
 - **Phase 4:** iframe sandbox tokens, content-origin strategy, CSP, Permissions-Policy, and WebSocket vs SSE transport need security-specific phase research.
-- **Phase 5:** sibling `../kehto` and `../napplet-web` exports/version drift require source inspection and contract tests before implementation.
+- **Phase 5:** sibling `../kehto` and `../napplet` exports/version drift require source inspection and contract tests before implementation.
 - **Phase 6:** NAP domain wire contracts are draft/active; relay/resource/intent/storage adapters need phase-specific API verification.
 - **Phase 8:** deployment target, Deno permissions, separate origin, SSRF defenses, and privacy/observability model need explicit validation.
 
@@ -186,11 +186,11 @@ Phases with standard patterns (skip research-phase unless implementation context
 
 ### Gaps to Address
 
-- **Sibling API compatibility:** Inspect `../kehto` and `../napplet-web` exports, package peer ranges, and runtime assumptions; pin a version/import strategy before adapter implementation.
+- **Sibling API compatibility:** Inspect `../kehto` and `../napplet` exports, package peer ranges, and runtime assumptions; pin a version/import strategy before adapter implementation.
 - **Signer policy:** Decide whether v1 uses NIP-46/Bunker, NIP-07 shell handoff, dev-only private key custody, or a combination; document threat model and tests before relay publish.
 - **Deployment target:** Deno Deploy, Docker/VPS, and edge platforms differ for SQLite files, long-lived WebSockets, file cache, environment secrets, and separate iframe origins.
 - **NAP contract volatility:** Keep local adapter boundaries and contract tests because NAP relay/storage/resource/identity/intent specs are draft/active.
-- **Transport streaming choice:** Decide WebSocket vs SSE vs polling after Kehto/napplet-web message semantics are confirmed; WebSocket is likely default for bidirectional subscriptions.
+- **Transport streaming choice:** Decide WebSocket vs SSE vs polling after Kehto/napplet message semantics are confirmed; WebSocket is likely default for bidirectional subscriptions.
 - **Resource proxy policy:** Define SSRF, DNS rebinding, MIME sniffing, SVG/XML, size/deadline, cache partitioning, and Blossom verification rules before broad NAP-RESOURCE or upload support.
 - **Privacy model:** Document what the server can observe: pubkeys, relay targets, napplet usage, request timing, grants, and metadata even for encrypted events.
 - **Mobile browser behavior:** Verify iOS Safari and Android Chrome with physical devices for viewport, safe areas, keyboard occlusion, focus, back navigation, and PWA behavior.
@@ -209,14 +209,14 @@ Phases with standard patterns (skip research-phase unless implementation context
 - Applesauce documentation and method/package searches — EventStore, AsyncEventStore, RelayPool, loaders, LibSQL event database, signers, accounts, relay AUTH/sync patterns.
 - Nostr protocol references — NIP-01 event semantics, NIP-07 browser signer, NIP-42 relay AUTH, NIP-46 remote signing, NIP-65 relay lists, NIP-96/Blossom considerations.
 - Kehto local docs and package metadata — runtime/shell/ACL/service boundaries and alpha NAP/runtime guidance.
-- napplet-web local docs and package metadata — sandbox/iframe/runtime injection and NAP package direction.
+- napplet local docs and package metadata — sandbox/iframe/runtime injection and NAP package direction.
 
 ### Tertiary (LOW confidence / needs validation)
 - Fresh official docs fetched through web tooling — WebSocket and CSP guidance; official but source classifier marked fetched web docs lower confidence.
 - Deno docs fetched through web tooling — configuration and permissions; official but should be verified against actual deployment target.
 - MDN Web Docs — iframe sandbox, `postMessage`, and Permissions-Policy guidance; official browser docs but not exhaustive for mobile browser quirks.
 - NAP registry and specs at `https://github.com/napplet/naps` — domain posture and contracts are draft/active and may change before implementation.
-- Local alpha sibling sources (`../kehto`, `../napplet-web`) — authoritative for current local context but unstable enough to require code-level inspection per phase.
+- Local alpha sibling sources (`../kehto`, `../napplet`) — authoritative for current local context but unstable enough to require code-level inspection per phase.
 
 ---
 *Research completed: 2026-07-30*  

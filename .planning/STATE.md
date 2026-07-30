@@ -68,7 +68,7 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Sign-in]: Nostr Connect QR/URI is primary; bunker URI and nsec are secondary, with nsec labeled `Not recommended` rather than developer-only.
 - [Runtime Style]: Applesauce/RxJS usage should be stream-first, avoid nested subscriptions, and avoid UI flows that wait for Nostr data to be complete.
 - [Cache Backends]: Runtime should support local Nostr relays and local Blossom servers so napplet events/blobs can be cached locally instead of always loading from public relays/servers.
-- [Roadmap]: Future phases expand backend Nostr runtime, Kehto/napplet-web contracts, NAP API breadth, policy, diagnostics, and production hardening.
+- [Roadmap]: Future phases expand backend Nostr runtime, Kehto/napplet contracts, NAP API breadth, policy, diagnostics, and production hardening.
 
 ### Pending Todos
 
