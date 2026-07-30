@@ -8,7 +8,7 @@ status: executing
 stopped_at: Completed 01-06-PLAN.md; verification/UAT pending
 last_updated: "2026-07-30T17:53:00Z"
 last_activity: 2026-07-30
-last_activity_desc: "Closed out 01-06 summary from existing commits; automated checks pass"
+last_activity_desc: "Completed quick task 260730-pcm: repaired Phase 01 API coverage preflight"
 progress:
   total_phases: 1
   completed_phases: 0
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-07-30)
 Phase: 01 (one-day-napplet-runtime-mvp) — VERIFYING
 Plan: 6 of 6
 Status: Ready for phase verification and supplied-napplet UAT
-Last activity: 2026-07-30 — Closed out 01-06 summary from existing commits; automated checks pass
+Last activity: 2026-07-30 — Completed quick task 260730-pcm: repaired Phase 01 API coverage preflight
 
 Progress: [██████████] 100%
 
@@ -106,6 +106,7 @@ None yet.
 |---|-------------|------|--------|-----------|
 | 260730-par | Fix napplet iframe element not filling the available height | 2026-07-30 | 3000f4d | [260730-par-fix-napplet-iframe-element-not-filling-t](./quick/260730-par-fix-napplet-iframe-element-not-filling-t/) |
 | 260730-phe | Restore Applesauce active account into signer runtime on startup | 2026-07-30 | 0fe5bd1 | [260730-phe-restore-applesauce-active-account-into-s](./quick/260730-phe-restore-applesauce-active-account-into-s/) |
+| 260730-pcm | Shorten RELAY and OUTBOX behavior reasons in Phase 01 COVERAGE.md to satisfy the verify-work preflight gate, then rerun Phase 01 verification | 2026-07-30 | 1f54bd0 | [260730-pcm-shorten-relay-and-outbox-behavior-reason](./quick/260730-pcm-shorten-relay-and-outbox-behavior-reason/) |
 
 ## Deferred Items
 
