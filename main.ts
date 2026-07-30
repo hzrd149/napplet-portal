@@ -1,5 +1,3 @@
-import "./runtime/debug_env.ts";
-
 import { App, staticFiles } from "fresh";
 import { RelayPool } from "applesauce-relay";
 import { AccountStore } from "./runtime/account_store.ts";
