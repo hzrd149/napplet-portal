@@ -61,9 +61,10 @@
 ## Configuration
 
 **Environment:**
-- Runtime configuration is currently static and code-driven; no `.env` files are present in the project root.
-- `.gitignore` lists `.env`, `.env.development.local`, `.env.test.local`, `.env.production.local`, and `.env.local`, so future environment files must remain uncommitted.
-- No `Deno.env`, `process.env`, database URL, API key, or service credential usage is detected in first-party source files under `main.ts`, `client.ts`, `utils.ts`, `routes/`, `components/`, or `islands/`.
+- Runtime configuration is environment-driven and parsed once in `runtime/config.ts` (`NAPPLET_COORDINATE`, `NOSTR_RELAYS`, `REMOTE_SIGNER_RELAYS`, `BLOSSOM_SERVERS`, `PORTAL_RECONNECT_GRACE_MS`, `PORTAL_BIND`); `main.ts` calls `loadRuntimeConfig()` at module scope.
+- `deno task dev` and `deno task start` delegate to `deno task --env-file dev:server` / `start:server`, so `.env` is loaded into the task shell and inherited by Vite, `deno serve`, and `runtime/bind.ts`. Real environment variables are not overwritten by `.env`. `deno task check` and `deno task test` intentionally do not load it.
+- `.env.example` is the committed template and must hold placeholder values only; `.gitignore` lists `.env`, `.env.development.local`, `.env.test.local`, `.env.production.local`, and `.env.local`, so real environment files stay uncommitted.
+- `Deno.env` is read only through `runtime/config.ts` (`loadRuntimeConfig`, `loadBindAddress`); route, component, and island code takes configuration from `ctx.state.config`. No database URL, API key, or service credential is read from the environment.
 - Shared per-request state is typed in `utils.ts` with `State { shared: string }` and set by middleware in `main.ts`.
 
 **Build:**
@@ -83,7 +84,7 @@
 
 **Production:**
 - Build with `deno task build`, which runs `vite build` and produces Fresh build output under `_fresh/`.
-- Start with `deno task start`, which runs `deno serve -A _fresh/server.js`.
+- Start with `deno task start`, which loads `.env` and runs `deno serve -A --host=<validated PORTAL_BIND> _fresh/server.js`; the address comes from `runtime/bind.ts` so a non-loopback value is rejected before it is served.
 - Deployment target is any Deno-compatible host capable of serving `_fresh/server.js` with the permissions implied by `-A`; no platform-specific deployment config is detected.
 
 ---

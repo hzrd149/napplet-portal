@@ -46,6 +46,19 @@ function endpoints(
   return Object.freeze([...unique]);
 }
 
+/**
+ * Resolve only the bind address. `deno serve` and the Vite dev server both take
+ * the address before the app loads, so they resolve it here instead of reading
+ * `PORTAL_BIND` directly: the same loopback validation applies, and no unrelated
+ * configuration warning is duplicated ahead of the startup summary.
+ */
+export function loadBindAddress(
+  environment: Environment = { PORTAL_BIND: Deno.env.get("PORTAL_BIND") },
+  warn: (message: string) => void = console.warn,
+): RuntimeConfig["bind"] {
+  return loadRuntimeConfig({ PORTAL_BIND: environment.PORTAL_BIND }, warn).bind;
+}
+
 export function loadRuntimeConfig(
   environment: Environment = Deno.env.toObject(),
   warn: (message: string) => void = console.warn,

@@ -27,12 +27,27 @@ times out. Fresh documents this as fixed in 2.4 with Deno 2.8 or newer; until
 that release, exercise the runtime with `deno task build && deno task start`.
 
 Development and production tasks bind to `127.0.0.1` unless `PORTAL_BIND` is
-explicitly set. Anyone who can reach this server acts as the same trusted
-operator and shares the backend's globally active signer. There is no portal
-authentication or multi-user isolation in Phase 1. Do not expose it to a LAN or
-the public internet without adding an appropriate trusted access boundary.
+explicitly set to another loopback address. Both tasks resolve the address
+through the same validation the runtime uses, so a non-loopback value is
+rejected with a warning instead of being served. Anyone who can reach this
+server acts as the same trusted operator and shares the backend's globally
+active signer. There is no portal authentication or multi-user isolation in
+Phase 1. Do not expose it to a LAN or the public internet without adding an
+appropriate trusted access boundary.
 
 ## Configuration
+
+Copy `.env.example` to `.env` and edit it:
+
+```sh
+cp .env.example .env
+```
+
+`deno task dev` and `deno task start` load `.env` from the project root before
+the server starts. Variables already present in the real environment are never
+overwritten by the file, so an exported value wins over `.env`. The
+`deno task check` and `deno task test` commands deliberately ignore `.env` and
+stay hermetic.
 
 Configuration is read once when the process starts. Restart after changing it.
 
@@ -53,7 +68,8 @@ continue. Manifest-provided Blossom hints are merged with the configured list,
 and every returned blob is verified rather than trusted.
 
 No credentials belong in endpoint URLs. Environment files are gitignored, but
-operators should still apply host-level secret controls.
+operators should still apply host-level secret controls. `.env.example` is
+committed and must keep placeholder values only.
 
 ## Security and sensitive state
 

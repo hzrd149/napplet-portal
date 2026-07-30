@@ -1,10 +1,11 @@
 import { defineConfig } from "vite";
 import { fresh } from "@fresh/plugin-vite";
 import tailwindcss from "@tailwindcss/vite";
+import { loadBindAddress } from "./runtime/config.ts";
 
 export default defineConfig({
   plugins: [fresh(), tailwindcss()],
   server: {
-    host: Deno.env.get("PORTAL_BIND")?.trim() || "127.0.0.1",
+    host: loadBindAddress(),
   },
 });
