@@ -83,6 +83,7 @@ export class InMemoryNappletArtifactCache implements NappletArtifactCache {
 
 export interface ArtifactAdapterOptions {
   readonly coordinate: string;
+  readonly manifestEventId?: string;
   readonly relays: readonly string[];
   readonly blossomServers: readonly string[];
   readonly resolveManifest: (
@@ -159,6 +160,12 @@ export class PortalArtifactResolver {
         this.#options.coordinate,
         this.#options.relays,
       );
+      if (
+        this.#options.manifestEventId &&
+        event.id !== this.#options.manifestEventId
+      ) {
+        throw new Error("resolved manifest does not match accepted event ID");
+      }
     } catch (cause) {
       debug("resolve manifest failed coordinate=%s", this.#options.coordinate);
       throw new ArtifactResolutionError(

@@ -10,6 +10,36 @@ export interface RuntimeForwardMessage extends MessageOwner {
   readonly message: NappletMessage;
 }
 
+export type CatalogCommand =
+  | {
+    readonly type: "catalog.approve";
+    readonly id: string;
+    readonly coordinate: string;
+    readonly manifestEventId: string;
+  }
+  | {
+    readonly type: "catalog.uninstall";
+    readonly id: string;
+    readonly coordinate: string;
+  };
+
+export function decodeCatalogCommand(value: unknown): CatalogCommand | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const command = value as Record<string, unknown>;
+  if (
+    command.type === "catalog.approve" && typeof command.id === "string" &&
+    typeof command.coordinate === "string" &&
+    typeof command.manifestEventId === "string"
+  ) {
+    return command as unknown as CatalogCommand;
+  }
+  if (
+    command.type === "catalog.uninstall" && typeof command.id === "string" &&
+    typeof command.coordinate === "string"
+  ) return command as unknown as CatalogCommand;
+  return null;
+}
+
 export type DecodeResult =
   | { readonly ok: true; readonly value: RuntimeForwardMessage }
   | { readonly ok: false; readonly error: string };

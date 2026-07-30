@@ -21,6 +21,8 @@ import {
   TracerRelayAdapter,
 } from "./relay_adapter.ts";
 import type { RuntimeSettingsService } from "./settings.ts";
+import type { CatalogProjection, CatalogService } from "./catalog.ts";
+import type { CatalogCommand } from "./transport.ts";
 
 const debug = rootDebug.extend("runtime");
 
@@ -70,6 +72,7 @@ interface RuntimeServiceHubOptions {
   readonly relay?: BackendRelayAdapter;
   readonly outbox?: OutboxAdapter;
   readonly cache?: { destroy?(): void };
+  readonly catalog?: CatalogService;
 }
 
 export class RuntimeServiceHub {
@@ -79,6 +82,7 @@ export class RuntimeServiceHub {
   readonly #relay?: BackendRelayAdapter;
   readonly #outbox?: OutboxAdapter;
   readonly #cache?: { destroy?(): void };
+  readonly #catalog?: CatalogService;
   readonly #windowCleanups = new Map<string, Set<() => void>>();
 
   constructor(options: RuntimeServiceHubOptions) {
@@ -86,6 +90,7 @@ export class RuntimeServiceHub {
     this.#relay = options.relay;
     this.#outbox = options.outbox;
     this.#cache = options.cache;
+    this.#catalog = options.catalog;
     this.#subscription = this.#identity$.subscribe((identity) => {
       debug(
         "broadcast identity status=%s account=%s windows=%d",
@@ -118,6 +123,19 @@ export class RuntimeServiceHub {
     send({ type: "identity.changed", identity: this.#identity$.value });
     const owner: RelayOwner = { connectionId, windowId };
     return {
+      catalog: (): Promise<CatalogProjection> =>
+        this.#catalog?.project() ??
+          Promise.resolve({ catalogEventId: null, entries: [] }),
+      catalogCommand: (command: CatalogCommand) => {
+        if (!this.#catalog) throw new Error("catalog service unavailable");
+        return command.type === "catalog.approve"
+          ? this.#catalog.approveManifestUpdate(
+            command.id,
+            command.coordinate,
+            command.manifestEventId,
+          )
+          : this.#catalog.uninstallNapplet(command.id, command.coordinate);
+      },
       subscribeRelay: (request: RelaySubscribeRequest) => {
         if (!this.#relay) throw new Error("relay service unavailable");
         debug(
