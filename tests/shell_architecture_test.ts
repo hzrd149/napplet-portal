@@ -199,12 +199,30 @@ Deno.test("approved sign-in, Home, Profile, notice, and sign-out copy is present
     ]
   ) assert(shell.includes(copy), `missing approved copy: ${copy}`);
   assert(
-    home.includes("No napplet configured"),
-    "empty configuration copy required",
+    home.includes("No napplets installed"),
+    "empty synchronized catalog copy required",
   );
   assert(profile.includes("Signer offline"), "offline signer state required");
   assert(shell.includes("<HomeView"), "Home must remain presentational");
   assert(shell.includes("<ProfileView"), "Profile must remain presentational");
+});
+
+Deno.test("installed catalog mutations stay outside iframe authority", async () => {
+  const shell = await Deno.readTextFile("islands/NappletShell.tsx");
+  const home = await Deno.readTextFile("components/HomeView.tsx");
+  assert(
+    shell.includes('type: "catalog.approve"') &&
+      shell.includes('type: "catalog.uninstall"'),
+    "shell must send explicit correlated catalog commands",
+  );
+  assert(
+    home.includes("Connect a signer to change installed napplets."),
+    "signer-free public catalog must visibly disable mutations",
+  );
+  assert(
+    !home.includes("postMessage"),
+    "catalog controls must not ask the napplet iframe for identity",
+  );
 });
 
 Deno.test("runtime settings navigation preserves the mounted iframe and browser Back profile state", async () => {
