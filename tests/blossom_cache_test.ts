@@ -39,16 +39,31 @@ Deno.test("local proxy receives repeated xs and attested as hints", async () => 
     },
   });
 
-  assert(new TextDecoder().decode(bytes) === "cached", "cache hit must return bytes");
+  assert(
+    new TextDecoder().decode(bytes) === "cached",
+    "cache hit must return bytes",
+  );
   const url = new URL(calls[0]);
-  assert(url.origin === "http://127.0.0.1:24242", "only fixed local origin is used");
+  assert(
+    url.origin === "http://127.0.0.1:24242",
+    "only fixed local origin is used",
+  );
   assert(url.pathname === "/abc", "hash must be the local path");
-  assert(url.searchParams.getAll("xs").join(",") === "https://one.example/,https://two.example/cache", "all upstream hints must be encoded");
-  assert(url.searchParams.get("as") === "author", "attested author must be encoded");
+  assert(
+    url.searchParams.getAll("xs").join(",") ===
+      "https://one.example/,https://two.example/cache",
+    "all upstream hints must be encoded",
+  );
+  assert(
+    url.searchParams.get("as") === "author",
+    "attested author must be encoded",
+  );
 });
 
 Deno.test("unhealthy, timeout, miss, and proxy failure fall through upstream", async () => {
-  for (const localResult of ["unhealthy", "timeout", "miss", "failure"] as const) {
+  for (
+    const localResult of ["unhealthy", "timeout", "miss", "failure"] as const
+  ) {
     const calls: string[] = [];
     const cache = new BlossomCache({
       timeoutMs: 5,
@@ -56,12 +71,23 @@ Deno.test("unhealthy, timeout, miss, and proxy failure fall through upstream", a
         const url = String(input);
         calls.push(`${init?.method ?? "GET"} ${url}`);
         if (init?.method === "HEAD") {
-          if (localResult === "unhealthy") return Promise.resolve(new Response(null, { status: 503 }));
-          if (localResult === "timeout") return new Promise((_resolve, reject) => init.signal?.addEventListener("abort", () => reject(new DOMException("aborted", "AbortError"))));
+          if (localResult === "unhealthy") {
+            return Promise.resolve(new Response(null, { status: 503 }));
+          }
+          if (localResult === "timeout") {
+            return new Promise((_resolve, reject) =>
+              init.signal?.addEventListener(
+                "abort",
+                () => reject(new DOMException("aborted", "AbortError")),
+              )
+            );
+          }
           return Promise.resolve(new Response(null, { status: 204 }));
         }
         if (url.startsWith(LOCAL_BLOSSOM_URL)) {
-          if (localResult === "miss") return Promise.resolve(new Response(null, { status: 404 }));
+          if (localResult === "miss") {
+            return Promise.resolve(new Response(null, { status: 404 }));
+          }
           return Promise.reject(new Error("proxy failed"));
         }
         return Promise.resolve(new Response(localResult));
@@ -69,8 +95,14 @@ Deno.test("unhealthy, timeout, miss, and proxy failure fall through upstream", a
     });
 
     const bytes = await cache.fetch("abc", ["https://upstream.example/"]);
-    assert(new TextDecoder().decode(bytes) === localResult, `${localResult} must use upstream`);
-    assert(calls.at(-1) === "GET https://upstream.example/abc", `${localResult} must reach upstream`);
+    assert(
+      new TextDecoder().decode(bytes) === localResult,
+      `${localResult} must use upstream`,
+    );
+    assert(
+      calls.at(-1) === "GET https://upstream.example/abc",
+      `${localResult} must reach upstream`,
+    );
   }
 });
 
@@ -79,7 +111,9 @@ Deno.test("invalid upstream schemes are never requested", async () => {
   const cache = new BlossomCache({
     fetch: (input, init) => {
       calls.push(String(input));
-      if (init?.method === "HEAD") return Promise.resolve(new Response(null, { status: 503 }));
+      if (init?.method === "HEAD") {
+        return Promise.resolve(new Response(null, { status: 503 }));
+      }
       return Promise.resolve(new Response("unexpected"));
     },
   });
@@ -88,7 +122,10 @@ Deno.test("invalid upstream schemes are never requested", async () => {
     await cache.fetch("abc", ["file:///secret", "javascript:alert(1)"]);
     throw new Error("expected unavailable error");
   } catch (error) {
-    assert(error instanceof Error && error.message.includes("unavailable"), "must fail unavailable");
+    assert(
+      error instanceof Error && error.message.includes("unavailable"),
+      "must fail unavailable",
+    );
   }
   assert(calls.length === 1, "only fixed discovery may be requested");
 });

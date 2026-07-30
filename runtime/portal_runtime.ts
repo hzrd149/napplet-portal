@@ -5,6 +5,7 @@ import type { BehaviorSubject } from "npm:rxjs@7.8.2";
 import { debug as rootDebug, shortId } from "../debug.ts";
 import { AccountRuntime, type IdentitySnapshot } from "./accounts.ts";
 import { resolveVerifiedArtifact } from "./artifacts.ts";
+import { BlossomCache } from "./blossom_cache.ts";
 import { ConnectionRegistry } from "./connections.ts";
 import { createEventRuntime, type EventRuntime } from "./event_runtime.ts";
 import type {
@@ -185,6 +186,7 @@ export function createPortalRuntime(
   const connections = new ConnectionRegistry();
   const relay = new TracerRelayAdapter(fixture.events.initial);
   const events = new RuntimeEvents();
+  const blossomCache = new BlossomCache();
   let destroyed = false;
 
   return {
@@ -202,7 +204,12 @@ export function createPortalRuntime(
     },
     resolveArtifact: async () => {
       debug("resolve artifact started");
-      const resolved = await resolveVerifiedArtifact(fixture);
+      const resolved = await resolveVerifiedArtifact(
+        fixture,
+        fetch,
+        settings?.settings.blossomServers ?? fixture.artifact.servers,
+        blossomCache,
+      );
       debug(
         "resolve artifact complete dTag=%s aggregate=%s",
         resolved.dTag,

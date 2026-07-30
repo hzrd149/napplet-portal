@@ -7,6 +7,7 @@ import {
 } from "@kehto/nip/5d";
 import type { NostrEvent } from "@napplet/core";
 import { debug as rootDebug, shortId } from "../debug.ts";
+import { BlossomCache } from "./blossom_cache.ts";
 
 const debug = rootDebug.extend("artifacts");
 
@@ -89,6 +90,8 @@ export interface ArtifactAdapterOptions {
     relays: readonly string[],
   ) => Promise<NostrEvent>;
   readonly fetchBytes?: (url: string) => Promise<Uint8Array>;
+  readonly blossomFetch?: typeof fetch;
+  readonly blossomCache?: BlossomCache;
   readonly cache?: NappletArtifactCache;
   readonly supportedDomains?: readonly string[];
 }
@@ -115,10 +118,14 @@ function uniqueServers(
 
 export class PortalArtifactResolver {
   readonly #options: ArtifactAdapterOptions;
+  readonly #blossomCache: BlossomCache;
   #held?: Promise<ArtifactState>;
 
   constructor(options: ArtifactAdapterOptions) {
     this.#options = options;
+    this.#blossomCache = options.blossomCache ?? new BlossomCache({
+      fetch: options.blossomFetch,
+    });
   }
 
   resolve(): Promise<ArtifactState> {
@@ -175,6 +182,9 @@ export class PortalArtifactResolver {
             this.#options.blossomServers,
             manifestServers,
           );
+          if (!this.#options.fetchBytes) {
+            return await this.#blossomCache.fetch(hash, servers, event.pubkey);
+          }
           if (servers.length === 0) {
             throw new ArtifactResolutionError(
               "blob-unavailable",
@@ -274,18 +284,16 @@ interface ArtifactFixture {
 export async function resolveVerifiedArtifact(
   fixture: ArtifactFixture,
   fetcher: typeof fetch = fetch,
+  blossomServers: readonly string[] = fixture.artifact.servers,
+  blossomCache = new BlossomCache({ fetch: fetcher }),
 ): Promise<ResolvedNapplet> {
   debug("resolve fixture artifact started");
   const resolver = new PortalArtifactResolver({
     coordinate: "fixture",
     relays: [],
-    blossomServers: fixture.artifact.servers,
+    blossomServers,
     resolveManifest: () => Promise.resolve(fixture.manifestEvent),
-    fetchBytes: async (url) => {
-      const response = await fetcher(url);
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      return new Uint8Array(await response.arrayBuffer());
-    },
+    blossomCache,
   });
   const result = await resolver.resolve();
   if (result.state !== "ready") throw new Error("fixture coordinate is empty");
