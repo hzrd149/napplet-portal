@@ -1,0 +1,81 @@
+{
+  "version": "1.0",
+  "timestamp": "2026-07-30T12:07:39.453Z",
+  "phase": "01",
+  "phase_name": "one-day-napplet-runtime-mvp",
+  "phase_dir": ".planning/phases/01-one-day-napplet-runtime-mvp",
+  "plan": 1,
+  "task": 1,
+  "total_tasks": 3,
+  "status": "paused",
+  "completed_tasks": [
+    {
+      "id": 1,
+      "name": "Verify pinned low-volume packages before installation",
+      "status": "in_progress",
+      "progress": "Automated verification confirmed all 11 expected package/version pins are present; no packages have been installed and human registry-legitimacy approval is still required."
+    }
+  ],
+  "remaining_tasks": [
+    {
+      "id": 1,
+      "name": "Verify pinned low-volume packages before installation",
+      "status": "awaiting_human_approval"
+    },
+    {
+      "id": 2,
+      "name": "Supply the actual napplet coordinate and verified artifact",
+      "status": "not_started"
+    },
+    {
+      "id": 3,
+      "name": "Derive the supplied contract and prove sign-in → verified iframe → updating backend stream",
+      "status": "not_started"
+    }
+  ],
+  "blockers": [
+    {
+      "description": "The exact low-volume dependency set requires human verification of npm publisher/source legitimacy before installation.",
+      "type": "human_action",
+      "workaround": "None; this is an intentional blocking-human supply-chain gate."
+    },
+    {
+      "description": "The real user-supplied napplet coordinate or verified artifact bundle is not yet available.",
+      "type": "human_action",
+      "workaround": "None; an authored, generated, or synthetic napplet must not substitute for the supplied artifact."
+    }
+  ],
+  "async_jobs": [],
+  "human_actions_pending": [
+    {
+      "action": "Verify and approve the 11 exact npm package/version pins listed in the phase handoff.",
+      "context": "Package legitimacy must be approved before any dependency installation.",
+      "blocking": true
+    },
+    {
+      "action": "Provide the intended napplet's NIP-5A coordinate or verified artifact bundle with identity/hash evidence.",
+      "context": "Wave 0 derives its contract fixture from the actual supplied artifact; synthetic substitutes are prohibited.",
+      "blocking": true
+    }
+  ],
+  "decisions": [
+    {
+      "decision": "Keep the full locked Phase 1 scope; target one day only for its first vertical tracer checkpoint.",
+      "rationale": "User selected full functionality over retaining a one-day deadline for the whole phase.",
+      "phase": "01"
+    },
+    {
+      "decision": "Proceed with the plan-verification override.",
+      "rationale": "User accepted the Wave 0 tracer task-size finding and the artifact-dependent research prerequisites.",
+      "phase": "01"
+    },
+    {
+      "decision": "Do not build an example or synthetic napplet.",
+      "rationale": "Compatibility testing must use the actual napplet supplied by the user.",
+      "phase": "01"
+    }
+  ],
+  "uncommitted_files": [],
+  "next_action": "Independently verify the exact npm package set, obtain explicit approval, then resume Plan 01-01 Task 1 through $gsd-resume-work or $gsd-execute-phase 1.",
+  "context_notes": "Planning, research, UI specification, pattern mapping, six execution plans, and all 73 requirement/decision coverage checks are complete. Planning was force-approved after the bounded checker loop. Execution started but made no source changes because Plan 01-01 immediately reached its package-legitimacy blocking-human gate."
+}
