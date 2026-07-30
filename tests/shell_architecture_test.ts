@@ -142,8 +142,38 @@ Deno.test("startup account restore failure is handled", async () => {
     "startup restore must not create an unhandled rejection",
   );
   assert(
+    main.includes("restoredSignerAccounts = undefined") &&
+      main.includes("throw error"),
+    "failed account restoration must clear the cached promise",
+  );
+  assert(
     main.includes("startup account restore failed"),
     "startup restore failure must be sanitized and logged",
+  );
+});
+
+Deno.test("process account restore cache follows sign-in mutations", async () => {
+  const main = await Deno.readTextFile("main.ts");
+  assert(
+    main.includes("function cacheRestoredSignerAccounts"),
+    "successful sign-in paths must refresh the module restore cache",
+  );
+  assert(
+    main.includes("pending.connected.then(cacheRestoredSignerAccounts)"),
+    "remote signer approval must refresh restored account cache",
+  );
+  assert(
+    main.includes(
+      "cacheRestoredSignerAccounts(await signerAccounts.signInBunker",
+    ) &&
+      main.includes("cacheRestoredSignerAccounts(") &&
+      main.includes("await signerAccounts.signInNsec"),
+    "bunker and nsec sign-in must refresh restored account cache",
+  );
+  assert(
+    main.includes("signOut: () =>") &&
+      main.includes("restoredSignerAccounts = undefined"),
+    "sign-out must invalidate restored account cache",
   );
 });
 

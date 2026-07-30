@@ -30,7 +30,16 @@ const signerAccounts = new PortalAccounts(
 );
 let restoredSignerAccounts: Promise<IdentitySnapshot> | undefined;
 function restoreSignerAccounts(): Promise<IdentitySnapshot> {
-  return restoredSignerAccounts ??= signerAccounts.restore();
+  return restoredSignerAccounts ??= signerAccounts.restore().catch((error) => {
+    restoredSignerAccounts = undefined;
+    throw error;
+  });
+}
+function cacheRestoredSignerAccounts(
+  identity: IdentitySnapshot,
+): IdentitySnapshot {
+  restoredSignerAccounts = Promise.resolve(identity);
+  return identity;
 }
 export const signerService = new SignerConnectionService({
   identity$: signerAccounts.identity$,
@@ -42,20 +51,29 @@ export const signerService = new SignerConnectionService({
     debug("restoring signer accounts before nostr connect");
     await restoreSignerAccounts();
     debug("starting signer accounts nostr connect");
-    return await signerAccounts.startNostrConnect(abort);
+    const pending = await signerAccounts.startNostrConnect(abort);
+    return {
+      uri: pending.uri,
+      connected: pending.connected.then(cacheRestoredSignerAccounts),
+    };
   },
   signInBunker: async (uri) => {
     debug("restoring signer accounts before bunker sign-in");
     await restoreSignerAccounts();
-    return await signerAccounts.signInBunker(uri);
+    return cacheRestoredSignerAccounts(await signerAccounts.signInBunker(uri));
   },
   signInNsec: async (privateKey) => {
     debug("restoring signer accounts before nsec sign-in");
     await restoreSignerAccounts();
-    return await signerAccounts.signInNsec(privateKey);
+    return cacheRestoredSignerAccounts(
+      await signerAccounts.signInNsec(
+        privateKey,
+      ),
+    );
   },
   signOut: () => {
     debug("signing out signer accounts");
+    restoredSignerAccounts = undefined;
     return signerAccounts.signOut();
   },
 });
