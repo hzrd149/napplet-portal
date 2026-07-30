@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 2
 current_phase_name: Backend Runtime Expansion
 status: executing
-stopped_at: Phase 2 UI-SPEC approved
-last_updated: "2026-07-30T19:41:54.422Z"
+stopped_at: Completed 02-01-PLAN.md
+last_updated: "2026-07-30T20:19:27.780Z"
 last_activity: 2026-07-30
 last_activity_desc: Phase 01 complete, transitioned to Phase 2
 progress:
   total_phases: 2
   completed_phases: 1
   total_plans: 13
-  completed_plans: 6
+  completed_plans: 7
 ---
 
 # Project State
@@ -32,7 +32,7 @@ Plan: Not started
 Status: Ready to execute
 Last activity: 2026-07-30 — Phase 01 complete, transitioned to Phase 2
 
-Progress: [██████████] 100%
+Progress: [█████░░░░░] 54%
 
 ## Performance Metrics
 
@@ -66,6 +66,7 @@ Progress: [██████████] 100%
 | Phase 01 P04 | 8min | 2 tasks | 12 files |
 | Phase 01 P05 | 7min | 2 tasks | 5 files |
 | Phase 01 P06 | 55min | 3 tasks | 18 files |
+| Phase 02 P01 | 6min | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -84,6 +85,9 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase 1]: Process-owned signer and relay services survive transient browser sessions.
 - [Phase 1]: Reconnect preserves connection-owned windows and logical subscriptions through grace.
 - [Phase 1]: RELAY and OUTBOX use composed streams with centralized dedupe and complete required publish settlement.
+- [Phase 02]: Use the human-approved exact npm:applesauce-loaders@6.2.0 production import. — Package legitimacy was explicitly confirmed before installation.
+- [Phase 02]: Persist endpoint settings in one versioned atomic JSON snapshot with one BehaviorSubject-backed source. — Keeps backend authority reactive without introducing a second database technology.
+- [Phase 02]: Use one process-owned EventStore, RelayPool, and unified loader lifecycle. — Applesauce owns event semantics and deterministic teardown without duplicated runtime state.
 
 ### Pending Todos
 
@@ -112,6 +116,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-07-30T19:24:28.292Z
-Stopped at: Phase 2 UI-SPEC approved
-Resume file: .planning/phases/02-backend-runtime-expansion/02-UI-SPEC.md
+Last session: 2026-07-30T20:19:27.768Z
+Stopped at: Completed 02-01-PLAN.md
+Resume file: None

@@ -71,13 +71,13 @@ Plans:
   4. User can configure relays and Blossom servers while runtime keeps portal login, signer authority, cache trust, and relay AUTH separate.
   5. Developer can verify `../kehto`, `../napplet`, and `@napplet/*` contracts through documented adapters and tests.
 
-**Plans**: 7 plans
+**Plans**: 1/7 plans executed
 
 Plans:
 
 **Wave 1**
 
-- [ ] 02-01-PLAN.md — Persisted settings through a process-wide Applesauce runtime tracer
+- [x] 02-01-PLAN.md — Persisted settings through a process-wide Applesauce runtime tracer
 
 **Wave 2**
 
@@ -96,6 +96,7 @@ Plans:
 **Wave 5**
 
 - [ ] 02-07-PLAN.md — Pinned contract coverage and non-blocking sibling drift report
+
 **UI hint**: yes
 
 ### Phase 3: NAP Coverage, Policy, and Production Hardening
@@ -122,7 +123,7 @@ Phases execute in numeric order: 1 -> 2 -> 3
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Napplet Runtime MVP | 6/6 | Complete    | 2026-07-30 |
-| 2. Backend Runtime Expansion | 0/TBD | Future expansion | - |
+| 2. Backend Runtime Expansion | 1/7 | In Progress|  |
 | 3. NAP Coverage, Policy, and Production Hardening | 0/TBD | Future expansion | - |
 
 ## Requirement Coverage
