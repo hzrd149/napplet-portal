@@ -1,5 +1,5 @@
 ---
-status: awaiting_human_verify
+status: resolved
 trigger: "Post-archive requirement traceability test fails because .planning/REQUIREMENTS.md is removed."
 created: 2026-07-31
 updated: 2026-07-31T00:09:00Z
@@ -22,10 +22,10 @@ updated: 2026-07-31T00:09:00Z
 
 ## Current Focus
 
-- hypothesis: the v1.1-specific test fails because it assumes the transient active-ledger path survives milestone cleanup; an active-first resolver with an explicit v1.1 archived fallback preserves the same ledger pair across both lifecycle states
-- test: all automated fix-acceptance signals complete
-- expecting: active layout resolves `.planning/REQUIREMENTS.md` plus `.planning/ROADMAP.md`; archived-only layout resolves the pinned v1.1 pair and the 33-ID oracle passes
-- next_action: obtain human/orchestrator confirmation that the archived milestone workflow is fixed end-to-end
+- hypothesis: the traceability test assumed the transient active-ledger path survives milestone cleanup
+- test: active and archived lifecycle layouts plus the complete repository gate
+- expecting: active layout wins when present; otherwise the newest numeric complete archived ledger pair is selected
+- next_action: resolved
 - bug_class: bohrbug
 - reasoning_checkpoint:
     hypothesis: the test's unconditional active-path read causes NotFound after cleanup because the canonical v1.1 files move to versioned archive paths
@@ -33,7 +33,7 @@ updated: 2026-07-31T00:09:00Z
       - exact test fails at the active requirements read before parsing
       - explicit archived v1.1 pair parses to 33 IDs with every error collection empty
     falsification_test: if an active-first pinned-v1.1 resolver still fails on the archived-only checkout, the hypothesis is wrong
-    fix_rationale: resolve the same v1.1 ledger pair from its active location before cleanup and versioned archive location afterward
+    fix_rationale: prefer the active ledger, then select the newest complete archived requirements/roadmap pair by numeric milestone version
     blind_spots: no concurrent cleanup during a single test run is modeled; repository tests assume a stable checkout
     candidate_causes:
       - code: hard-coded active-only test fixture path
@@ -74,13 +74,17 @@ updated: 2026-07-31T00:09:00Z
   checked: repository-wide non-browser test suite
   found: `deno task test` completed successfully after the traceability test entered the suite with all three cases green
   implication: no held-out non-browser regression was introduced
+- timestamp: 2026-07-31T08:50:00Z
+  checked: archive fallback version selection
+  found: active layout wins; archived v1.10 wins over v1.2; incomplete v2.0 requirements without a matching roadmap is ignored
+  implication: the fix survives future milestone archival without hard-coding v1.1 or weakening the 33-ID oracle
 
 ## Eliminated
 
 ## Resolution
 
 - root_cause: `tests/requirement_traceability_test.ts` unconditionally reads the transient active requirements path, although milestone cleanup moves the v1.1 ledger pair to stable versioned archive paths.
-- fix: added an active-first v1.1 ledger resolver with an explicit versioned archive fallback and lifecycle boundary tests
+- fix: added an active-first resolver with deterministic numeric selection of the newest complete archived requirements/roadmap pair and lifecycle boundary tests
 - oracle_type: specified
 - verification:
     target_test: { result: pass }

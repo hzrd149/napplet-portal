@@ -6,7 +6,22 @@ interface TraceabilityLedgerPaths {
   roadmap: string;
 }
 
-async function resolveV11TraceabilityLedger(
+function parseArchivedVersion(name: string): number[] | undefined {
+  const match = /^v(\d+)\.(\d+)(?:\.(\d+))?-REQUIREMENTS\.md$/.exec(name);
+  return match
+    ? [Number(match[1]), Number(match[2]), Number(match[3] ?? 0)]
+    : undefined;
+}
+
+function compareVersions(left: number[], right: number[]): number {
+  for (let index = 0; index < 3; index += 1) {
+    const difference = left[index] - right[index];
+    if (difference !== 0) return difference;
+  }
+  return 0;
+}
+
+async function resolveTraceabilityLedger(
   planningRoot = ".planning",
 ): Promise<TraceabilityLedgerPaths> {
   const active = {
@@ -23,14 +38,37 @@ async function resolveV11TraceabilityLedger(
     }
   }
 
+  const milestonesRoot = `${planningRoot}/milestones`;
+  const candidates: { version: number[]; prefix: string }[] = [];
+  for await (const entry of Deno.readDir(milestonesRoot)) {
+    if (!entry.isFile) continue;
+    const version = parseArchivedVersion(entry.name);
+    if (!version) continue;
+    const prefix = entry.name.slice(0, -"-REQUIREMENTS.md".length);
+    try {
+      const roadmap = await Deno.stat(`${milestonesRoot}/${prefix}-ROADMAP.md`);
+      if (roadmap.isFile) candidates.push({ version, prefix });
+    } catch (error) {
+      if (!(error instanceof Deno.errors.NotFound)) throw error;
+    }
+  }
+  candidates.sort((left, right) =>
+    compareVersions(right.version, left.version)
+  );
+  const latest = candidates[0];
+  if (!latest) {
+    throw new Deno.errors.NotFound(
+      "No active or complete archived requirement traceability ledger found",
+    );
+  }
   return {
-    requirements: `${planningRoot}/milestones/v1.1-REQUIREMENTS.md`,
-    roadmap: `${planningRoot}/milestones/v1.1-ROADMAP.md`,
+    requirements: `${milestonesRoot}/${latest.prefix}-REQUIREMENTS.md`,
+    roadmap: `${milestonesRoot}/${latest.prefix}-ROADMAP.md`,
   };
 }
 
 Deno.test("all 33 v1.1 requirements map exactly once with honest evidence status", async () => {
-  const ledger = await resolveV11TraceabilityLedger();
+  const ledger = await resolveTraceabilityLedger();
   const requirements = await Deno.readTextFile(ledger.requirements);
   const roadmap = await Deno.readTextFile(ledger.roadmap);
   const result = parseRequirementTraceability(requirements, roadmap);
@@ -46,7 +84,7 @@ Deno.test("v1.1 traceability uses the active ledger before archival", async () =
   const planningRoot = await Deno.makeTempDir();
   try {
     await Deno.writeTextFile(`${planningRoot}/REQUIREMENTS.md`, "active");
-    assertEquals(await resolveV11TraceabilityLedger(planningRoot), {
+    assertEquals(await resolveTraceabilityLedger(planningRoot), {
       requirements: `${planningRoot}/REQUIREMENTS.md`,
       roadmap: `${planningRoot}/ROADMAP.md`,
     });
@@ -55,12 +93,27 @@ Deno.test("v1.1 traceability uses the active ledger before archival", async () =
   }
 });
 
-Deno.test("v1.1 traceability uses its versioned ledger after archival", async () => {
+Deno.test("traceability uses the newest complete versioned ledger after archival", async () => {
   const planningRoot = await Deno.makeTempDir();
   try {
-    assertEquals(await resolveV11TraceabilityLedger(planningRoot), {
-      requirements: `${planningRoot}/milestones/v1.1-REQUIREMENTS.md`,
-      roadmap: `${planningRoot}/milestones/v1.1-ROADMAP.md`,
+    await Deno.mkdir(`${planningRoot}/milestones`);
+    for (const version of ["v1.2", "v1.10"]) {
+      await Deno.writeTextFile(
+        `${planningRoot}/milestones/${version}-REQUIREMENTS.md`,
+        version,
+      );
+      await Deno.writeTextFile(
+        `${planningRoot}/milestones/${version}-ROADMAP.md`,
+        version,
+      );
+    }
+    await Deno.writeTextFile(
+      `${planningRoot}/milestones/v2.0-REQUIREMENTS.md`,
+      "incomplete archive",
+    );
+    assertEquals(await resolveTraceabilityLedger(planningRoot), {
+      requirements: `${planningRoot}/milestones/v1.10-REQUIREMENTS.md`,
+      roadmap: `${planningRoot}/milestones/v1.10-ROADMAP.md`,
     });
   } finally {
     await Deno.remove(planningRoot, { recursive: true });
