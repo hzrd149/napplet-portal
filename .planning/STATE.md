@@ -5,16 +5,16 @@ milestone_name: Runtime & UX Expansion
 current_phase: 5
 current_phase_name: Resource and Blossom Transfer
 status: verifying
-stopped_at: Completed 06-02-PLAN.md
-last_updated: "2026-07-31T03:35:57.731Z"
+stopped_at: Completed 06-03-PLAN.md
+last_updated: "2026-07-31T03:47:21.263Z"
 last_activity: 2026-07-31
 last_activity_desc: Completed Phase 5 RESOURCE and Blossom transfer runtime integration
 progress:
   total_phases: 7
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 32
-  completed_plans: 15
-  percent: 43
+  completed_plans: 16
+  percent: 50
 ---
 
 # Project State
@@ -88,6 +88,7 @@ Last activity: 2026-07-31 — Completed Phase 5 RESOURCE and Blossom transfer ru
 | Phase 05 P04 | 14min | 2 tasks | 11 files |
 | Phase 06 P01 | 16min | 1 tasks | 7 files |
 | Phase 06 P02 | 5min | 2 tasks | 7 files |
+| Phase 06 P03 | 10min | 3 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -156,6 +157,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase ?]: [Phase 06]: Treat omitted storage scope as shared and derive instance scope solely from the backend-issued instanceId.
 - [Phase ?]: [Phase 06]: Encode storage authority as one opaque tuple containing account, exact manifest and artifact identity, canonical scope, and backend instance identity only for instance scope.
 - [Phase ?]: [Phase 06]: Count UTF-8 key plus value bytes across shared and every instance namespace for the 512 KiB account/exact-manifest budget.
+- [Phase ?]: [Phase 06]: Return shared EventStore truth before bounded COMMON profile/contact refresh work.
+- [Phase ?]: [Phase 06]: Route COMMON mutations through PortalAccounts and one required-relay OutboxAdapter.
 
 ### Pending Todos
 
@@ -184,6 +187,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-07-31T03:35:57.716Z
-Stopped at: Completed 06-02-PLAN.md
+Last session: 2026-07-31T03:47:21.247Z
+Stopped at: Completed 06-03-PLAN.md
 Resume file: None
