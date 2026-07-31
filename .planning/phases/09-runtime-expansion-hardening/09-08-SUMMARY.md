@@ -14,10 +14,22 @@ provides:
 affects: [09-09, QLT-04, browser-acceptance]
 tech-stack:
   added: ["@playwright/test@1.62.1"]
-  patterns: [isolated loopback built-server browser tests, explicit physical-device evidence boundary]
+  patterns: [
+    isolated loopback built-server browser tests,
+    explicit physical-device evidence boundary,
+  ]
 key-files:
   created: [playwright.config.ts, tests/browser/portal_acceptance_test.ts]
-  modified: [deno.json, deno.lock, main.ts, runtime/security_headers.ts, shell/connection.ts, components/AccountSheet.tsx, assets/styles.css, routes/intent/reserved.tsx]
+  modified: [
+    deno.json,
+    deno.lock,
+    main.ts,
+    runtime/security_headers.ts,
+    shell/connection.ts,
+    components/AccountSheet.tsx,
+    assets/styles.css,
+    routes/intent/reserved.tsx,
+  ]
 key-decisions:
   - "Accept the USER-AUTHORIZED residual SUS risk for exactly @playwright/test 1.62.1 and retain its SHA-512 lock evidence."
   - "Label every result automated local Chromium evidence; physical iOS and Android remain NOT RUN."
@@ -50,7 +62,9 @@ status: gaps_found
 
 # Phase 09 Plan 08: Real Chromium Browser Acceptance Summary
 
-**Exact Playwright 1.62.1 drives local Chromium through four passing browser acceptance rows, with the two-page media row implemented but blocked at production artifact resolution.**
+**Exact Playwright 1.62.1 drives local Chromium through four passing browser
+acceptance rows, with the two-page media row implemented but blocked at
+production artifact resolution.**
 
 ## Performance
 
@@ -62,9 +76,14 @@ status: gaps_found
 
 ## Accomplishments
 
-- Pinned only `npm:@playwright/test@1.62.1`; `deno.lock` records exact 1.62.1 entries and SHA-512 integrity for Playwright packages.
-- Passed real local Chromium coverage for phone portrait/landscape overflow, accessible navigation/dialog/focus return, system/light/dark themes, reduced motion, Back/Forward, offline/online/visibility state, popup capture, fragment erasure, opener severing, and popup close.
-- Implemented a real two-page WebSocket media ownership row using production sign-in, runtime ownership, generation, and transfer messages.
+- Pinned only `npm:@playwright/test@1.62.1`; `deno.lock` records exact 1.62.1
+  entries and SHA-512 integrity for Playwright packages.
+- Passed real local Chromium coverage for phone portrait/landscape overflow,
+  accessible navigation/dialog/focus return, system/light/dark themes, reduced
+  motion, Back/Forward, offline/online/visibility state, popup capture, fragment
+  erasure, opener severing, and popup close.
+- Implemented a real two-page WebSocket media ownership row using production
+  sign-in, runtime ownership, generation, and transfer messages.
 - Passed `deno task check` and `deno task build`.
 
 ## Task Commits
@@ -76,35 +95,64 @@ status: gaps_found
 
 ## Files Created/Modified
 
-- `playwright.config.ts` - Local `/snap/bin/chromium` runner and isolated built-server port.
-- `tests/browser/portal_acceptance_test.ts` - Five-row integrated Chromium acceptance suite.
-- `deno.json`, `deno.lock` - Exact user-authorized Playwright pin and integrity evidence.
-- `runtime/security_headers.ts`, `main.ts` - Same-origin-only settings framing while external ancestors remain denied.
+- `playwright.config.ts` - Local `/snap/bin/chromium` runner and isolated
+  built-server port.
+- `tests/browser/portal_acceptance_test.ts` - Five-row integrated Chromium
+  acceptance suite.
+- `deno.json`, `deno.lock` - Exact user-authorized Playwright pin and integrity
+  evidence.
+- `runtime/security_headers.ts`, `main.ts` - Same-origin-only settings framing
+  while external ancestors remain denied.
 - `shell/connection.ts` - Browser-safe timer cancellation wrapper.
-- `components/AccountSheet.tsx`, `assets/styles.css` - Modal layering and invoker focus restoration.
+- `components/AccountSheet.tsx`, `assets/styles.css` - Modal layering and
+  invoker focus restoration.
 - `routes/intent/reserved.tsx` - Deferred popup script and explicit favicon.
 
 ## Gaps Found
 
-| Gap | Evidence | Required closure |
-|---|---|---|
+| Gap                                                    | Evidence                                                                                                                                                                                                                                                           | Required closure                                                                                                                                               |
+| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Two-page media browser row cannot reach media creation | Sequential production `runtime.start` emits sanitized `runtime.signer.error`; server evidence identifies verified artifact resolution as `blob-unavailable`. Existing Deno production multi-client media smoke passes, but this does not replace browser evidence. | Provide a deterministic exact verified artifact to the browser server through the existing production Blossom boundary, then run the complete five-test suite. |
 
-Physical iOS Safari and Android Chrome remain **NOT RUN — automated local Chromium is not physical-device evidence**.
+### Bounded follow-up (2026-07-31)
+
+- Confirmed and fixed a production `pinnedFetch` deadlock: it awaited
+  `Agent.close()` before returning an unread response body. Commit `89c04d7`
+  defers cleanup until body completion/cancellation; the new focused regression
+  and artifact-resolver suite pass, as does `deno task check`.
+- Added an uncommitted Playwright-managed loopback Blossom trial containing the
+  exact 531,120-byte artifact, verified against manifest SHA-256 before serving.
+  Direct `BlossomCache.fetch` and `resolveVerifiedArtifact` probes pass without
+  external Blossom after the fix.
+- The rebuilt Playwright media row nevertheless still receives sanitized
+  `runtime.signer.error` / `blob-unavailable`. Therefore WINDOW 21 remains open
+  and QLT-04 is not reconciled; no browser pass is claimed.
+
+Physical iOS Safari and Android Chrome remain **NOT RUN — automated local
+Chromium is not physical-device evidence**.
 
 ## Deviations from Plan
 
 ### Auto-fixed Issues
 
-1. **[Rule 1 - Bug] Fixed settings iframe CSP violation** — the global `frame-ancestors 'none'` and `X-Frame-Options: DENY` blocked the portal's own settings frame. `/settings` now permits only same-origin framing.
-2. **[Rule 1 - Bug] Fixed browser timer illegal invocation** — a bare `clearTimeout` reference was invoked as an object method after WebSocket connection.
-3. **[Rule 1 - Bug] Restored dialog usability** — the startup ritual covered account sheets and closing a sheet lost invoker focus.
-4. **[Rule 1 - Bug] Fixed reserved-popup initialization** — the head script ran before its status node existed; it now defers and has an explicit favicon.
+1. **[Rule 1 - Bug] Fixed settings iframe CSP violation** — the global
+   `frame-ancestors 'none'` and `X-Frame-Options: DENY` blocked the portal's own
+   settings frame. `/settings` now permits only same-origin framing.
+2. **[Rule 1 - Bug] Fixed browser timer illegal invocation** — a bare
+   `clearTimeout` reference was invoked as an object method after WebSocket
+   connection.
+3. **[Rule 1 - Bug] Restored dialog usability** — the startup ritual covered
+   account sheets and closing a sheet lost invoker focus.
+4. **[Rule 1 - Bug] Fixed reserved-popup initialization** — the head script ran
+   before its status node existed; it now defers and has an explicit favicon.
 
 ## Issues Encountered
 
-- Deno's 24-hour minimum dependency age policy initially blocked newly published 1.62.1. The user-authorized exact pin was added with the age override applied only to that command; project policy was not weakened.
-- Context7 was unavailable and the documented CLI fallback was not installed; installed version declarations and actual runner behavior were used.
+- Deno's 24-hour minimum dependency age policy initially blocked newly published
+  1.62.1. The user-authorized exact pin was added with the age override applied
+  only to that command; project policy was not weakened.
+- Context7 was unavailable and the documented CLI fallback was not installed;
+  installed version declarations and actual runner behavior were used.
 
 ## User Setup Required
 
@@ -112,8 +160,8 @@ None.
 
 ## Threat Flags
 
-| Flag | File | Description |
-|---|---|---|
+| Flag                                | File                        | Description                                                                                         |
+| ----------------------------------- | --------------------------- | --------------------------------------------------------------------------------------------------- |
 | threat_flag: frame-policy-exception | runtime/security_headers.ts | `/settings` is frameable only by the exact same origin; all other routes retain deny-all ancestors. |
 
 ## Self-Check: PASSED
@@ -125,4 +173,5 @@ None.
 
 ## Next Phase Readiness
 
-Plan 09-09 must not reconcile QLT-04 until the bounded media browser artifact-fixture gap is closed and the complete five-test Chromium suite passes.
+Plan 09-09 must not reconcile QLT-04 until the bounded media browser
+artifact-fixture gap is closed and the complete five-test Chromium suite passes.

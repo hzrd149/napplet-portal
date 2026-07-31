@@ -35,7 +35,7 @@ last_updated: 2026-07-31T07:34:29.044Z
 | 18 | 09 | deviation | tests/requirement_traceability_test.ts |  | Full-suite traceability expectation still lists concurrently advanced QLT-02 and QLT-03 as pending | open |  | 2026-07-31T06:22:40.172Z |  |
 | 19 | 09 | deviation | runtime/storage_store.ts |  | Added commit-time authority fencing discovered by the adversarial state-isolation matrix | fixed |  | 2026-07-31T06:30:16.295Z | 2026-07-31T06:30:40.280Z |
 | 20 | 09 | deviation | tests/runtime_transport_test.ts |  | Added missing named browser-boundary verification suites required by Plan 09-05 | fixed |  | 2026-07-31T06:39:38.954Z | 2026-07-31T06:40:07.750Z |
-| 21 | 09 | unrun-verify | tests/browser/portal_acceptance_test.ts |  | Two-page Chromium media ownership row blocked by historical verified artifact blob-unavailable | open |  | 2026-07-31T07:34:29.044Z |  |
+| 21 | 09 | unrun-verify | tests/browser/portal_acceptance_test.ts |  | Two-page Chromium media ownership row blocked by historical verified artifact blob-unavailable | open | Pinned-fetch deadlock fixed in 89c04d7; direct local resolution passes, rebuilt Playwright row remains red. | 2026-07-31T07:34:29.044Z |  |
 
 ````json
 [
@@ -287,7 +287,7 @@ last_updated: 2026-07-31T07:34:29.044Z
     "line": null,
     "description": "Two-page Chromium media ownership row blocked by historical verified artifact blob-unavailable",
     "status": "open",
-    "reason": "",
+    "reason": "Pinned-fetch response deadlock fixed in 89c04d7 and exact local fixture added to the bounded harness, but the rebuilt Playwright portal still reports blob-unavailable although direct BlossomCache and resolveVerifiedArtifact probes pass; browser row remains red.",
     "recorded_at": "2026-07-31T07:34:29.044Z",
     "resolved_at": null
   }
