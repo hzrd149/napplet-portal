@@ -30,6 +30,7 @@ import { debug as rootDebug, shortId } from "../debug.ts";
 import {
   ConnectionController,
   type ConnectionSnapshot,
+  type SocketLike,
 } from "../shell/connection.ts";
 import {
   ActiveBinaryRequests,
@@ -175,6 +176,14 @@ interface PopupReservation {
   readonly timeout: number;
 }
 
+interface InlineReservation {
+  readonly source: Window;
+  readonly invocationId: string;
+  readonly mode: "reuse" | "stack";
+  readonly caller: { readonly connectionId: string; readonly windowId: string };
+  readonly socket: SocketLike;
+}
+
 export class PopupReservationController {
   readonly #pending = new Map<string, PopupReservation>();
   readonly #terminal = new Set<string>();
@@ -300,6 +309,14 @@ const RITUAL_READY_CEILING_MS = 1_000;
 const SLOW_START_ESCAPE_MS = 3_000;
 export const MAX_PENDING_CATALOG_COMMANDS = 32;
 const CATALOG_COMMAND_TIMEOUT_MS = 15_000;
+
+export function intentNavigationMode(behavior?: {
+  readonly newWindow?: boolean;
+  readonly reuse?: boolean;
+}): "new-tab" | "reuse" | "stack" {
+  if (behavior?.newWindow === true) return "new-tab";
+  return behavior?.reuse === false ? "stack" : "reuse";
+}
 
 interface CatalogResult extends CatalogCommandOutcome {
   readonly value?: unknown;
@@ -566,6 +583,8 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
   const [catalogQuery, setCatalogQuery] = useState("");
   const [surfaces, setSurfaces] = useState<readonly IntentSurface[]>([]);
   const controller = useRef<ConnectionController | null>(null);
+  const activeSocket = useRef<SocketLike | null>(null);
+  const surfaceSockets = useRef(new Map<string, SocketLike>());
   const iframe = useRef<HTMLIFrameElement | null>(null);
   const owner = useRef<{ connectionId: string; windowId: string } | null>(null);
   const [accountSheetOpen, setAccountSheetOpen] = useState(false);
@@ -586,18 +605,30 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
   const binaryRequests = useRef(new ActiveBinaryRequests(2));
   const resourceAssembler = useRef(new ResourceBinaryAssembler());
   const popupReservations = useRef<PopupReservationController | null>(null);
+  const inlineReservations = useRef(new Map<string, InlineReservation>());
   const surfaceStack = useRef<SurfaceStackController | null>(null);
   if (!surfaceStack.current) {
     surfaceStack.current = new SurfaceStackController({
       pushHistory: (state) => history.pushState(state, "", location.href),
-      changed: setSurfaces,
+      settleClosed: (surfaceId) => {
+        surfaceSockets.current.get(surfaceId)?.close();
+        surfaceSockets.current.delete(surfaceId);
+      },
+      changed: (next) => {
+        setSurfaces(next);
+        const active = next.at(-1);
+        if (!active) return;
+        owner.current = active.owner;
+        activeSocket.current = surfaceSockets.current.get(active.surfaceId) ??
+          controller.current?.socket ?? null;
+      },
     });
   }
   if (!popupReservations.current) {
     popupReservations.current = new PopupReservationController({
       open: (path, name, features) => globalThis.open(path, name, features),
       send: (message) => {
-        const ws = controller.current?.socket;
+        const ws = activeSocket.current ?? controller.current?.socket;
         const currentOwner = owner.current;
         if (ws?.readyState !== WebSocket.OPEN || !currentOwner) return;
         ws.send(JSON.stringify({
@@ -628,7 +659,7 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
         iframe.current?.contentWindow?.postMessage(message, "*");
       },
       forward: (message) => {
-        const ws = controller.current?.socket;
+        const ws = activeSocket.current ?? controller.current?.socket;
         const currentOwner = owner.current;
         if (ws?.readyState !== WebSocket.OPEN || !currentOwner) {
           debug(
@@ -677,12 +708,37 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
           | Record<string, unknown>
           | undefined;
         const currentOwner = owner.current;
-        if (behavior?.newWindow === true && currentOwner) {
+        const ws = activeSocket.current ?? controller.current?.socket;
+        const navigationMode = intentNavigationMode(behavior);
+        if (navigationMode === "new-tab" && currentOwner) {
           popupReservations.current?.reserve(frame, {
             invocationId: message.id,
             callerWindowId: currentOwner.windowId,
             owner: currentOwner,
           });
+        } else if (currentOwner && ws?.readyState === WebSocket.OPEN) {
+          const reservationId = crypto.randomUUID();
+          const mode: "reuse" | "stack" = navigationMode === "stack"
+            ? "stack"
+            : "reuse";
+          inlineReservations.current.set(reservationId, {
+            source: frame,
+            invocationId: message.id,
+            mode,
+            caller: currentOwner,
+            socket: ws,
+          });
+          ws.send(JSON.stringify({
+            type: "runtime.forward",
+            ...currentOwner,
+            message: {
+              type: "intent.navigation.reserve",
+              reservationId,
+              invocationId: message.id,
+              callerWindowId: currentOwner.windowId,
+              mode,
+            },
+          }));
         }
       }
       if (
@@ -693,7 +749,7 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
         typeof message.id === "string" && message.id.length > 0 &&
         message.id.length <= 128 && message.url === FIXED_RESOURCE_URL
       ) {
-        const ws = controller.current?.socket;
+        const ws = activeSocket.current ?? controller.current?.socket;
         const currentOwner = owner.current;
         if (
           ws instanceof WebSocket && ws.readyState === WebSocket.OPEN &&
@@ -715,7 +771,7 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
         /^(resource|upload)\./.test(message.type)
       ) {
         const control = decodeNapControlMessage(message);
-        const ws = controller.current?.socket;
+        const ws = activeSocket.current ?? controller.current?.socket;
         const currentOwner = owner.current;
         if (!control || ws?.readyState !== WebSocket.OPEN || !currentOwner) {
           return;
@@ -875,6 +931,7 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
         connectionId: message.connectionId,
         windowId: message.windowId,
       };
+      activeSocket.current ??= controller.current?.socket ?? null;
       debug(
         "runtime connected connection=%s window=%s resumed=%s",
         shortId(message.connectionId),
@@ -895,7 +952,119 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
           type: "intent.navigation.authorized";
         }>;
         const source = iframe.current?.contentWindow;
-        if (source) popupReservations.current?.authorize(source, decoded);
+        const inline = inlineReservations.current.get(decoded.reservationId);
+        if (inline) {
+          inlineReservations.current.delete(decoded.reservationId);
+          if (
+            !source || source !== inline.source ||
+            decoded.invocationId !== inline.invocationId ||
+            !isReservedIntentLaunchPath(decoded.launchPath)
+          ) {
+            sendInlineAck(inline, decoded.reservationId, "failed");
+            return;
+          }
+          const protocol = location.protocol === "https:" ? "wss:" : "ws:";
+          const target = new WebSocket(
+            `${protocol}//${location.host}/api/runtime?window=${decoded.targetWindowId}`,
+          );
+          let settled = false;
+          let targetOwner:
+            | { connectionId: string; windowId: string }
+            | null = null;
+          const settle = (state: "committed" | "failed") => {
+            if (settled) return;
+            settled = true;
+            sendInlineAck(inline, decoded.reservationId, state);
+          };
+          target.addEventListener("message", (event) => {
+            const targetMessage = JSON.parse(String(event.data)) as Record<
+              string,
+              unknown
+            >;
+            if (
+              targetMessage.type === "runtime.connected" &&
+              typeof targetMessage.connectionId === "string" &&
+              typeof targetMessage.windowId === "string"
+            ) {
+              targetOwner = {
+                connectionId: targetMessage.connectionId,
+                windowId: targetMessage.windowId,
+              };
+              target.send(JSON.stringify({
+                type: "runtime.forward",
+                connectionId: targetMessage.connectionId,
+                windowId: targetMessage.windowId,
+                message: {
+                  type: "intent.ticket.claim",
+                  reservationId: decoded.reservationId,
+                  ticket: decoded.ticket,
+                  targetWindowId: decoded.targetWindowId,
+                  generation: decoded.generation,
+                },
+              }));
+              return;
+            }
+            if (
+              targetMessage.type !== "runtime.intent.ticket" ||
+              targetMessage.reservationId !== decoded.reservationId
+            ) {
+              receiveRuntimeMessage(targetMessage);
+              return;
+            }
+            const claim = targetMessage.claim as
+              | Record<string, unknown>
+              | undefined;
+            const nextIdentity = claim?.identity as
+              | Record<string, unknown>
+              | undefined;
+            if (
+              targetMessage.ok !== true || typeof claim?.srcdoc !== "string" ||
+              typeof nextIdentity?.dTag !== "string" ||
+              typeof nextIdentity.aggregateHash !== "string"
+            ) {
+              settle("failed");
+              target.close();
+              return;
+            }
+            const verifiedIdentity = {
+              dTag: nextIdentity.dTag,
+              aggregateHash: nextIdentity.aggregateHash,
+            };
+            if (
+              inline.mode === "reuse" &&
+              surfaceStack.current?.focusReusable(
+                profile?.pubkey ?? "",
+                verifiedIdentity,
+              )
+            ) {
+              settle("committed");
+              target.close();
+              return;
+            }
+            const surface: IntentSurface = {
+              surfaceId: decoded.targetWindowId,
+              account: profile?.pubkey ?? "",
+              identity: verifiedIdentity,
+              srcdoc: claim.srcdoc,
+              owner: {
+                connectionId: targetOwner?.connectionId ?? "",
+                windowId: targetOwner?.windowId ?? decoded.targetWindowId,
+              },
+            };
+            surfaceSockets.current.set(surface.surfaceId, target);
+            if (!surfaceStack.current?.push(surface)) {
+              surfaceSockets.current.delete(surface.surfaceId);
+              target.close();
+              settle("failed");
+              return;
+            }
+            navigate("napplet");
+            settle("committed");
+          });
+          target.addEventListener("error", () => settle("failed"));
+        } else if (source) {
+          popupReservations.current?.authorize(source, decoded);
+        }
         return;
       }
       if (resourceAssembler.current.acceptMetadata(eventMessage)) return;
@@ -1003,8 +1172,11 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
       : "";
     const currentOwner = owner.current;
     if (currentOwner) {
+      const surfaceId = crypto.randomUUID();
+      const rootSocket = controller.current?.socket;
+      if (rootSocket) surfaceSockets.current.set(surfaceId, rootSocket);
       surfaceStack.current?.replaceRoot({
-        surfaceId: crypto.randomUUID(),
+        surfaceId,
         account: nextAccount,
         identity: {
           dTag: nextIdentity.dTag,
@@ -1019,6 +1191,24 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
     }
     setConnecting(false);
     navigate("napplet");
+  }
+
+  function sendInlineAck(
+    reservation: InlineReservation,
+    reservationId: string,
+    state: "committed" | "failed",
+  ): void {
+    if (reservation.socket.readyState !== WebSocket.OPEN) return;
+    reservation.socket.send(JSON.stringify({
+      type: "runtime.forward",
+      ...reservation.caller,
+      message: {
+        type: "intent.navigation.ack",
+        reservationId,
+        invocationId: reservation.invocationId,
+        state,
+      },
+    }));
   }
 
   function navigate(next: View): void {
@@ -1238,7 +1428,7 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
                   hidden={view !== "napplet" || index !== all.length - 1}
                   registry={registry}
                   onFrame={(frame) => {
-                    if (index === 0) {
+                    if (index === all.length - 1) {
                       iframe.current = frame;
                     }
                   }}

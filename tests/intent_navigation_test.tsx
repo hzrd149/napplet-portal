@@ -1,4 +1,5 @@
 import {
+  intentNavigationMode,
   type IntentSurface,
   PopupReservationController,
   SurfaceStackController,
@@ -7,6 +8,12 @@ import {
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
 }
+
+Deno.test("shell routes intent behavior through all navigation modes", () => {
+  assert(intentNavigationMode({ newWindow: true }) === "new-tab", "new tab");
+  assert(intentNavigationMode() === "reuse", "reuse is the default");
+  assert(intentNavigationMode({ reuse: false }) === "stack", "stack opt-out");
+});
 
 function surface(id: string): IntentSurface {
   return {
