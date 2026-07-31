@@ -1,8 +1,9 @@
 import type { EventTemplate, NostrEvent } from "@napplet/core";
 import type { EventStore } from "applesauce-core";
-import { verifyEvent } from "nostr-tools";
+import { nip19, verifyEvent } from "nostr-tools";
 import type { IdentitySnapshot } from "./accounts.ts";
 import type { PublishOutcome } from "./outbox.ts";
+import type { RelayPolicy } from "./relay_policy.ts";
 
 export const CATALOG_KIND = 30078;
 export const CATALOG_IDENTIFIER = "org.napplet.portal:installed";
@@ -33,16 +34,33 @@ export interface VerifiedCatalogArtifact {
 }
 
 export interface CatalogProjectionEntry extends InstalledNappletEntry {
-  readonly title: string;
-  readonly version: string;
-  readonly capabilities: readonly string[];
-  readonly launch: VerifiedCatalogArtifact["launch"];
+  readonly resolution: "pending" | "ready" | "unavailable";
+  readonly title?: string;
+  readonly version?: string;
+  readonly capabilities?: readonly string[];
 }
 
 export interface CatalogProjection {
   readonly catalogEventId: string | null;
   readonly entries: readonly CatalogProjectionEntry[];
+  readonly status?: "idle" | "refreshing" | "ready" | "error";
+  readonly error?: string;
 }
+
+export interface InstallPreview {
+  readonly publisher: string;
+  readonly coordinate: string;
+  readonly manifestEventId: string;
+  readonly title: string;
+  readonly version: string;
+  readonly aggregateHash: string;
+  readonly capabilities: readonly string[];
+  readonly sourceCatalogEventId: string | null;
+}
+
+export type CatalogAuthorityResult<T> =
+  | { readonly ok: true; readonly value: T }
+  | { readonly ok: false; readonly error: string; readonly retryable: boolean };
 
 export type CatalogMutationResult =
   | {
@@ -68,6 +86,12 @@ export interface CatalogServiceOptions {
   readonly signEvent: (template: EventTemplate) => Promise<NostrEvent>;
   readonly publish: (event: NostrEvent) => Promise<readonly PublishOutcome[]>;
   readonly now?: () => number;
+  readonly relayPolicy?: RelayPolicy;
+  readonly configuredReadRelays?: () => readonly string[];
+  readonly resolvePreviewArtifact?: (
+    coordinate: string,
+    relays: readonly string[],
+  ) => Promise<VerifiedCatalogArtifact>;
 }
 
 function exactKeys(value: Record<string, unknown>, keys: readonly string[]) {
@@ -134,12 +158,17 @@ export function decodeCatalogEvent(
 const EMPTY: CatalogProjection = Object.freeze({
   catalogEventId: null,
   entries: Object.freeze([]),
+  status: "idle",
 });
 
 export class CatalogService {
   readonly options: CatalogServiceOptions;
   #mutationTail: Promise<void> = Promise.resolve();
   readonly #listeners = new Set<() => void>();
+  #projection: CatalogProjection = EMPTY;
+  readonly #inflight = new Map<string, Promise<void>>();
+  readonly #queue: Array<() => Promise<void>> = [];
+  #activeJobs = 0;
 
   constructor(options: CatalogServiceOptions) {
     this.options = options;
@@ -153,7 +182,7 @@ export class CatalogService {
       if (!decodeCatalogEvent(event, pubkey)) continue;
       if (this.options.eventStore.add(event)) accepted++;
     }
-    if (accepted > 0) this.#notify();
+    if (accepted > 0) this.#refresh();
     return accepted;
   }
 
@@ -163,51 +192,218 @@ export class CatalogService {
   }
 
   async project(): Promise<CatalogProjection> {
+    this.#refresh();
+    return this.#projection;
+  }
+
+  retry(): void {
+    this.#refresh(true);
+  }
+
+  #refresh(force = false): void {
     const identity = this.options.identity();
-    if (!identity.pubkey) return EMPTY;
+    if (!identity.pubkey) {
+      this.#projection = EMPTY;
+      this.#notify();
+      return;
+    }
     const event = this.options.eventStore.getReplaceable(
       CATALOG_KIND,
       identity.pubkey,
       CATALOG_IDENTIFIER,
     );
-    if (!event) return EMPTY;
-    const catalog = decodeCatalogEvent(event, identity.pubkey);
-    if (!catalog) return EMPTY;
-    const entries: CatalogProjectionEntry[] = [];
-    for (const entry of catalog.entries) {
-      try {
-        const verified = await this.options.resolveVerifiedArtifact(
-          entry.coordinate,
-          entry.acceptedManifestEventId,
-        );
-        if (verified.manifestEventId !== entry.acceptedManifestEventId) {
-          continue;
-        }
-        entries.push(Object.freeze({
-          ...entry,
-          title: verified.title,
-          version: verified.version,
-          capabilities: Object.freeze([...verified.capabilities]),
-          launch: Object.freeze({ ...verified.launch }),
-        }));
-      } catch {
-        // A public catalog entry is not launchable until its accepted manifest
-        // passes the existing artifact integrity boundary.
-      }
+    if (!event) {
+      this.#projection = EMPTY;
+      this.#notify();
+      return;
     }
-    return Object.freeze({
+    const catalog = decodeCatalogEvent(event, identity.pubkey);
+    if (!catalog) {
+      if (this.#projection.entries.length > 0) {
+        this.#projection = Object.freeze({
+          ...this.#projection,
+          status: "error",
+          error: "catalog refresh failed",
+        });
+        this.#notify();
+      }
+      return;
+    }
+    const previous = this.#projection.catalogEventId === event.id
+      ? new Map(
+        this.#projection.entries.map((entry) => [entry.coordinate, entry]),
+      )
+      : new Map<string, CatalogProjectionEntry>();
+    const entries = catalog.entries.map((entry): CatalogProjectionEntry => {
+      const held = previous.get(entry.coordinate);
+      if (
+        !force &&
+        held?.acceptedManifestEventId === entry.acceptedManifestEventId
+      ) return held;
+      return Object.freeze({ ...entry, resolution: "pending" });
+    });
+    this.#projection = Object.freeze({
       catalogEventId: event.id,
       entries: Object.freeze(entries),
+      status: "refreshing",
     });
+    this.#notify();
+    for (const entry of catalog.entries) {
+      const current = previous.get(entry.coordinate);
+      if (
+        force ||
+        current?.acceptedManifestEventId !== entry.acceptedManifestEventId ||
+        current.resolution !== "ready"
+      ) {
+        this.#enqueue(identity.pubkey, event.id, entry);
+      }
+    }
+  }
+
+  #enqueue(
+    pubkey: string,
+    catalogEventId: string,
+    entry: InstalledNappletEntry,
+  ): void {
+    const key =
+      `${pubkey}:${catalogEventId}:${entry.coordinate}:${entry.acceptedManifestEventId}`;
+    if (this.#inflight.has(key)) return;
+    let task!: Promise<void>;
+    task = new Promise<void>((resolve) => {
+      this.#queue.push(async () => {
+        try {
+          const verified = await this.options.resolveVerifiedArtifact(
+            entry.coordinate,
+            entry.acceptedManifestEventId,
+          );
+          this.#applyEnrichment(
+            pubkey,
+            catalogEventId,
+            entry,
+            verified.manifestEventId === entry.acceptedManifestEventId
+              ? verified
+              : undefined,
+          );
+        } catch {
+          this.#applyEnrichment(pubkey, catalogEventId, entry);
+        } finally {
+          this.#inflight.delete(key);
+          resolve();
+        }
+      });
+    });
+    this.#inflight.set(key, task);
+    this.#drain();
+  }
+
+  #drain(): void {
+    while (this.#activeJobs < 4 && this.#queue.length > 0) {
+      const job = this.#queue.shift()!;
+      this.#activeJobs++;
+      void job().finally(() => {
+        this.#activeJobs--;
+        this.#drain();
+      });
+    }
+  }
+
+  #applyEnrichment(
+    pubkey: string,
+    catalogEventId: string,
+    expected: InstalledNappletEntry,
+    verified?: VerifiedCatalogArtifact,
+  ): void {
+    if (
+      this.options.identity().pubkey !== pubkey ||
+      this.#projection.catalogEventId !== catalogEventId
+    ) return;
+    const index = this.#projection.entries.findIndex((entry) =>
+      entry.coordinate === expected.coordinate &&
+      entry.acceptedManifestEventId === expected.acceptedManifestEventId
+    );
+    if (index < 0) return;
+    const entries = [...this.#projection.entries];
+    entries[index] = verified
+      ? Object.freeze({
+        ...expected,
+        resolution: "ready",
+        title: verified.title,
+        version: verified.version,
+        capabilities: Object.freeze([...verified.capabilities]),
+      })
+      : Object.freeze({ ...expected, resolution: "unavailable" });
+    const settled = entries.every((entry) => entry.resolution !== "pending");
+    this.#projection = Object.freeze({
+      catalogEventId,
+      entries: Object.freeze(entries),
+      status: settled ? "ready" : "refreshing",
+    });
+    this.#notify();
+  }
+
+  async previewInstall(
+    input: string,
+  ): Promise<CatalogAuthorityResult<InstallPreview>> {
+    if (input.length === 0 || input.length > 5000) {
+      return { ok: false, error: "invalid naddr", retryable: false };
+    }
+    try {
+      const decoded = nip19.decodeNostrURI(input);
+      if (
+        decoded.type !== "naddr" || decoded.data.kind !== 35129 ||
+        !HEX_64.test(decoded.data.pubkey) || !decoded.data.identifier ||
+        decoded.data.identifier.includes(":")
+      ) {
+        return {
+          ok: false,
+          error: "invalid named manifest naddr",
+          retryable: false,
+        };
+      }
+      const coordinate =
+        `35129:${decoded.data.pubkey}:${decoded.data.identifier}`;
+      const relays = this.options.relayPolicy?.previewReads(
+        decoded.data.relays ?? [],
+        this.options.configuredReadRelays?.() ?? [],
+        8,
+      ) ?? [];
+      if (!this.options.resolvePreviewArtifact) {
+        return { ok: false, error: "preview unavailable", retryable: true };
+      }
+      const verified = await this.options.resolvePreviewArtifact(
+        coordinate,
+        relays,
+      );
+      return {
+        ok: true,
+        value: Object.freeze({
+          publisher: decoded.data.pubkey,
+          coordinate,
+          manifestEventId: verified.manifestEventId,
+          title: verified.title,
+          version: verified.version,
+          aggregateHash: verified.launch.aggregateHash,
+          capabilities: Object.freeze([...verified.capabilities]),
+          sourceCatalogEventId: this.#currentCatalogEvent()?.id ?? null,
+        }),
+      };
+    } catch {
+      return { ok: false, error: "preview failed", retryable: true };
+    }
   }
 
   approveManifestUpdate(
     id: string,
     coordinate: string,
     manifestEventId: string,
+    sourceCatalogEventId?: string | null,
   ): Promise<CatalogMutationResult> {
     return this.#serialize(() =>
       this.#mutate(id, async (entries) => {
+        if (
+          sourceCatalogEventId !== undefined &&
+          this.#currentCatalogEvent()?.id !== sourceCatalogEventId
+        ) throw new Error("catalog changed");
         const verified = await this.options.resolveVerifiedArtifact(
           coordinate,
           manifestEventId,
@@ -220,6 +416,52 @@ export class CatalogService {
         return next;
       })
     );
+  }
+
+  async launch(
+    catalogEventId: string,
+    coordinate: string,
+    manifestEventId: string,
+  ): Promise<CatalogAuthorityResult<VerifiedCatalogArtifact>> {
+    const event = this.#currentCatalogEvent();
+    const pubkey = this.options.identity().pubkey;
+    if (!event || !pubkey || event.id !== catalogEventId) {
+      return { ok: false, error: "catalog changed", retryable: true };
+    }
+    const catalog = decodeCatalogEvent(event, pubkey);
+    const accepted = catalog?.entries.find((entry) =>
+      entry.coordinate === coordinate
+    );
+    if (!accepted || accepted.acceptedManifestEventId !== manifestEventId) {
+      return { ok: false, error: "napplet is not accepted", retryable: true };
+    }
+    try {
+      const verified = await this.options.resolveVerifiedArtifact(
+        coordinate,
+        manifestEventId,
+      );
+      if (verified.manifestEventId !== manifestEventId) {
+        throw new Error("manifest mismatch");
+      }
+      return { ok: true, value: verified };
+    } catch {
+      return {
+        ok: false,
+        error: "accepted artifact unavailable",
+        retryable: true,
+      };
+    }
+  }
+
+  #currentCatalogEvent(): NostrEvent | undefined {
+    const pubkey = this.options.identity().pubkey;
+    return pubkey
+      ? this.options.eventStore.getReplaceable(
+        CATALOG_KIND,
+        pubkey,
+        CATALOG_IDENTIFIER,
+      )
+      : undefined;
   }
 
   uninstallNapplet(
@@ -289,7 +531,7 @@ export class CatalogService {
         };
       }
       this.options.eventStore.add(event);
-      this.#notify();
+      this.#refresh();
       return { id, ok: true, event, outcomes };
     } catch {
       return { id, ok: false, error: "catalog mutation failed", outcomes: [] };
