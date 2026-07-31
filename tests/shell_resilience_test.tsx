@@ -4,11 +4,74 @@ import {
   connectionCopy,
 } from "../components/ConnectionConstellation.tsx";
 import { ConnectionSheet } from "../components/ConnectionSheet.tsx";
+import { AccountSheet } from "../components/AccountSheet.tsx";
+import { HomeHeader } from "../components/HomeHeader.tsx";
+import { createVerifiedIdentityPublisher } from "../components/NappletFrame.tsx";
 import type { ConnectionSnapshot } from "../shell/connection.ts";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
 }
+
+Deno.test("identity-first header exposes compact and wide signer truth", () => {
+  const html = renderToString(
+    <HomeHeader
+      profile={{ pubkey: "f".repeat(64), displayName: "Ada", status: "offline" }}
+      onOpenAccount={() => undefined}
+    />,
+  );
+  assert(html.includes("Ada"), "identity name must be visible");
+  assert(html.includes("Signer offline"), "offline truth must not rely on color");
+  assert(html.includes("header-wide-identity"), "wide disclosure must be available");
+  assert(html.includes("ffffffffffff…ffffffffffff"), "wide identity must shorten pubkey");
+});
+
+Deno.test("account sheet distinguishes identity signer and backend state", () => {
+  const signedOut = renderToString(
+    <AccountSheet open profile={null} backendConnected onClose={() => undefined} onSignOut={() => undefined} />,
+  );
+  assert(signedOut.includes("Sign in"), "signed-out sheet needs primary sign-in action");
+  const offline = renderToString(
+    <AccountSheet open profile={{ pubkey: "a".repeat(64), status: "offline" }} backendConnected onClose={() => undefined} onSignOut={() => undefined} />,
+  );
+  assert(offline.includes("Signer offline"), "signer offline must be explicit");
+  assert(offline.includes("Backend connected"), "transport truth must stay separate");
+  const disconnected = renderToString(
+    <AccountSheet open profile={{ pubkey: "a".repeat(64), status: "active" }} backendConnected={false} onClose={() => undefined} onSignOut={() => undefined} />,
+  );
+  assert(disconnected.includes("Signer connected"), "signer truth must survive transport loss");
+  assert(disconnected.includes("Backend disconnected"), "backend loss must be explicit");
+});
+
+Deno.test("canonical identity publisher accepts only the current verified frame", () => {
+  const trusted = {} as Window;
+  const foreign = {} as Window;
+  const sent: unknown[] = [];
+  const publish = createVerifiedIdentityPublisher({
+    source: () => trusted,
+    registered: () => ({ source: trusted, identity: { dTag: "app", aggregateHash: "hash" } }),
+    post: (message) => sent.push(message),
+  });
+  assert(publish(foreign, { type: "identity.changed", identity: { pubkey: "" } }) === false, "foreign frame must be rejected");
+  assert(publish(trusted, { type: "identity.changed", identity: { pubkey: "" } }), "verified frame must receive identity");
+  assert(sent.length === 1, "canonical identity must deliver exactly once");
+  assert(JSON.stringify(sent[0]) === '{"type":"identity.changed","identity":{"pubkey":""}}', "pinned envelope must be exact");
+});
+
+Deno.test("shell reserves safe navigation and keeps one frame across views", async () => {
+  const shell = await Deno.readTextFile("islands/NappletShell.tsx");
+  const styles = await Deno.readTextFile("assets/styles.css");
+  assert(shell.match(/<NappletFrame/g)?.length === 1, "one iframe must remain mounted");
+  const navigation = shell.indexOf("function PrimaryNavigation");
+  const home = shell.indexOf("HomeIcon", navigation);
+  const status = shell.indexOf("ConnectionConstellation", home);
+  const account = shell.indexOf("AccountIcon", status);
+  assert(home >= 0 && status > home && account > status, "targets must be Home Status Account");
+  assert(styles.includes("env(safe-area-inset-bottom)"), "safe area must be reserved");
+  assert(styles.includes("@media (orientation: landscape)"), "landscape navigation must compact");
+  assert(styles.includes("@media (max-height:"), "short viewport navigation must compact");
+  assert(styles.includes("min-height: 44px"), "touch targets must be at least 44px");
+});
 
 function snapshot(
   phase: ConnectionSnapshot["phase"],
