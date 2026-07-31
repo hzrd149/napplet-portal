@@ -125,6 +125,7 @@ Plans:
 **Plans:** 9 plans
 
 Plans:
+
 - [ ] 09-01-PLAN.md — Generate exhaustive ten-domain codec/action parity and traceability evidence.
 - [ ] 09-02-PLAN.md — Close hostile transport, URL, redirect, and RESOURCE/UPLOAD transfer boundaries.
 - [ ] 09-03-PLAN.md — Close capability, catalog, identity, and signer authority boundaries.

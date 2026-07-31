@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 2
+open_count: 4
 waived_count: 0
 fixed_count: 10
-total_count: 12
-last_updated: 2026-07-31T02:19:04.919Z
+total_count: 14
+last_updated: 2026-07-31T03:28:43.721Z
 ---
 
 # Broken Windows Ledger
@@ -27,6 +27,8 @@ last_updated: 2026-07-31T02:19:04.919Z
 | 10 | 04 | deviation | shell/connection.ts |  | Added socket terminal callback required for pending catalog command cleanup | fixed |  | 2026-07-31T01:31:18.558Z | 2026-07-31T01:31:54.949Z |
 | 11 | 04 | deviation | components/HomeView.tsx |  | Removed projected executable launch bytes from the catalog card contract | fixed |  | 2026-07-31T01:31:18.664Z | 2026-07-31T01:31:55.053Z |
 | 12 | 05 | deviation | islands/NappletShell.tsx |  | Preserved canonical caller correlation IDs by selecting the fixed tracer only by URL | fixed |  | 2026-07-31T02:18:16.185Z | 2026-07-31T02:19:04.919Z |
+| 13 | 06 | deviation | islands/NappletShell.tsx |  | Verified capability handoff added to complete the production iframe bridge | open |  | 2026-07-31T03:28:43.610Z |  |
+| 14 | 06 | deviation | main.ts |  | In-memory tracer storage port wired pending Plan 06-03 durability | open |  | 2026-07-31T03:28:43.721Z |  |
 
 ````json
 [
@@ -173,6 +175,30 @@ last_updated: 2026-07-31T02:19:04.919Z
     "reason": "",
     "recorded_at": "2026-07-31T02:18:16.185Z",
     "resolved_at": "2026-07-31T02:19:04.919Z"
+  },
+  {
+    "id": 13,
+    "kind": "deviation",
+    "phase": "06",
+    "file": "islands/NappletShell.tsx",
+    "line": null,
+    "description": "Verified capability handoff added to complete the production iframe bridge",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-07-31T03:28:43.610Z",
+    "resolved_at": null
+  },
+  {
+    "id": 14,
+    "kind": "deviation",
+    "phase": "06",
+    "file": "main.ts",
+    "line": null,
+    "description": "In-memory tracer storage port wired pending Plan 06-03 durability",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-07-31T03:28:43.721Z",
+    "resolved_at": null
   }
 ]
 ````

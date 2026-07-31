@@ -4,16 +4,16 @@ milestone: v1.1
 milestone_name: Runtime & UX Expansion
 current_phase: 5
 current_phase_name: Resource and Blossom Transfer
-status: phase_complete
-stopped_at: Completed 05-04-PLAN.md
-last_updated: "2026-07-31T02:46:36.232Z"
+status: verifying
+stopped_at: Completed 06-01-PLAN.md
+last_updated: "2026-07-31T03:28:44.459Z"
 last_activity: 2026-07-31
 last_activity_desc: Completed Phase 5 RESOURCE and Blossom transfer runtime integration
 progress:
   total_phases: 7
   completed_phases: 3
-  total_plans: 23
-  completed_plans: 13
+  total_plans: 32
+  completed_plans: 14
   percent: 43
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-07-30)
 
 Phase: 5 — Resource and Blossom Transfer
 Plan: 4 of 4 complete
-Status: Phase complete
+Status: Phase complete — ready for verification
 Last activity: 2026-07-31 — Completed Phase 5 RESOURCE and Blossom transfer runtime integration
 
 ## Performance Metrics
@@ -86,6 +86,7 @@ Last activity: 2026-07-31 — Completed Phase 5 RESOURCE and Blossom transfer ru
 | Phase 05 P01 | 14min | 2 tasks | 5 files |
 | Phase 05 P02 | 11min | 2 tasks | 7 files |
 | Phase 05 P04 | 14min | 2 tasks | 11 files |
+| Phase 06 P01 | 16min | 1 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -150,6 +151,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase ?]: [Phase 05]: Release resource bytes only after streamed size, observed MIME, and SHA-256 policy succeeds.
 - [Phase ?]: [Phase 05]: Bind transfer authority to connection, window, verified napplet identity, and active account.
 - [Phase ?]: [Phase 05]: Preserve transfer work through reconnect grace and abort only on authority invalidation or shutdown.
+- [Phase ?]: [Phase 06]: Mint window capability authority only from a successful backend CatalogService.launch result.
+- [Phase ?]: [Phase 06]: Treat omitted storage scope as shared and derive instance scope solely from the backend-issued instanceId.
 
 ### Pending Todos
 
@@ -178,6 +181,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-07-31T02:46:08.395Z
-Stopped at: Completed 05-04-PLAN.md
+Last session: 2026-07-31T03:28:44.443Z
+Stopped at: Completed 06-01-PLAN.md
 Resume file: None
