@@ -5,16 +5,16 @@ milestone_name: Runtime & UX Expansion
 current_phase: 7
 current_phase_name: Intent Navigation
 status: verifying
-stopped_at: Completed 07-04-PLAN.md
-last_updated: "2026-07-31T04:31:51.505Z"
+stopped_at: Completed 08-01-PLAN.md
+last_updated: "2026-07-31T05:05:18.789Z"
 last_activity: 2026-07-31
 last_activity_desc: Completed Phase 7 production intent navigation integration
 progress:
   total_phases: 7
   completed_phases: 5
   total_plans: 32
-  completed_plans: 20
-  percent: 63
+  completed_plans: 21
+  percent: 66
 ---
 
 # Project State
@@ -90,6 +90,7 @@ Last activity: 2026-07-31 — Completed Phase 7 production intent navigation int
 | Phase 06 P02 | 5min | 2 tasks | 7 files |
 | Phase 06 P03 | 10min | 3 tasks | 8 files |
 | Phase 07 P04 | 14min | 3 tasks | 12 files |
+| Phase 08-cross-tab-media-sessions P01 | 7min | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -163,6 +164,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase ?]: Expose the IntentService created from the production CatalogService as the single process-owned intent authority.
 - [Phase ?]: Bind fresh target WebSockets to backend-issued targetWindowIds and release verified launch bytes only after an exact single-use claim.
 - [Phase ?]: Erase ticket fragments after opener severing and retain the exact allow-scripts-only iframe sandbox.
+- [Phase ?]: [Phase 08]: Keep canonical media envelopes free of portal generation and owner identity; carry both only in coordinator projections and effects.
+- [Phase ?]: [Phase 08]: Commit media authority before ordered delivery and convert current-owner delivery failure into immediate owner loss.
 
 ### Pending Todos
 
@@ -191,6 +194,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-07-31T04:31:51.490Z
-Stopped at: Completed 07-04-PLAN.md
+Last session: 2026-07-31T05:05:18.773Z
+Stopped at: Completed 08-01-PLAN.md
 Resume file: None
