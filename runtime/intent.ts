@@ -51,6 +51,8 @@ interface PendingInvocation {
   readonly targetWindowId: string;
   readonly timer: number;
   ticket: string | null;
+  claimed: boolean;
+  committed: boolean;
   terminal: boolean;
 }
 
@@ -197,6 +199,8 @@ export class IntentService {
       targetWindowId,
       timer,
       ticket: null,
+      claimed: false,
+      committed: false,
       terminal: false,
     };
     this.#pending.set(reservation.reservationId, pending);
@@ -256,6 +260,14 @@ export class IntentService {
     const ticket = this.#tickets.get(claim.ticket);
     const pending = this.#pending.get(claim.reservationId);
     if (
+      ticket && pending &&
+      ticket.reservationId === claim.reservationId &&
+      this.#options.now() > ticket.expiresAt
+    ) {
+      this.#settle(pending, "failed");
+      return null;
+    }
+    if (
       !ticket || !pending || pending.terminal ||
       ticket.reservationId !== claim.reservationId ||
       ticket.targetWindowId !== claim.targetWindowId ||
@@ -266,7 +278,8 @@ export class IntentService {
       this.#options.now() > ticket.expiresAt
     ) return null;
     this.#tickets.delete(claim.ticket);
-    return Object.freeze({
+    pending.claimed = true;
+    const result = Object.freeze({
       invocationId: ticket.invocationId,
       archetype: ticket.candidate.archetype,
       action: pending.command.request.action ?? "open",
@@ -280,6 +293,8 @@ export class IntentService {
       }),
       srcdoc: ticket.launch.srcdoc,
     });
+    if (pending.committed) this.#settle(pending, "handled");
+    return result;
   }
 
   acknowledge(
@@ -291,9 +306,16 @@ export class IntentService {
       !pending || pending.terminal ||
       pending.invocationId !== ack.invocationId ||
       pending.owner.connectionId !== owner.connectionId ||
-      pending.owner.windowId !== owner.windowId
+      pending.owner.windowId !== owner.windowId ||
+      pending.generation !== this.#generation ||
+      pending.candidate.accountPubkey !== this.#options.account()
     ) return false;
-    this.#settle(pending, ack.state === "committed" ? "handled" : "failed");
+    if (ack.state !== "committed") {
+      this.#settle(pending, "failed");
+      return true;
+    }
+    pending.committed = true;
+    if (pending.claimed) this.#settle(pending, "handled");
     return true;
   }
 
