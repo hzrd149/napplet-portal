@@ -320,7 +320,11 @@ export function createPortalRuntime(
       dispatcher = service;
       service.setAuthorityValidator((candidate) =>
         windowAuthorities.get(candidate.windowId) === candidate &&
-        accounts.active?.pubkey === candidate.accountPubkey
+        accounts.active?.pubkey === candidate.accountPubkey &&
+        catalog?.acceptsManifest(
+            candidate.coordinate,
+            candidate.manifestEventId,
+          ) === true
       );
     },
     deliverTransfer(
@@ -520,15 +524,24 @@ export function createPortalRuntime(
           switch (command.type) {
             case "catalog.preview":
               return catalog.previewInstall(command.naddr);
-            case "catalog.approve":
-              return catalog.approveManifestUpdate(
+            case "catalog.approve": {
+              const result = await catalog.approveManifestUpdate(
                 command.id,
                 command.coordinate,
                 command.manifestEventId,
                 command.sourceCatalogEventId,
               );
-            case "catalog.uninstall":
-              return catalog.uninstallNapplet(command.id, command.coordinate);
+              if (result.ok) revokeObsoleteAuthorities(command.coordinate);
+              return result;
+            }
+            case "catalog.uninstall": {
+              const result = await catalog.uninstallNapplet(
+                command.id,
+                command.coordinate,
+              );
+              if (result.ok) revokeObsoleteAuthorities(command.coordinate);
+              return result;
+            }
             case "catalog.launch": {
               const result = await catalog.launch(
                 command.catalogEventId,
@@ -599,6 +612,17 @@ export function createPortalRuntime(
           return relay.subscribe(message, listener);
         },
       };
+
+      function revokeObsoleteAuthorities(coordinate: string): void {
+        for (const [authorityWindowId, candidate] of windowAuthorities) {
+          if (
+            candidate.coordinate !== coordinate ||
+            catalog?.acceptsManifest(coordinate, candidate.manifestEventId)
+          ) continue;
+          windowAuthorities.delete(authorityWindowId);
+          dispatcher?.abortWindow(authorityWindowId);
+        }
+      }
     },
     destroy() {
       if (destroyed) return;

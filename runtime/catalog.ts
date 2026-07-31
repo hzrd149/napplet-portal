@@ -196,6 +196,14 @@ export class CatalogService {
     return Promise.resolve(this.#projection);
   }
 
+  acceptsManifest(coordinate: string, manifestEventId: string): boolean {
+    this.#refresh();
+    return this.#projection.entries.some((entry) =>
+      entry.coordinate === coordinate &&
+      entry.acceptedManifestEventId === manifestEventId
+    );
+  }
+
   retry(): void {
     this.#refresh(true);
   }
