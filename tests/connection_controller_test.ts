@@ -196,7 +196,7 @@ Deno.test("only a verified artifact resets failure count; stop cannot reopen", (
   active.message({
     type: "runtime.artifact",
     srcdoc: "<p>ok</p>",
-    identity: {},
+    identity: { dTag: "test", aggregateHash: "hash" },
   });
   assert(h.controller.snapshot.phase === "ready", "artifact proves ready");
   assert(Number(h.controller.snapshot.failures) === 0, "ready resets failures");

@@ -2,7 +2,7 @@ function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
 }
 
-async function freePort(): Promise<number> {
+function freePort(): number {
   const listener = Deno.listen({ hostname: "127.0.0.1", port: 0 });
   const port = (listener.addr as Deno.NetAddr).port;
   listener.close();
@@ -143,7 +143,7 @@ Deno.test({
       `production build failed: ${new TextDecoder().decode(built.stderr)}`,
     );
 
-    const port = await freePort();
+    const port = freePort();
     const bind = `127.0.0.1:${port}`;
     const origin = `http://${bind}`;
     const child = new Deno.Command("setsid", {

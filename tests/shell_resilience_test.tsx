@@ -26,50 +26,91 @@ function snapshot(
 }
 
 Deno.test("constellation exposes non-color geometry for every truth state", () => {
-  for (const phase of [
-    "pending",
-    "connected",
-    "bootstrapping",
-    "ready",
-    "retrying",
-    "dormant",
-    "failed",
-  ] as const) {
+  for (
+    const phase of [
+      "pending",
+      "connected",
+      "bootstrapping",
+      "ready",
+      "retrying",
+      "dormant",
+      "failed",
+    ] as const
+  ) {
     const html = renderToString(
       <ConnectionConstellation state={snapshot(phase)} compact={false} />,
     );
-    assert(html.includes(`data-state="${phase}"`), `${phase} state is explicit`);
+    assert(
+      html.includes(`data-state="${phase}"`),
+      `${phase} state is explicit`,
+    );
     assert(html.includes("constellation-node"), `${phase} has nodes`);
     assert(html.includes("constellation-link"), `${phase} has links`);
-    assert(html.includes("aria-hidden="), "graphic does not duplicate live copy");
+    assert(
+      html.includes("aria-hidden="),
+      "graphic does not duplicate live copy",
+    );
   }
 });
 
 Deno.test("cold and reconnect modes retain distinct visual grammar", () => {
   const cold = renderToString(
-    <ConnectionConstellation state={snapshot("pending", "cold")} compact={false} />,
+    <ConnectionConstellation
+      state={snapshot("pending", "cold")}
+      compact={false}
+    />,
   );
   const reconnect = renderToString(
-    <ConnectionConstellation state={snapshot("retrying", "reconnect")} compact={false} />,
+    <ConnectionConstellation
+      state={snapshot("retrying", "reconnect")}
+      compact={false}
+    />,
   );
   assert(cold.includes('data-ritual="cold"'), "cold uses full ritual");
-  assert(reconnect.includes('data-ritual="reconnect"'), "retry uses rebuild ritual");
-  assert(reconnect.includes("constellation-fracture"), "reconnect shows fracture");
+  assert(
+    reconnect.includes('data-ritual="reconnect"'),
+    "retry uses rebuild ritual",
+  );
+  assert(
+    reconnect.includes("constellation-fracture"),
+    "reconnect shows fracture",
+  );
 });
 
 Deno.test("status sheet has one sentence, no operational disclosure, and contextual Retry", () => {
   const early = renderToString(
-    <ConnectionSheet state={snapshot("retrying")} open onClose={() => {}} onRetry={() => {}} />,
+    <ConnectionSheet
+      state={snapshot("retrying")}
+      open
+      onClose={() => {}}
+      onRetry={() => {}}
+    />,
   );
   assert(!early.includes(">Retry<"), "early recovery stays quiet");
   const failed = renderToString(
-    <ConnectionSheet state={snapshot("failed", "reconnect", true)} open onClose={() => {}} onRetry={() => {}} />,
+    <ConnectionSheet
+      state={snapshot("failed", "reconnect", true)}
+      open
+      onClose={() => {}}
+      onRetry={() => {}}
+    />,
   );
   assert(failed.includes(">Retry<"), "repeated failure exposes Retry");
-  for (const forbidden of ["token", "connectionId", "windowId", "milliseconds", "attempt 3"]) {
+  for (
+    const forbidden of [
+      "token",
+      "connectionId",
+      "windowId",
+      "milliseconds",
+      "attempt 3",
+    ]
+  ) {
     assert(!failed.includes(forbidden), `sheet excludes ${forbidden}`);
   }
-  assert((failed.match(/<p/g) ?? []).length === 1, "sheet contains one sentence");
+  assert(
+    (failed.match(/<p/g) ?? []).length === 1,
+    "sheet contains one sentence",
+  );
 });
 
 Deno.test("plain status language distinguishes all connection truth", () => {
@@ -81,22 +122,35 @@ Deno.test("plain status language distinguishes all connection truth", () => {
     "retrying",
     "dormant",
     "failed",
-  ].map((phase) => connectionCopy(snapshot(phase as ConnectionSnapshot["phase"]))));
+  ].map((phase) =>
+    connectionCopy(snapshot(phase as ConnectionSnapshot["phase"]))
+  ));
   assert(copies.size === 7, "each truth state has distinct plain language");
 });
 
 Deno.test("shell implements bounded cold ritual and slow-start escape", async () => {
   const shell = await Deno.readTextFile("islands/NappletShell.tsx");
-  assert(shell.includes("RITUAL_READY_CEILING_MS = 1_000"), "ready reveal caps at one second");
-  assert(shell.includes("SLOW_START_ESCAPE_MS = 3_000"), "slow startup reveals controls");
-  assert(shell.includes('aria-live="polite"'), "ordinary updates use polite live status");
+  assert(
+    shell.includes("RITUAL_READY_CEILING_MS = 1_000"),
+    "ready reveal caps at one second",
+  );
+  assert(
+    shell.includes("SLOW_START_ESCAPE_MS = 3_000"),
+    "slow startup reveals controls",
+  );
+  assert(
+    shell.includes('aria-live="polite"'),
+    "ordinary updates use polite live status",
+  );
   assert(shell.includes("ConnectionSheet"), "status target opens the sheet");
   assert(!shell.includes(">Skip<"), "ritual has no ordinary Skip control");
 });
 
 Deno.test("reduced motion disables continuous constellation motion", async () => {
   const styles = await Deno.readTextFile("assets/styles.css");
-  const reduced = styles.slice(styles.indexOf("@media (prefers-reduced-motion: reduce)"));
+  const reduced = styles.slice(
+    styles.indexOf("@media (prefers-reduced-motion: reduce)"),
+  );
   assert(reduced.includes("animation: none"), "animation is disabled");
   assert(reduced.includes("transition: none"), "transitions are disabled");
 });

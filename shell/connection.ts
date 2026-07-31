@@ -76,6 +76,7 @@ export class ConnectionController {
   #started = false;
   #stopped = false;
   #attemptTerminal = false;
+  #runtimeStarted = false;
 
   constructor(options: ConnectionControllerOptions) {
     this.#options = {
@@ -125,6 +126,7 @@ export class ConnectionController {
     this.#generation++;
     const generation = this.#generation;
     this.#attemptTerminal = false;
+    this.#runtimeStarted = false;
     this.#socket = null;
     previous?.close(1000, "superseded");
     const reconnect = this.#token !== null || this.#snapshot.failures > 0;
@@ -208,8 +210,9 @@ export class ConnectionController {
       message.type === "runtime.connected" &&
       typeof message.connectionId === "string" &&
       typeof message.windowId === "string" &&
-      typeof message.reconnectToken === "string"
+      typeof message.reconnectToken === "string" && !this.#runtimeStarted
     ) {
+      this.#runtimeStarted = true;
       this.#token = message.reconnectToken;
       this.#emit({ phase: "connected", nextRetryMs: null });
       socket.send(JSON.stringify({
@@ -220,7 +223,10 @@ export class ConnectionController {
     } else if (
       message.type === "runtime.artifact" &&
       typeof message.srcdoc === "string" &&
-      message.identity && typeof message.identity === "object"
+      message.identity && typeof message.identity === "object" &&
+      typeof (message.identity as Record<string, unknown>).dTag === "string" &&
+      typeof (message.identity as Record<string, unknown>).aggregateHash ===
+        "string"
     ) {
       this.#emit({
         phase: "ready",

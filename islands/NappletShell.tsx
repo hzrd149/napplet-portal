@@ -17,6 +17,11 @@ import {
   type PublicProfile,
   UserIcon,
 } from "../components/ProfileView.tsx";
+import {
+  ConnectionConstellation,
+  connectionCopy,
+} from "../components/ConnectionConstellation.tsx";
+import { ConnectionSheet } from "../components/ConnectionSheet.tsx";
 import { debug as rootDebug, shortId } from "../debug.ts";
 import {
   ConnectionController,
@@ -39,6 +44,8 @@ type Notice = "connection" | "handshake" | "integrity" | null;
  */
 const CONNECT_FAILED =
   "Napplet Portal could not connect. Check the server and try again.";
+const RITUAL_READY_CEILING_MS = 1_000;
+const SLOW_START_ESCAPE_MS = 3_000;
 
 export default function NappletShell({ coordinate }: NappletShellProps) {
   const [srcdoc, setSrcdoc] = useState("");
@@ -58,6 +65,9 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
     nextRetryMs: null,
     online: true,
   });
+  const [connectionSheetOpen, setConnectionSheetOpen] = useState(false);
+  const [ritualVisible, setRitualVisible] = useState(Boolean(coordinate));
+  const [slowStartEscape, setSlowStartEscape] = useState(false);
   const [catalog, setCatalog] = useState<CatalogViewProjection>({
     catalogEventId: null,
     entries: [],
@@ -79,6 +89,7 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
   const catalogCommands = useRef(
     new Map<string, (accepted: boolean) => void>(),
   );
+  const mountedAt = useRef(Date.now());
 
   const registry = useMemo<FrameIdentityRegistry>(() => ({
     register(source, nextIdentity) {
@@ -154,6 +165,11 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
           if (snapshot.phase === "ready") {
             setRuntimeError("");
             setNotice(null);
+            const remaining = Math.max(
+              0,
+              RITUAL_READY_CEILING_MS - (Date.now() - mountedAt.current),
+            );
+            setTimeout(() => setRitualVisible(false), remaining);
           } else if (snapshot.phase === "failed") {
             setRuntimeError(CONNECT_FAILED);
             if (hasMountedNapplet.current) setNotice("connection");
@@ -167,6 +183,10 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
       globalThis.addEventListener("online", online);
       globalThis.addEventListener("offline", online);
       controller.current.start();
+      const escapeTimer = setTimeout(
+        () => setSlowStartEscape(true),
+        SLOW_START_ESCAPE_MS,
+      );
       return () => {
         debug("shell unmounting");
         globalThis.removeEventListener("message", receive);
@@ -176,6 +196,7 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
         globalThis.removeEventListener("offline", online);
         controller.current?.stop();
         controller.current = null;
+        clearTimeout(escapeTimer);
       };
     }
     return () => {
@@ -344,6 +365,30 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
   return (
     <section class="portal-shell">
       <main class="shell-content">
+        {ritualVisible && !srcdoc && (
+          <div class="connection-ritual" data-escape={slowStartEscape}>
+            <ConnectionConstellation state={connection} compact={false} />
+            <span class="sr-only" aria-live="polite">
+              {connectionCopy(connection)}
+            </span>
+            {connection.phase === "failed" && (
+              <span class="sr-only" role="alert">
+                Connection needs attention. Retry is available.
+              </span>
+            )}
+            {slowStartEscape && (
+              <div class="ritual-escape-actions">
+                <button
+                  type="button"
+                  onClick={() => navigate("home")}
+                >
+                  Home
+                </button>
+                <a href={signedIn ? "#account" : "/signin"}>Account</a>
+              </div>
+            )}
+          </div>
+        )}
         <div
           class={`shell-view ${homeVisible ? "" : "shell-view-hidden"}`}
           inert={!homeVisible}
@@ -413,7 +458,18 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
       <PrimaryNavigation
         view={view}
         signedIn={signedIn}
+        connection={connection}
         onNavigate={navigate}
+        onConnection={() => setConnectionSheetOpen(true)}
+      />
+      <ConnectionSheet
+        state={connection}
+        open={connectionSheetOpen}
+        onClose={() => setConnectionSheetOpen(false)}
+        onRetry={() => {
+          setConnectionSheetOpen(false);
+          controller.current?.retryNow();
+        }}
       />
       <dialog
         ref={signOutDialog}
@@ -459,11 +515,15 @@ function ShellNotice(
 function PrimaryNavigation({
   view,
   signedIn,
+  connection,
   onNavigate,
+  onConnection,
 }: {
   view: View;
   signedIn: boolean;
+  connection: ConnectionSnapshot;
   onNavigate: (view: View) => void;
+  onConnection: () => void;
 }) {
   return (
     <nav aria-label="Primary" class="bottom-nav">
@@ -478,13 +538,24 @@ function PrimaryNavigation({
       </button>
       <button
         type="button"
+        class="connection-status-button"
+        aria-label={`Connection status: ${
+          connectionCopy(connection)
+        } Open details.`}
+        onClick={onConnection}
+      >
+        <ConnectionConstellation state={connection} compact />
+        <span>Status</span>
+      </button>
+      <button
+        type="button"
         aria-current={signedIn && view === "profile" ? "page" : undefined}
-        aria-label="Open profile"
+        aria-label="Open account"
         disabled={!signedIn}
         onClick={() => onNavigate("profile")}
       >
         <UserIcon />
-        <span>Profile</span>
+        <span>Account</span>
       </button>
     </nav>
   );

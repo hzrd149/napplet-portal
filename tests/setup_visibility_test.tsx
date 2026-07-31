@@ -46,6 +46,7 @@ Deno.test("configured portal links to sign-in and keeps Home independent", () =>
 Deno.test("runtime transport upgrades through Fresh and cannot hang silently", async () => {
   const route = await Deno.readTextFile("routes/api/runtime.ts");
   const shell = await Deno.readTextFile("islands/NappletShell.tsx");
+  const connection = await Deno.readTextFile("shell/connection.ts");
   assert(
     route.includes("ctx.upgrade()"),
     "upgrades must go through Fresh's documented context API",
@@ -55,15 +56,13 @@ Deno.test("runtime transport upgrades through Fresh and cannot hang silently", a
     "route must not bypass Fresh with a raw Deno upgrade",
   );
   assert(
-    shell.includes("CONNECT_TIMEOUT_MS"),
+    connection.includes("connectTimeoutMs"),
     "a transport that never opens must still time out",
   );
-  const timeoutBranch = shell.slice(
-    shell.indexOf("connectTimer.current = setTimeout"),
-    shell.indexOf('ws.addEventListener("open"'),
-  );
   assert(
-    timeoutBranch.includes("setRuntimeError(CONNECT_FAILED)"),
-    "a timed-out transport must report failure to the operator",
+    connection.includes("#terminateAttempt(socket, generation)") &&
+      shell.includes('snapshot.phase === "failed"') &&
+      shell.includes("setRuntimeError(CONNECT_FAILED)"),
+    "a timed-out transport must enter visible recovery policy",
   );
 });

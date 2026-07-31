@@ -194,6 +194,160 @@ svg {
   outline-offset: 2px;
 }
 
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.connection-ritual {
+  position: absolute;
+  z-index: 20;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: #d97706;
+  background: #111318;
+}
+
+.connection-constellation {
+  width: min(58vw, 280px);
+  height: auto;
+  overflow: visible;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.constellation-compact {
+  width: 26px;
+  height: 26px;
+}
+
+.constellation-node,
+.constellation-proof {
+  fill: currentColor;
+  stroke: currentColor;
+}
+
+.constellation-link,
+.constellation-gate {
+  fill: none;
+  stroke: currentColor;
+}
+
+.connection-constellation[data-state="pending"] .constellation-seed,
+.connection-constellation[data-state="bootstrapping"] .constellation-proof,
+.connection-constellation[data-state="retrying"] .constellation-fracture {
+  animation: constellation-pulse 1.6s ease-in-out infinite;
+}
+
+.connection-constellation[data-state="pending"] :is(.constellation-link, .constellation-gate, .constellation-proof, .constellation-node:not(.constellation-seed)) {
+  opacity: 0.18;
+}
+
+.connection-constellation[data-state="connected"] :is(.constellation-link-secondary, .constellation-gate, .constellation-proof) {
+  opacity: 0.24;
+}
+
+.connection-constellation[data-state="bootstrapping"] .constellation-gate {
+  stroke-dasharray: 16 7;
+}
+
+.constellation-fracture {
+  stroke-dasharray: 19 13;
+}
+
+.connection-constellation[data-state="dormant"] {
+  opacity: 0.52;
+}
+
+.connection-constellation[data-state="failed"] .constellation-fracture {
+  stroke-dasharray: 13 18;
+}
+
+@keyframes constellation-pulse {
+  50% {
+    opacity: 0.36;
+  }
+}
+
+.ritual-escape-actions {
+  position: absolute;
+  bottom: calc(24px + env(safe-area-inset-bottom));
+  display: flex;
+  gap: 12px;
+}
+
+.ritual-escape-actions a,
+.ritual-escape-actions button {
+  display: inline-flex;
+  min-width: 88px;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  color: #f8fafc;
+  background: #1f232b;
+  text-decoration: none;
+}
+
+.connection-sheet-backdrop {
+  position: fixed;
+  z-index: 50;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  background: rgb(15 23 42 / 45%);
+}
+
+.connection-sheet {
+  width: 100%;
+  padding: 22px 18px calc(18px + env(safe-area-inset-bottom));
+  border-top: 1px solid #d97706;
+  border-radius: 18px 18px 0 0;
+  color: #f8fafc;
+  background: #111318;
+}
+
+.connection-sheet h2,
+.connection-sheet p {
+  margin: 0 0 12px;
+}
+
+.connection-sheet-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.connection-sheet button {
+  padding-inline: 18px;
+  border: 1px solid #d97706;
+  border-radius: 999px;
+  color: inherit;
+  background: transparent;
+}
+
+.connection-sheet .primary-button {
+  color: #111318;
+  background: #f59e0b;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .connection-constellation *,
+  .connection-ritual,
+  .connection-sheet-backdrop {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
 .portal-shell {
   display: grid;
   grid-template-rows: minmax(0, 1fr) calc(64px + env(safe-area-inset-bottom));
@@ -765,7 +919,7 @@ svg {
 .bottom-nav {
   z-index: 1;
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   padding-bottom: env(safe-area-inset-bottom);
   border-top: 1px solid #cbd5e1;
   background: #fff;
