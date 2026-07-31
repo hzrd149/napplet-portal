@@ -191,9 +191,9 @@ export class CatalogService {
     return () => this.#listeners.delete(listener);
   }
 
-  async project(): Promise<CatalogProjection> {
+  project(): Promise<CatalogProjection> {
     this.#refresh();
-    return this.#projection;
+    return Promise.resolve(this.#projection);
   }
 
   retry(): void {
@@ -268,8 +268,7 @@ export class CatalogService {
     const key =
       `${pubkey}:${catalogEventId}:${entry.coordinate}:${entry.acceptedManifestEventId}`;
     if (this.#inflight.has(key)) return;
-    let task!: Promise<void>;
-    task = new Promise<void>((resolve) => {
+    const task = new Promise<void>((resolve) => {
       this.#queue.push(async () => {
         try {
           const verified = await this.options.resolveVerifiedArtifact(
