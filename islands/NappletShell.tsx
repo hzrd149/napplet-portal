@@ -1478,11 +1478,6 @@ export default function NappletShell({
           "Napplet artifact bytes are unavailable. Check sources and retry.",
         );
         setNotice("availability");
-      } else if (message.category === "unsupported") {
-        setRuntimeError(
-          "Napplet requires capabilities this portal does not support.",
-        );
-        setNotice("integrity");
       } else {
         setRuntimeError(
           "Napplet artifact bytes failed verification and were not opened.",

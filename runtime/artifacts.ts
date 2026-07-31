@@ -16,7 +16,6 @@ const debug = rootDebug.extend("artifacts");
 
 export type ArtifactResolutionErrorCode =
   | "manifest-unavailable"
-  | "missing-capability"
   | "invalid-signature"
   | "invalid-manifest"
   | "aggregate-mismatch"
@@ -203,7 +202,6 @@ export interface ArtifactAdapterOptions {
   readonly blossomFetch?: typeof fetch;
   readonly blossomCache?: BlossomCache;
   readonly cache?: NappletArtifactCache;
-  readonly supportedDomains?: readonly string[];
 }
 
 export type ArtifactState =
@@ -364,24 +362,11 @@ export class PortalArtifactResolver {
         },
       });
 
-      const supported = this.#options.supportedDomains ??
-        resolved.manifest.requires;
-      const missing = resolved.manifest.requires.filter((domain) =>
-        !supported.includes(domain)
-      );
-      if (missing.length > 0) {
-        debug("resolve failed missing capabilities=%s", missing.join(","));
-        throw new ArtifactResolutionError(
-          "missing-capability",
-          `napplet requires unsupported capabilities: ${missing.join(", ")}`,
-        );
-      }
-
       debug(
         "resolve complete dTag=%s aggregate=%s domains=%d",
         resolved.dTag,
         shortId(resolved.aggregateHash),
-        supported.length,
+        resolved.manifest.requires.length,
       );
       return {
         state: "ready",
@@ -391,7 +376,7 @@ export class PortalArtifactResolver {
         },
         srcdoc: resolved.indexHtml,
         resolved,
-        grantedDomains: Object.freeze([...supported]),
+        grantedDomains: Object.freeze([...resolved.manifest.requires]),
       };
     } catch (cause) {
       if (cause instanceof ArtifactResolutionError) throw cause;

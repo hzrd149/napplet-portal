@@ -92,7 +92,7 @@ Deno.test("supplied manifest resolves once, merges sources, and holds version", 
   assert(manifestCalls === 1, "held version must not re-resolve");
 });
 
-Deno.test("integrity failures and unsupported capabilities fail closed", async () => {
+Deno.test("integrity failures fail closed", async () => {
   const invalid = structuredClone(fixture.manifestEvent);
   invalid.sig = `0${invalid.sig.slice(1)}`;
   await expectCode("invalid-signature", () =>
@@ -101,15 +101,6 @@ Deno.test("integrity failures and unsupported capabilities fail closed", async (
       relays: [],
       blossomServers: [],
       resolveManifest: () => Promise.resolve(invalid),
-    }).resolve());
-
-  await expectCode("missing-capability", () =>
-    new PortalArtifactResolver({
-      coordinate: fixture.coordinate,
-      relays: [],
-      blossomServers: [],
-      resolveManifest: () => Promise.resolve(fixture.manifestEvent),
-      supportedDomains: ["identity", "relay", "outbox"],
     }).resolve());
 
   await expectCode("blob-hash-mismatch", () =>

@@ -99,7 +99,6 @@ export interface ProductionCatalogResolverOptions {
   readonly eventRuntime: EventRuntime;
   readonly blossomServers: () => readonly string[];
   readonly fetchBytes?: (url: string) => Promise<Uint8Array>;
-  readonly supportedDomains?: readonly string[];
 }
 
 export function createProductionCatalogResolver(
@@ -132,7 +131,6 @@ export function createProductionCatalogResolver(
       blossomServers: options.blossomServers(),
       resolveManifest: () => Promise.resolve(event),
       fetchBytes: options.fetchBytes,
-      supportedDomains: options.supportedDomains,
     });
     const resolved = await resolver.resolve();
     if (resolved.state !== "ready") throw new Error("manifest unavailable");

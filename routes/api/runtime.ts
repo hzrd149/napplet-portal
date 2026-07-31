@@ -34,7 +34,7 @@ const debug = rootDebug.extend("runtime-endpoint");
 
 export interface RuntimeArtifactFailureMessage {
   readonly type: "runtime.artifact.error";
-  readonly category: "unavailable" | "invalid" | "unsupported";
+  readonly category: "unavailable" | "invalid";
   readonly code: ArtifactResolutionErrorCode | "artifact-unavailable";
   readonly error: string;
 }
@@ -54,14 +54,6 @@ export function artifactFailureMessage(
       category: "unavailable",
       code,
       error: "Napplet artifact bytes are unavailable. Check sources and retry.",
-    });
-  }
-  if (code === "missing-capability") {
-    return Object.freeze({
-      type: "runtime.artifact.error",
-      category: "unsupported",
-      code,
-      error: "Napplet requires capabilities this portal does not support.",
     });
   }
   return Object.freeze({
