@@ -149,18 +149,31 @@ function validCatalogProjection(
   const projection = value as Record<string, unknown>;
   if (
     !(projection.catalogEventId === null ||
-      typeof projection.catalogEventId === "string") ||
+      (typeof projection.catalogEventId === "string" &&
+        /^[0-9a-f]{64}$/.test(projection.catalogEventId))) ||
     !Array.isArray(projection.entries)
   ) return false;
+  const coordinates = new Set<string>();
   return projection.entries.every((candidate) => {
     if (
       !candidate || typeof candidate !== "object" || Array.isArray(candidate)
     ) return false;
     const entry = candidate as Record<string, unknown>;
-    return typeof entry.coordinate === "string" &&
-      typeof entry.acceptedManifestEventId === "string" &&
+    if (
+      typeof entry.coordinate !== "string" ||
+      !/^\d+:[0-9a-f]{64}:[^:\s]+$/.test(entry.coordinate) ||
+      coordinates.has(entry.coordinate)
+    ) return false;
+    coordinates.add(entry.coordinate);
+    return typeof entry.acceptedManifestEventId === "string" &&
+      /^[0-9a-f]{64}$/.test(entry.acceptedManifestEventId) &&
       (entry.resolution === "pending" || entry.resolution === "ready" ||
-        entry.resolution === "unavailable");
+        entry.resolution === "unavailable") &&
+      (entry.title === undefined || typeof entry.title === "string") &&
+      (entry.version === undefined || typeof entry.version === "string") &&
+      (entry.capabilities === undefined ||
+        (Array.isArray(entry.capabilities) &&
+          entry.capabilities.every((item) => typeof item === "string")));
   });
 }
 

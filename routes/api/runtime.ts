@@ -98,7 +98,10 @@ export const handler = define.handlers({
           status: catalog.status === "refreshing" || catalog.status === "idle"
             ? "loading"
             : catalog.status ?? "ready",
-          catalog,
+          catalog: {
+            catalogEventId: catalog.catalogEventId,
+            entries: catalog.entries,
+          },
         }));
       } catch {
         socket.send(JSON.stringify({

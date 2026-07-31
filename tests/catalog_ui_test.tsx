@@ -114,6 +114,9 @@ Deno.test("catalog stream architecture updates cards without remounting the ifra
   assertStringIncludes(shell, 'message.type === "runtime.catalog"');
   assertStringIncludes(shell, "setCatalog(");
   assertEquals(shell.match(/<NappletFrame/g)?.length, 1);
+  assertStringIncludes(shell, "catalogGeneration");
+  assertStringIncludes(shell, "generations.retired.has(nextId)");
+  assertStringIncludes(shell, "catalogAccount.current !== pubkey");
 });
 
 Deno.test("update review renders complete attested comparison and capability changes", () => {
@@ -225,8 +228,14 @@ Deno.test("production runtime emits projections and dispatches correlated catalo
       'type: "runtime.catalog"',
       'type: "runtime.catalog.result"',
       "bridge.subscribeCatalog",
+      "catalogEventId: catalog.catalogEventId",
+      "entries: catalog.entries",
     ]
   ) assertStringIncludes(endpoint, required);
+  assertEquals(
+    endpoint.includes("catalog: { catalogEventId: null, entries: [] }"),
+    false,
+  );
   assertStringIncludes(main, "new CatalogService(");
   assertStringIncludes(main, "processRuntime.configureCatalog(catalogService)");
   assertStringIncludes(main, "new CatalogSyncOwner(");
