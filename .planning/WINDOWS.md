@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 3
+open_count: 2
 waived_count: 0
-fixed_count: 9
+fixed_count: 10
 total_count: 12
-last_updated: 2026-07-31T02:18:16.185Z
+last_updated: 2026-07-31T02:19:04.919Z
 ---
 
 # Broken Windows Ledger
@@ -26,7 +26,7 @@ last_updated: 2026-07-31T02:18:16.185Z
 | 9 | 04 | deviation | runtime/catalog.ts |  | Normalized absent catalog generation from undefined to null for first-install approval | fixed |  | 2026-07-31T01:23:55.401Z | 2026-07-31T01:24:28.480Z |
 | 10 | 04 | deviation | shell/connection.ts |  | Added socket terminal callback required for pending catalog command cleanup | fixed |  | 2026-07-31T01:31:18.558Z | 2026-07-31T01:31:54.949Z |
 | 11 | 04 | deviation | components/HomeView.tsx |  | Removed projected executable launch bytes from the catalog card contract | fixed |  | 2026-07-31T01:31:18.664Z | 2026-07-31T01:31:55.053Z |
-| 12 | 05 | deviation | islands/NappletShell.tsx |  | Preserved canonical caller correlation IDs by selecting the fixed tracer only by URL | open |  | 2026-07-31T02:18:16.185Z |  |
+| 12 | 05 | deviation | islands/NappletShell.tsx |  | Preserved canonical caller correlation IDs by selecting the fixed tracer only by URL | fixed |  | 2026-07-31T02:18:16.185Z | 2026-07-31T02:19:04.919Z |
 
 ````json
 [
@@ -169,10 +169,10 @@ last_updated: 2026-07-31T02:18:16.185Z
     "file": "islands/NappletShell.tsx",
     "line": null,
     "description": "Preserved canonical caller correlation IDs by selecting the fixed tracer only by URL",
-    "status": "open",
+    "status": "fixed",
     "reason": "",
     "recorded_at": "2026-07-31T02:18:16.185Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-31T02:19:04.919Z"
   }
 ]
 ````
