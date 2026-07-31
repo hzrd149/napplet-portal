@@ -3,9 +3,11 @@ import {
   PendingCorrelations,
 } from "../runtime/connections.ts";
 import {
+  artifactFailureMessage,
   ExpiringCorrelationRegistry,
   isSameOriginRuntimeRequest,
 } from "../routes/api/runtime.ts";
+import { ArtifactResolutionError } from "../runtime/artifacts.ts";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -246,6 +248,37 @@ Deno.test("runtime websocket rejects missing and cross-site origins", () => {
   assert(
     !isSameOriginRuntimeRequest(missingOrigin),
     "missing origin must fail closed for browser command sockets",
+  );
+});
+
+Deno.test("artifact failures distinguish unavailable bytes from invalid bytes without leaking causes", () => {
+  const unavailable = artifactFailureMessage(
+    new ArtifactResolutionError(
+      "blob-unavailable",
+      "secret local path /private/operator/napplet.html",
+    ),
+  );
+  const invalid = artifactFailureMessage(
+    new ArtifactResolutionError(
+      "blob-hash-mismatch",
+      "secret upstream response details",
+    ),
+  );
+  assert(
+    unavailable.type === "runtime.artifact.error" &&
+      unavailable.category === "unavailable" &&
+      unavailable.code === "blob-unavailable",
+    "unavailable bytes must retain a stable typed category",
+  );
+  assert(
+    invalid.category === "invalid" &&
+      invalid.code === "blob-hash-mismatch",
+    "invalid bytes must remain distinct from unavailable bytes",
+  );
+  const serialized = JSON.stringify([unavailable, invalid]);
+  assert(
+    !serialized.includes("/private/") && !serialized.includes("upstream"),
+    "transport messages must not expose raw causes",
   );
 });
 

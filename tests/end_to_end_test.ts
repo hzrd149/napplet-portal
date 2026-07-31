@@ -81,6 +81,10 @@ Deno.test("supplied Security Lab traverses verified mount, handshake, identity, 
   assert(account.status === "active", "identity must activate before launch");
   const artifact = await runtime.resolveArtifact();
   assert(
+    artifact.verification === "verified",
+    "normal runtime must identify verified production bytes",
+  );
+  assert(
     artifact.dTag === fixture.identity.identifier,
     "verified dTag must bind session",
   );
@@ -157,6 +161,38 @@ Deno.test("supplied Security Lab traverses verified mount, handshake, identity, 
     publicMessages[0]?.type === "relay.event",
     "public relay reads must continue after sign-out",
   );
+});
+
+Deno.test("loopback unsafe runtime uses only the explicit local artifact source", async () => {
+  const directory = await Deno.makeTempDir();
+  const path = `${directory}/local.html`;
+  await Deno.writeTextFile(
+    path,
+    "<!doctype html><html><body>offline local artifact</body></html>",
+  );
+  const runtime = createPortalRuntime({
+    fixture,
+    unsafeLocalArtifactPath: path,
+  });
+  try {
+    const artifact = await runtime.resolveArtifact();
+    assert(
+      artifact.verification === "unsafe-local",
+      "runtime result must never call local bytes verified",
+    );
+    assert(
+      artifact.indexHtml.includes("offline local artifact"),
+      "explicit local bytes must reach the runtime",
+    );
+    assert(
+      artifact.manifest.requires.join(",") ===
+        fixture.requiredDomains.join(","),
+      "unsafe mode must preserve capability grants",
+    );
+  } finally {
+    runtime.destroy();
+    await Deno.remove(directory, { recursive: true });
+  }
 });
 
 Deno.test("runtime sign-out emits only the canonical identity transition", async () => {

@@ -11,6 +11,8 @@ const VARIABLES = [
   "BLOSSOM_SERVERS",
   "PORTAL_RECONNECT_GRACE_MS",
   "PORTAL_BIND",
+  "NAPPLET_UNSAFE_SKIP_VERIFICATION",
+  "NAPPLET_UNSAFE_LOCAL_ARTIFACT_PATH",
 ];
 
 Deno.test("dev and production tasks load .env while quality tasks stay hermetic", async () => {
@@ -105,4 +107,31 @@ Deno.test("bind resolver rejects URL and host-port values", () => {
     "missing bind must default to loopback",
   );
   assert(warnings.length === 2, "rejected binds must warn exactly once each");
+});
+
+Deno.test("production bind bootstrap rejects unsafe mode on a public bind", async () => {
+  const output = await new Deno.Command(Deno.execPath(), {
+    args: [
+      "run",
+      "--allow-env=PORTAL_BIND,NAPPLET_UNSAFE_SKIP_VERIFICATION,NAPPLET_UNSAFE_LOCAL_ARTIFACT_PATH",
+      "runtime/bind.ts",
+    ],
+    env: {
+      PORTAL_BIND: "0.0.0.0",
+      NAPPLET_UNSAFE_SKIP_VERIFICATION: "true",
+      NAPPLET_UNSAFE_LOCAL_ARTIFACT_PATH: "/private/operator/napplet.html",
+    },
+    stdout: "piped",
+    stderr: "piped",
+  }).output();
+  const stderr = new TextDecoder().decode(output.stderr);
+  assert(!output.success, "production startup must fail before serving");
+  assert(
+    stderr.includes("loopback"),
+    "startup rejection must explain the loopback requirement",
+  );
+  assert(
+    !stderr.includes("/private/operator/napplet.html"),
+    "startup rejection must not disclose the local artifact path",
+  );
 });

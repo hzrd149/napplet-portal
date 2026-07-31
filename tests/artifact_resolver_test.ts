@@ -4,8 +4,10 @@ import fixture from "./fixtures/supplied_napplet_contract.json" with {
 import {
   ArtifactResolutionError,
   InMemoryNappletArtifactCache,
+  loadUnsafeLocalArtifact,
   PortalArtifactResolver,
 } from "../runtime/artifacts.ts";
+import { MAX_BINARY_PAYLOAD_BYTES } from "../runtime/binary_transport.ts";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -168,4 +170,72 @@ Deno.test("valid executable HTML can traverse local Blossom without bypassing ve
           ? Promise.resolve(new Response(null, { status: 204 }))
           : Promise.resolve(new Response("malformed cache bytes")),
     }).resolve());
+});
+
+Deno.test("unsafe local artifact loads explicit HTML bytes with distinct identity", async () => {
+  const directory = await Deno.makeTempDir();
+  const path = `${directory}/local-napplet.html`;
+  const source = "<!doctype html><html><body>local test</body></html>";
+  await Deno.writeTextFile(path, source);
+  try {
+    const artifact = await loadUnsafeLocalArtifact(fixture, path);
+    const expectedHash = Array.from(
+      new Uint8Array(
+        await crypto.subtle.digest("SHA-256", new TextEncoder().encode(source)),
+      ),
+      (byte) => byte.toString(16).padStart(2, "0"),
+    ).join("");
+    assert(artifact.verification === "unsafe-local", "mode must stay explicit");
+    assert(artifact.indexHtml === source, "exact local bytes must be loaded");
+    assert(
+      artifact.aggregateHash === expectedHash,
+      "unsafe identity must hash the actual local bytes",
+    );
+    assert(
+      artifact.manifest.requires.join(",") ===
+        fixture.requiredDomains.join(","),
+      "unsafe mode must retain the fixture capability boundary",
+    );
+  } finally {
+    await Deno.remove(directory, { recursive: true });
+  }
+});
+
+Deno.test("unsafe local artifact retains HTML MIME and size boundaries", async () => {
+  const directory = await Deno.makeTempDir();
+  const exactPath = `${directory}/exact.html`;
+  const invalidPath = `${directory}/invalid.txt`;
+  const oversizedPath = `${directory}/oversized.html`;
+  const prefix = "<!doctype html>";
+  await Deno.writeTextFile(
+    exactPath,
+    prefix + " ".repeat(MAX_BINARY_PAYLOAD_BYTES - prefix.length),
+  );
+  await Deno.writeTextFile(invalidPath, "<html></html>");
+  await Deno.writeTextFile(
+    oversizedPath,
+    prefix + " ".repeat(MAX_BINARY_PAYLOAD_BYTES + 1 - prefix.length),
+  );
+  try {
+    const boundary = await loadUnsafeLocalArtifact(fixture, exactPath);
+    assert(
+      new TextEncoder().encode(boundary.indexHtml).byteLength ===
+        MAX_BINARY_PAYLOAD_BYTES,
+      "exact size limit remains eligible",
+    );
+    await expectCode(
+      "invalid-mime",
+      () => loadUnsafeLocalArtifact(fixture, invalidPath),
+    );
+    await expectCode(
+      "artifact-too-large",
+      () => loadUnsafeLocalArtifact(fixture, oversizedPath),
+    );
+    await expectCode(
+      "blob-unavailable",
+      () => loadUnsafeLocalArtifact(fixture, `${directory}/missing.html`),
+    );
+  } finally {
+    await Deno.remove(directory, { recursive: true });
+  }
 });

@@ -446,6 +446,25 @@ svg {
   background: var(--shell-bg);
 }
 
+.unsafe-mode-banner {
+  position: absolute;
+  z-index: 30;
+  top: calc(8px + env(safe-area-inset-top));
+  left: 50%;
+  width: max-content;
+  max-width: calc(100% - 24px);
+  margin: 0;
+  padding: 8px 12px;
+  transform: translateX(-50%);
+  border: 1px solid var(--shell-error-text);
+  border-radius: 999px;
+  color: var(--shell-error-text);
+  background: var(--shell-error-bg);
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+}
+
 .shell-content {
   position: relative;
   min-height: 0;

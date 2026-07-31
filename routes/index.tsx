@@ -9,7 +9,10 @@ export default define.page(function Home(ctx) {
       <Head>
         <title>Napplet Portal</title>
       </Head>
-      <NappletShell coordinate={config.coordinate} />
+      <NappletShell
+        coordinate={config.coordinate}
+        unsafeLocalMode={config.unsafeSkipVerification}
+      />
     </>
   );
 });

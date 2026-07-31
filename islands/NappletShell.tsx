@@ -55,6 +55,7 @@ const debug = rootDebug.extend("shell");
 
 interface NappletShellProps {
   readonly coordinate: string;
+  readonly unsafeLocalMode?: boolean;
 }
 
 export interface IntentSurface {
@@ -554,7 +555,7 @@ export class PopupReservationController {
 }
 
 type View = "napplet" | "home" | "profile" | "settings";
-type Notice = "connection" | "handshake" | "integrity" | null;
+type Notice = "availability" | "connection" | "handshake" | "integrity" | null;
 
 /**
  * A transport that never opens must still surface a failure. Fresh cannot
@@ -810,7 +811,10 @@ function validCatalogProjection(
   });
 }
 
-export default function NappletShell({ coordinate }: NappletShellProps) {
+export default function NappletShell({
+  coordinate,
+  unsafeLocalMode = false,
+}: NappletShellProps) {
   const [srcdoc, setSrcdoc] = useState("");
   const [identity, setIdentity] = useState<VerifiedNappletIdentity | null>(
     null,
@@ -1466,8 +1470,31 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
       setNotice("integrity");
       return;
     }
+    if (message.type === "runtime.artifact.error") {
+      debug("runtime artifact error category=%s", String(message.category));
+      setConnecting(false);
+      if (message.category === "unavailable") {
+        setRuntimeError(
+          "Napplet artifact bytes are unavailable. Check sources and retry.",
+        );
+        setNotice("availability");
+      } else if (message.category === "unsupported") {
+        setRuntimeError(
+          "Napplet requires capabilities this portal does not support.",
+        );
+        setNotice("integrity");
+      } else {
+        setRuntimeError(
+          "Napplet artifact bytes failed verification and were not opened.",
+        );
+        setNotice("integrity");
+      }
+      return;
+    }
     if (
       message.type !== "runtime.artifact" ||
+      message.verification !==
+        (unsafeLocalMode ? "unsafe-local" : "verified") ||
       typeof message.srcdoc !== "string" ||
       !message.identity || typeof message.identity !== "object"
     ) return;
@@ -1629,6 +1656,11 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
   const homeVisible = !configured || view === "home";
   return (
     <section class="portal-shell">
+      {unsafeLocalMode && (
+        <p class="unsafe-mode-banner" role="status">
+          Unsafe local artifact mode: verification is disabled.
+        </p>
+      )}
       <main class="shell-content">
         {ritualVisible && !srcdoc && (
           <div class="connection-ritual" data-escape={slowStartEscape}>
@@ -1822,6 +1854,8 @@ function ShellNotice(
 ) {
   const copy = notice === "integrity"
     ? "The napplet could not be verified and was not opened."
+    : notice === "availability"
+    ? "The napplet artifact is unavailable. Check its sources and retry."
     : notice === "handshake"
     ? "The napplet did not start correctly."
     : "Napplet Portal could not connect. Check the server and try again.";
