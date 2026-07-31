@@ -39,7 +39,10 @@ import {
   encodeUploadPayload,
   FIXED_RESOURCE_URL,
 } from "../runtime/binary_transport.ts";
-import { decodeNapControlMessage } from "../runtime/transport.ts";
+import {
+  decodeNapControlMessage,
+  type IntentNavigationMessage,
+} from "../runtime/transport.ts";
 
 const debug = rootDebug.extend("shell");
 
@@ -149,6 +152,136 @@ export class SurfaceStackController {
 
   #emit(): void {
     this.options.changed?.(this.#surfaces);
+  }
+}
+
+interface PopupReservationOptions {
+  readonly open: (
+    path: string,
+    name: string,
+    features?: string,
+  ) => Window | null;
+  readonly send: (message: Record<string, unknown>) => void;
+  readonly setTimer?: typeof setTimeout;
+  readonly clearTimer?: typeof clearTimeout;
+  readonly timeoutMs?: number;
+}
+
+interface PopupReservation {
+  readonly source: Window;
+  readonly invocationId: string;
+  readonly handle: Window;
+  readonly timeout: number;
+}
+
+export class PopupReservationController {
+  readonly #pending = new Map<string, PopupReservation>();
+  readonly #terminal = new Set<string>();
+  readonly #setTimer: typeof setTimeout;
+  readonly #clearTimer: typeof clearTimeout;
+
+  constructor(readonly options: PopupReservationOptions) {
+    this.#setTimer = options.setTimer ?? setTimeout;
+    this.#clearTimer = options.clearTimer ?? clearTimeout;
+  }
+
+  reserve(source: Window, input: {
+    readonly invocationId: string;
+    readonly callerWindowId: string;
+    readonly owner: {
+      readonly connectionId: string;
+      readonly windowId: string;
+    };
+  }): string | null {
+    const reservationId = crypto.randomUUID();
+    const reserveMessage = {
+      type: "intent.navigation.reserve",
+      reservationId,
+      invocationId: input.invocationId,
+      callerWindowId: input.callerWindowId,
+      mode: "new-tab",
+    } as const;
+    const handle = this.options.open(
+      `/intent/reserved#${reservationId}`,
+      `_napplet_intent_${reservationId}`,
+    );
+    if (!handle) {
+      this.options.send(reserveMessage);
+      this.#ack(reservationId, input.invocationId, "blocked");
+      return null;
+    }
+    const timeout = this.#setTimer(
+      () => this.fail(reservationId, "failed"),
+      this.options.timeoutMs ?? 15_000,
+    );
+    this.#pending.set(reservationId, {
+      source,
+      invocationId: input.invocationId,
+      handle,
+      timeout,
+    });
+    this.options.send(reserveMessage);
+    return reservationId;
+  }
+
+  authorize(
+    source: Window,
+    message: Extract<IntentNavigationMessage, {
+      type: "intent.navigation.authorized";
+    }>,
+  ): boolean {
+    const pending = this.#pending.get(message.reservationId);
+    if (
+      !pending || pending.source !== source ||
+      pending.invocationId !== message.invocationId || pending.handle.closed
+    ) {
+      if (pending) this.fail(message.reservationId, "closed");
+      return false;
+    }
+    if (!message.launchPath.startsWith("/napplet?")) {
+      return this.fail(message.reservationId, "failed");
+    }
+    pending.handle.location.replace(message.launchPath);
+    return this.#finish(message.reservationId, "committed", false);
+  }
+
+  fail(reservationId: string, state: "blocked" | "closed" | "failed"): boolean {
+    return this.#finish(reservationId, state, true);
+  }
+
+  clear(state: "closed" | "failed" = "failed"): void {
+    for (const reservationId of [...this.#pending.keys()]) {
+      this.#finish(reservationId, state, true);
+    }
+  }
+
+  #finish(
+    reservationId: string,
+    state: "committed" | "blocked" | "closed" | "failed",
+    close: boolean,
+  ): boolean {
+    const pending = this.#pending.get(reservationId);
+    if (!pending || this.#terminal.has(reservationId)) return false;
+    this.#pending.delete(reservationId);
+    this.#clearTimer(pending.timeout);
+    if (close && !pending.handle.closed) pending.handle.close();
+    this.#ack(reservationId, pending.invocationId, state);
+    return true;
+  }
+
+  #ack(
+    reservationId: string,
+    invocationId: string,
+    state: "committed" | "blocked" | "closed" | "failed",
+  ): void {
+    if (this.#terminal.has(reservationId)) return;
+    this.#terminal.add(reservationId);
+    this.options.send({
+      type: "intent.navigation.ack",
+      reservationId,
+      invocationId,
+      state,
+    });
   }
 }
 
@@ -451,11 +584,27 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
   const mountedAt = useRef(Date.now());
   const binaryRequests = useRef(new ActiveBinaryRequests(2));
   const resourceAssembler = useRef(new ResourceBinaryAssembler());
+  const popupReservations = useRef<PopupReservationController | null>(null);
   const surfaceStack = useRef<SurfaceStackController | null>(null);
   if (!surfaceStack.current) {
     surfaceStack.current = new SurfaceStackController({
       pushHistory: (state) => history.pushState(state, "", location.href),
       changed: setSurfaces,
+    });
+  }
+  if (!popupReservations.current) {
+    popupReservations.current = new PopupReservationController({
+      open: (path, name, features) => globalThis.open(path, name, features),
+      send: (message) => {
+        const ws = controller.current?.socket;
+        const currentOwner = owner.current;
+        if (ws?.readyState !== WebSocket.OPEN || !currentOwner) return;
+        ws.send(JSON.stringify({
+          type: "runtime.forward",
+          ...currentOwner,
+          message,
+        }));
+      },
     });
   }
 
@@ -517,6 +666,24 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
       const frame = iframe.current?.contentWindow;
       const registration = registered.current;
       const message = event.data as Record<string, unknown> | null;
+      if (
+        frame && event.source === frame && event.origin === "null" &&
+        registration?.source === frame && message?.type === "intent.invoke" &&
+        typeof message.id === "string"
+      ) {
+        const request = message.request as Record<string, unknown> | undefined;
+        const behavior = request?.behavior as
+          | Record<string, unknown>
+          | undefined;
+        const currentOwner = owner.current;
+        if (behavior?.newWindow === true && currentOwner) {
+          popupReservations.current?.reserve(frame, {
+            invocationId: message.id,
+            callerWindowId: currentOwner.windowId,
+            owner: currentOwner,
+          });
+        }
+      }
       if (
         frame && event.source === frame && registration?.source === frame &&
         message && typeof message === "object" &&
@@ -632,6 +799,7 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
           catalogCommands.current?.clear();
           binaryRequests.current.clear();
           resourceAssembler.current.clear();
+          popupReservations.current?.clear("failed");
         },
         onSnapshot: (snapshot) => {
           setConnection(snapshot);
@@ -676,6 +844,7 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
         globalThis.removeEventListener("online", online);
         globalThis.removeEventListener("offline", online);
         controller.current?.stop();
+        popupReservations.current?.clear("closed");
         catalogCommands.current?.clear("catalog-command-cancelled");
         catalogCommands.current = null;
         controller.current = null;
@@ -720,6 +889,14 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
         message.windowId !== currentOwner.windowId
       ) return;
       const eventMessage = message.message as Record<string, unknown>;
+      if (eventMessage.type === "intent.navigation.authorized") {
+        const decoded = eventMessage as Extract<IntentNavigationMessage, {
+          type: "intent.navigation.authorized";
+        }>;
+        const source = iframe.current?.contentWindow;
+        if (source) popupReservations.current?.authorize(source, decoded);
+        return;
+      }
       if (resourceAssembler.current.acceptMetadata(eventMessage)) return;
       if (eventMessage.type === "identity.changed") {
         const projected = eventMessage.identity as

@@ -10,7 +10,10 @@ import { createPortalRuntime } from "../../runtime/portal_runtime.ts";
 import {
   decodeCatalogCommand,
   decodeClientMessage,
+  decodeIntentCommand,
+  decodeIntentNavigationMessage,
   decodeNapControlMessage,
+  type IntentNavigationMessage,
 } from "../../runtime/transport.ts";
 import {
   BinaryFrameKind,
@@ -171,6 +174,17 @@ export const handler = define.handlers({
     const unsubscribeCatalog = bridge.subscribeCatalog(() => {
       if (socket.readyState === WebSocket.OPEN) void sendCatalog();
     });
+    const pendingIntentReservations = new Map<
+      string,
+      Extract<
+        IntentNavigationMessage,
+        { type: "intent.navigation.reserve" }
+      >
+    >();
+    const pendingIntentAcks = new Map<
+      string,
+      Extract<IntentNavigationMessage, { type: "intent.navigation.ack" }>
+    >();
     socket.addEventListener("open", () => {
       debug(
         "socket open connection=%s window=%s resumed=%s",
@@ -355,6 +369,47 @@ export const handler = define.handlers({
         const transfer = decodeNapControlMessage(napMessage);
         if (transfer) {
           await bridge.dispatchTransfer(transfer);
+          return;
+        }
+        const intentNavigation = decodeIntentNavigationMessage(napMessage);
+        if (intentNavigation?.type === "intent.navigation.reserve") {
+          pendingIntentReservations.set(
+            intentNavigation.invocationId,
+            intentNavigation,
+          );
+          return;
+        }
+        if (intentNavigation?.type === "intent.navigation.ack") {
+          if (!bridge.acknowledgeIntent(intentNavigation)) {
+            pendingIntentAcks.set(
+              intentNavigation.reservationId,
+              intentNavigation,
+            );
+          }
+          return;
+        }
+        if (intentNavigation?.type === "intent.ticket.claim") {
+          bridge.claimIntentTicket(intentNavigation);
+          return;
+        }
+        const intentCommand = decodeIntentCommand(napMessage);
+        if (intentCommand?.type === "intent.invoke") {
+          const reservation = pendingIntentReservations.get(intentCommand.id);
+          if (reservation) {
+            pendingIntentReservations.delete(intentCommand.id);
+            await bridge.reserveIntent(reservation, intentCommand);
+            const pendingAck = pendingIntentAcks.get(
+              reservation.reservationId,
+            );
+            if (pendingAck) {
+              pendingIntentAcks.delete(reservation.reservationId);
+              bridge.acknowledgeIntent(pendingAck);
+            }
+          }
+          return;
+        }
+        if (intentCommand) {
+          bridge.intentQuery(intentCommand);
           return;
         }
         if (/^(common|storage)\./.test(napMessage.type)) {
