@@ -1,11 +1,19 @@
 ---
 phase: 05-resource-and-blossom-transfer
-verified: 2026-07-31T00:00:00Z
+verified: 2026-07-31T03:19:00Z
 status: passed
 score: 10/10 must-haves verified
 behavior_unverified: 0
 overrides_applied: 0
 gaps: []
+re_verification:
+  previous_status: passed
+  previous_score: 10/10
+  gaps_closed:
+    - "The built-server reconnect smoke now passes after unchanged empty catalog projections stopped synchronously notifying projection-reading subscribers."
+    - "The canonical workspace check passes after the repository-local verifier cache was removed from deno check discovery."
+  gaps_remaining: []
+  regressions: []
 deferred:
   - truth: "Public/local Blossom interoperability and physical mobile-browser behavior are observed on real services/devices."
     addressed_in: "Phase 9"
@@ -15,9 +23,9 @@ deferred:
 # Phase 5: Resource and Blossom Transfer Verification Report
 
 **Phase Goal:** Napplets can resolve bounded resources and upload blobs through backend-owned Blossom policy.
-**Verified:** 2026-07-31T00:00:00Z
+**Verified:** 2026-07-31T03:19:00Z
 **Status:** passed
-**Re-verification:** No — initial goal-backward verification after review fixes
+**Re-verification:** Yes — prior goal evidence regression-checked after commits `d9ab1fd` and `b0cbc65`; both recorded workspace caveats are closed
 
 ## Goal Achievement
 
@@ -52,8 +60,9 @@ deferred:
 | `runtime/resource_policy.ts`, `runtime/pinned_fetch.ts` | Every-hop SSRF policy and address-pinned connection | ✓ VERIFIED | Public/forbidden/mixed DNS and exact-cache cases tested; approved addresses flow into Undici lookup. |
 | `runtime/resource_service.ts`, `runtime/blossom_cache.ts` | Bounded HTTP/Blossom resolution and local-first cache | ✓ VERIFIED | Real streamed byte flow, hash/MIME validation, shared deadline, fallthrough and artifact consumers verified. |
 | `runtime/blossom_transfer.ts` | Backend-authorized multi-server transfer | ✓ VERIFIED | Exact SDK adapter, destination policy, descriptor validation, bounded settlement and retained status are wired. |
-| `runtime/nap_dispatcher.ts`, `runtime/portal_runtime.ts`, `main.ts` | Process ownership and lifecycle | ✓ VERIFIED | Singleton services feed dispatcher; window expiry/shutdown invoke abort/cleanup. |
+| `runtime/nap_dispatcher.ts`, `runtime/portal_runtime.ts`, `runtime/catalog.ts`, `main.ts` | Process ownership, reactive projection, and lifecycle | ✓ VERIFIED | Singleton services feed dispatcher; window expiry/shutdown invoke abort/cleanup; unchanged empty catalog reads are idempotent and cannot crash the built runtime through synchronous listener feedback. |
 | `routes/api/runtime.ts`, `islands/NappletShell.tsx` | WebSocket/iframe control and binary seam | ✓ VERIFIED | Canonical controls, upload metadata, response metadata, binary payloads and owner correlation are wired and behavior-tested. |
+| `tests/catalog_test.ts`, `tests/runtime_reconnect_smoke_test.ts` | Regression proof for production reconnect startup | ✓ VERIFIED | The focused projection-read regression and built Fresh server reconnect smoke both passed in the independently run 169-test workspace suite. |
 
 ### Key Link Verification
 
@@ -77,11 +86,12 @@ deferred:
 
 | Behavior | Command | Result | Status |
 |---|---|---|---|
-| Full automated workspace suite | `DENO_DIR=$PWD/.deno deno task test` | Phase 5 tests all passed; overall 167 passed, 1 unrelated built-server reconnect smoke failed with `ConnectionRefused` | ⚠ INFO |
-| Formatting/lint/type gate | `DENO_DIR=$PWD/.deno deno task check` | fmt and lint passed; final check was blocked by missing `npm:@types/node` in manual `node_modules` while scanning repository-local generated cache entries | ⚠ INFO |
+| Full automated workspace suite | `DENO_DIR=$PWD/.deno deno task test` | `169 passed, 0 failed`; the built Fresh server reconnect smoke passed in 51 seconds | ✓ PASS |
+| Formatting/lint/type gate | `deno task check` | Exit 0 after moving the repository-local verifier cache out of `deno check` discovery; 96 files formatted, 93 linted, all project modules type-checked | ✓ PASS |
 | Phase 5 behavioral set | Same full-suite run (single execution) | 6 binary + 3 policy + 6 service + 4 cache + 6 transfer + 3 dispatcher + 4 end-to-end + related contract/ownership tests passed | ✓ PASS |
+| Catalog feedback regression | Same full-suite run | `reading an unchanged catalog projection does not notify listeners` passed; the built runtime no longer overflows through `sendCatalog -> project -> refresh -> notify` | ✓ PASS |
 
-The full-suite smoke failure is not evidence against a Phase 5 truth: it occurs in the pre-existing built-server reconnect test before a connection is established. The manual dependency/cache issue similarly prevents a clean workspace `check` claim, so this report does not repeat the summaries' blanket gate claim. Neither failure contradicts the independently executed Phase 5 behavior.
+The previous smoke caveat was a real runtime defect rather than unrelated infrastructure: an unchanged empty catalog projection synchronously notified a listener that read the projection again, overflowing the production server stack before reconnect. Commit `d9ab1fd` makes empty projection reads idempotent and adds a focused regression; the independent 169/169 run confirms both that regression and the production reconnect smoke. The prior check caveat was caused by a verifier-created `.deno` cache inside the repository being included by bare `deno check`; with that generated cache moved out of discovery, the canonical check exits 0.
 
 ### Probe Execution
 
@@ -106,7 +116,7 @@ No unreferenced `TBD`, `FIXME`, or `XXX`, placeholder implementation, hardcoded 
 
 ### Human Verification Required
 
-None for the automated Phase 5 goal under the user's unattended acceptance. Public/local Blossom interoperability and physical-device/mobile-network observations remain explicit Phase 9 residual UAT and are not represented as executed passes here.
+None for the automated Phase 5 goal under the user's unattended acceptance. Public/local Blossom interoperability and physical-device/mobile-network observations are **Phase 9 NOT RUN residual UAT** and are not represented as executed passes here.
 
 ### Disconfirmation Pass
 
@@ -116,9 +126,9 @@ None for the automated Phase 5 goal under the user's unattended acceptance. Publ
 
 ### Gaps Summary
 
-No Phase 5 implementation gap was found. All ten merged roadmap/plan truths and RES-01..03/UPL-01..03 have substantive, wired, behavioral evidence. The independent workspace gate was not globally green (167/168 plus a manual dependency/cache check blocker), and this is recorded as non-Phase-5 infrastructure evidence rather than hidden. Live external Blossom and physical mobile checks are deferred explicitly to Phase 9 under the accepted unattended UAT policy.
+No Phase 5 implementation gap remains. All ten merged roadmap/plan truths and RES-01..03/UPL-01..03 retain substantive, wired, behavioral evidence. The formerly failing built-server reconnect smoke is now green inside a 169/169 workspace run, and the canonical formatting/lint/type gate exits 0. Live external Blossom and physical mobile checks remain explicitly **NOT RUN** Phase 9 residual UAT under the accepted unattended policy.
 
 ---
 
-_Verified: 2026-07-31T00:00:00Z_
+_Verified: 2026-07-31T03:19:00Z_
 _Verifier: the agent (gsd-verifier)_
