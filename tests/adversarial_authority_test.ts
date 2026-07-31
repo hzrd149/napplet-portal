@@ -1,10 +1,17 @@
 import { finalizeEvent, getPublicKey, nip19 } from "nostr-tools";
+import { EventStore } from "applesauce-core";
 import fixture from "./fixtures/supplied_napplet_contract.json" with {
   type: "json",
 };
 import { CommonService } from "../runtime/common.ts";
 import { NapDispatcher } from "../runtime/nap_dispatcher.ts";
 import { createPortalRuntime } from "../runtime/portal_runtime.ts";
+import {
+  CATALOG_IDENTIFIER,
+  CatalogService,
+  type VerifiedCatalogArtifact,
+} from "../runtime/catalog.ts";
+import { hasContractGrant } from "../runtime/nap_contract_registry.ts";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -134,4 +141,131 @@ Deno.test("authority tracer rejects an ungranted action before signer effect", a
     "denial must be sanitized",
   );
   harness.runtime.destroy();
+});
+
+Deno.test("authority matrix denies malformed invented and sibling grants", () => {
+  const rows: readonly [readonly string[], string, boolean][] = [
+    [["common"], "common.follow", true],
+    [["common.follow"], "common.follow", true],
+    [["common.encodeNip19"], "common.follow", false],
+    [["common.follow.extra"], "common.follow", false],
+    [["common"], "common.invented", false],
+    [["identity"], "common.follow", false],
+    [[""], "common.follow", false],
+  ];
+  for (const [grants, action, expected] of rows) {
+    assert(
+      hasContractGrant(grants, action) === expected,
+      `${JSON.stringify(grants)} must resolve ${action} to ${expected}`,
+    );
+  }
+});
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((done) => resolve = done);
+  return { promise, resolve };
+}
+
+function catalogAuthorityHarness() {
+  const accountASecret = new Uint8Array(32).fill(21);
+  const accountBSecret = new Uint8Array(32).fill(22);
+  const accountA = getPublicKey(accountASecret);
+  const accountB = getPublicKey(accountBSecret);
+  const nappletSecret = new Uint8Array(32).fill(23);
+  const nappletPubkey = getPublicKey(nappletSecret);
+  const coordinate = `35129:${nappletPubkey}:authority`;
+  const acceptedManifestEventId = "a".repeat(64);
+  const store = new EventStore();
+  const event = finalizeEvent({
+    kind: 30078,
+    created_at: 1,
+    tags: [["d", CATALOG_IDENTIFIER]],
+    content: JSON.stringify({
+      version: 1,
+      entries: [{ coordinate, acceptedManifestEventId }],
+    }),
+  }, accountASecret);
+  store.add(event);
+  let active = {
+    accountId: accountA,
+    pubkey: accountA,
+    status: "active" as const,
+  };
+  let publishes = 0;
+  const resolution = deferred<VerifiedCatalogArtifact>();
+  const service = new CatalogService({
+    eventStore: store,
+    identity: () => active,
+    resolveVerifiedArtifact: () => resolution.promise,
+    signEvent: (template) =>
+      Promise.resolve(finalizeEvent(template, accountASecret)),
+    publish: () => {
+      publishes++;
+      return Promise.resolve([{ relay: "wss://required.example", accepted: true }]);
+    },
+  });
+  return {
+    service,
+    event,
+    coordinate,
+    acceptedManifestEventId,
+    resolution,
+    replaceAccount: () => {
+      active = { accountId: accountB, pubkey: accountB, status: "active" };
+    },
+    publishes: () => publishes,
+  };
+}
+
+function verifiedArtifact(manifestEventId: string): VerifiedCatalogArtifact {
+  return {
+    manifestEventId,
+    title: "Authority",
+    version: "1",
+    capabilities: ["common.follow"],
+    declarations: [],
+    launch: {
+      dTag: "authority",
+      aggregateHash: "b".repeat(64),
+      srcdoc: "<main/>",
+    },
+  };
+}
+
+Deno.test("catalog authority rejects account replacement during artifact resolution", async () => {
+  const harness = catalogAuthorityHarness();
+  const pending = harness.service.launch(
+    harness.event.id,
+    harness.coordinate,
+    harness.acceptedManifestEventId,
+  );
+  harness.replaceAccount();
+  harness.resolution.resolve(verifiedArtifact(harness.acceptedManifestEventId));
+  const result = await pending;
+  assert(!result.ok, "foreign active account must receive no launch bytes");
+  assert(
+    JSON.stringify(result) ===
+      '{"ok":false,"error":"catalog changed","retryable":true}',
+    "catalog replacement denial must be stable and sanitized",
+  );
+});
+
+Deno.test("catalog signer authority rejects account replacement before publication", async () => {
+  const harness = catalogAuthorityHarness();
+  const pending = harness.service.approveManifestUpdate(
+    "approve",
+    harness.coordinate,
+    harness.acceptedManifestEventId,
+  );
+  await Promise.resolve();
+  harness.replaceAccount();
+  harness.resolution.resolve(verifiedArtifact(harness.acceptedManifestEventId));
+  const result = await pending;
+  assert(!result.ok, "foreign active account must not mutate the catalog");
+  assert(harness.publishes() === 0, "stale signer must cause zero publication effects");
+  assert(
+    result.error === "catalog mutation failed",
+    "signer authority denial must be sanitized",
+  );
 });
