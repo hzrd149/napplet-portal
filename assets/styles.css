@@ -1143,7 +1143,7 @@ svg {
 .account-sheet-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 4;
+  z-index: 50;
   display: flex;
   align-items: flex-end;
   background: var(--shell-overlay);

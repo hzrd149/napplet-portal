@@ -12,6 +12,7 @@ _fresh/
 # npm + other dependencies
 node_modules/
 vendor/
+test-results/
 
 # app data
 .data/

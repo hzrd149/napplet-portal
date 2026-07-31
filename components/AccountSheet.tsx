@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "preact/hooks";
 import { type PublicProfile, UserIcon } from "./ProfileView.tsx";
 import { shortenPubkey } from "./HomeHeader.tsx";
 import { ThemeControls } from "./ThemeControls.tsx";
@@ -15,6 +16,15 @@ export function AccountSheet(
   { open, profile, backendConnected, onClose, onSignOut, onOpenSettings }:
     AccountSheetProps,
 ) {
+  const invoker = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    if (open) {
+      invoker.current = document.activeElement as HTMLElement | null;
+      return;
+    }
+    invoker.current?.focus();
+    invoker.current = null;
+  }, [open]);
   if (!open) return null;
   return (
     <div class="account-sheet-backdrop" role="presentation" onClick={onClose}>

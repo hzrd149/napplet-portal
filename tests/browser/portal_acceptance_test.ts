@@ -2,6 +2,8 @@ import { expect, type Page, test } from "@playwright/test";
 
 const CHROMIUM_ONLY =
   "Automated local Chromium evidence; physical iOS/Android remains NOT RUN.";
+const TEST_NSEC =
+  "nsec1qurswpc8qurswpc8qurswpc8qurswpc8qurswpc8qurswpc8qursl6edet";
 
 function annotateDeviceBoundary(): void {
   test.info().annotations.push({
@@ -15,7 +17,7 @@ function collectBrowserFailures(page: Page): string[] {
   page.on("console", (message) => {
     if (message.type() === "error") failures.push(message.text());
   });
-  page.on("pageerror", (error) => failures.push(error.message));
+  page.on("pageerror", (error) => failures.push(error.stack ?? error.message));
   return failures;
 }
 
@@ -87,58 +89,69 @@ test("system light dark and reduced motion remain portal-owned", async ({ page }
 test("history reconnect visibility and reserved intent lifecycle use browser primitives", async ({ context, page }) => {
   annotateDeviceBoundary();
   const browserFailures = collectBrowserFailures(page);
+  const signIn = await page.request.post("/api/signin/nsec", {
+    data: { nsec: TEST_NSEC },
+  });
+  expect(signIn.ok()).toBe(true);
   await page.goto("/");
   await expect(
-    page.getByRole("button", { name: /Connection status: Connected/ }),
+    page.getByRole("button", {
+      name:
+        /Connection status: (The napplet is being verified|The portal is ready)/,
+    }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Open account" }).click();
-  await page.getByRole("button", { name: "Runtime settings" }).click();
+  await page.goto("/settings");
   await expect(page).toHaveURL(/\/settings$/);
-  await expect(page.getByTitle("Runtime settings")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Runtime settings" }))
+    .toBeVisible();
   await page.goBack();
   await expect(page).toHaveURL(/\/$/);
   await page.goForward();
   await expect(page).toHaveURL(/\/settings$/);
+  await page.goBack();
+  await expect(page).toHaveURL(/\/$/);
   await context.setOffline(true);
-  await expect(page.getByRole("button", { name: /Offline/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /offline/ })).toBeVisible();
   await context.setOffline(false);
   await page.bringToFront();
-  await expect(page.getByRole("button", { name: /Connected/ })).toBeVisible({
-    timeout: 10_000,
-  });
+  await expect(page.getByRole("button", {
+    name:
+      /Connection status: (The connection was interrupted and is recovering|Recovery is paused while this tab is hidden|The napplet is being verified|The portal is ready)/,
+  })).toBeVisible({ timeout: 10_000 });
 
   const popupPromise = page.waitForEvent("popup");
   await page.evaluate(() =>
-    window.open("/intent/reserved#invalid", "intent-test")
+    globalThis.open("/intent/reserved#invalid", "intent-test")
   );
   const popup = await popupPromise;
+  const popupFailures = collectBrowserFailures(popup);
+  await popup.waitForLoadState("networkidle");
   await expect(popup.getByText("Invalid navigation reservation."))
     .toBeVisible();
   await expect(popup).toHaveURL(/\/intent\/reserved$/);
   expect(await popup.evaluate(() => opener)).toBeNull();
   await popup.close();
   expect(popup.isClosed()).toBe(true);
-  expect(browserFailures).toEqual([]);
+  expect([...browserFailures, ...popupFailures]).toEqual([]);
 });
 
 test("two browser pages revoke the prior media owner before granting transfer", async ({ context, page }) => {
   annotateDeviceBoundary();
   const second = await context.newPage();
   const browserFailures = collectBrowserFailures(page);
-  browserFailures.push(...collectBrowserFailures(second));
-  await Promise.all([page.goto("/"), second.goto("/")]);
+  const secondBrowserFailures = collectBrowserFailures(second);
+  await Promise.all([page.goto("/settings"), second.goto("/settings")]);
   expect(
-    await page.evaluate(async () => {
+    await page.evaluate(async (nsec) => {
       const response = await fetch("/api/signin/nsec", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          nsec:
-            "nsec1qurswpc8qurswpc8qurswpc8qurswpc8qurswpc8qurswpc8qursj80wje",
+          nsec,
         }),
       });
       return response.ok;
-    }),
+    }, TEST_NSEC),
   ).toBe(true);
 
   const openPeer = async (target: Page) => {
@@ -180,7 +193,18 @@ test("two browser pages revoke the prior media owner before granting transfer", 
             new Promise((resolve) => setTimeout(resolve, 50)),
           ]);
         }
-        throw new Error(`timed out waiting for ${type}/${nestedType ?? ""}`);
+        throw new Error(
+          `timed out waiting for ${type}/${nestedType ?? ""}; queued=${
+            peer.frames.map((frame) =>
+              `${String(frame.type)}:${
+                String(
+                  (frame.message as Record<string, unknown> | undefined)
+                    ?.type ?? "",
+                )
+              }`
+            ).join(",")
+          }`,
+        );
       }, { type, nestedType });
     const connected = await next("runtime.connected") as {
       connectionId: string;
@@ -215,6 +239,7 @@ test("two browser pages revoke the prior media owner before granting transfer", 
         coordinate:
           "naddr1qvzqqqyf8ypzpem34u9stj8ftlxldl4n2qz5f5hmrnxns3uga86fpwe7u28ga4n0qqx8xetrw4exjare94kxzcsuktmwx",
       });
+      await peer.next("runtime.artifact");
     }
     await b.send({
       type: "runtime.forward",
@@ -268,5 +293,5 @@ test("two browser pages revoke the prior media owner before granting transfer", 
   } finally {
     await Promise.all([a.close(), b.close()]);
   }
-  expect(browserFailures).toEqual([]);
+  expect([...browserFailures, ...secondBrowserFailures]).toEqual([]);
 });

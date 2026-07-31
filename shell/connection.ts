@@ -85,7 +85,7 @@ export class ConnectionController {
       ...options,
       setTimer: options.setTimer ??
         ((callback, delay) => setTimeout(callback, delay)),
-      clearTimer: options.clearTimer ?? clearTimeout,
+      clearTimer: options.clearTimer ?? ((id) => clearTimeout(id)),
       random: options.random ?? Math.random,
       isVisible: options.isVisible ??
         (() => document.visibilityState === "visible"),

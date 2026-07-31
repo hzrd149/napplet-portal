@@ -33,7 +33,8 @@ export default defineConfig({
     env: {
       PORTAL_BIND: "127.0.0.1",
       PORTAL_PORT: String(port),
-      NAPPLET_COORDINATE: "",
+      NAPPLET_COORDINATE:
+        "naddr1qvzqqqyf8ypzpem34u9stj8ftlxldl4n2qz5f5hmrnxns3uga86fpwe7u28ga4n0qqx8xetrw4exjare94kxzcsuktmwx",
     },
     url: origin,
     reuseExistingServer: false,
