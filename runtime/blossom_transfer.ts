@@ -379,6 +379,10 @@ export class BlossomTransferService {
     );
   }
 
+  clearOwner(owner: string): void {
+    this.#statuses.delete(owner);
+  }
+
   #retain(owner: string, status: UploadStatus): void {
     this.#prune(owner);
     const statuses = this.#statuses.get(owner) ?? [];

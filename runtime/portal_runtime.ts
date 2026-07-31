@@ -26,6 +26,11 @@ import {
 import type { RuntimeSettingsService } from "./settings.ts";
 import type { CatalogProjection, CatalogService } from "./catalog.ts";
 import type { CatalogCommand } from "./transport.ts";
+import type {
+  DispatcherMessage,
+  NapDispatcher,
+  NapOwner,
+} from "./nap_dispatcher.ts";
 
 const debug = rootDebug.extend("runtime");
 
@@ -293,6 +298,14 @@ export function createPortalRuntime(
     : undefined;
   let destroyed = false;
   let catalog: CatalogService | undefined;
+  let dispatcher: NapDispatcher | undefined;
+  const transferSends = new Map<
+    string,
+    (
+      message: Record<string, unknown>,
+      bytes?: readonly Uint8Array[],
+    ) => void
+  >();
 
   return {
     events,
@@ -301,11 +314,31 @@ export function createPortalRuntime(
     configureCatalog(service: CatalogService): void {
       catalog = service;
     },
+    configureTransfers(service: NapDispatcher): void {
+      dispatcher = service;
+    },
+    deliverTransfer(
+      owner: NapOwner,
+      message: Record<string, unknown>,
+      bytes?: readonly Uint8Array[],
+    ): void {
+      transferSends.get(owner.windowId)?.(message, bytes);
+    },
+    destroyWindow(windowId: string): void {
+      transferSends.delete(windowId);
+      dispatcher?.abortWindow(windowId);
+      connections.remove(windowId);
+    },
     get activeAccount() {
       return accounts.active;
     },
     signIn: (pubkey: string) => accounts.signIn(pubkey),
-    signOut: () => accounts.signOut(),
+    signOut: () => {
+      for (const windowId of transferSends.keys()) {
+        dispatcher?.abortWindow(windowId);
+      }
+      return accounts.signOut();
+    },
     loadEvent: (id: string) => {
       if (!settings) throw new Error("runtime settings unavailable");
       return eventRuntime.loadEvent(id, settings.settings.relays);
@@ -376,15 +409,40 @@ export function createPortalRuntime(
       }
       return productionCatalogResolver(coordinate, undefined, relays);
     },
-    openWindow(connectionId: string, windowId: string, source: object) {
+    openWindow(
+      connectionId: string,
+      windowId: string,
+      source: object,
+      sendTransfer?: (
+        message: Record<string, unknown>,
+        bytes?: readonly Uint8Array[],
+      ) => void,
+    ) {
       debug(
         "open tracer window connection=%s window=%s",
         shortId(connectionId),
         shortId(windowId),
       );
       connections.register(connectionId, windowId, source);
+      if (sendTransfer) transferSends.set(windowId, sendTransfer);
       let initialized = false;
+      let verifiedNapplet: string | undefined;
       return {
+        verifyNapplet(identity: { dTag: string; aggregateHash: string }) {
+          verifiedNapplet = `${identity.dTag}@${identity.aggregateHash}`;
+        },
+        dispatchTransfer(message: DispatcherMessage): Promise<void> {
+          const account = accounts.active?.pubkey;
+          if (!dispatcher || !verifiedNapplet || !account) {
+            return Promise.resolve();
+          }
+          return dispatcher.dispatch({
+            connectionId,
+            windowId,
+            napplet: verifiedNapplet,
+            account,
+          }, message);
+        },
         catalog: () =>
           catalog?.project() ??
             Promise.resolve({
@@ -468,6 +526,8 @@ export function createPortalRuntime(
     destroy() {
       if (destroyed) return;
       destroyed = true;
+      dispatcher?.destroy();
+      transferSends.clear();
       eventRuntime.destroy();
       settings?.destroy();
     },

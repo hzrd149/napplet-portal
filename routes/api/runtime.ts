@@ -63,6 +63,7 @@ const connections = new ConnectionRegistry({
     for (const [connectionId, session] of sessions) {
       if (session.windowId === windowId) sessions.delete(connectionId);
     }
+    runtime.destroyWindow(windowId);
   },
 });
 

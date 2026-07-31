@@ -24,7 +24,9 @@ Deno.test("dispatcher cancel and window expiry abort exact owned resource work",
   const dispatcher = new NapDispatcher({
     resource: {
       bytes: (_url, options) => {
-        signals.push(options.signal!);
+        signals.push(
+          options instanceof AbortSignal ? options : options!.signal!,
+        );
         return pending.promise;
       },
       bytesMany: () => Promise.resolve([]),
@@ -65,14 +67,18 @@ Deno.test("dispatcher cancel and window expiry abort exact owned resource work",
 });
 
 Deno.test("dispatcher rejects duplicate IDs and a third byte operation before work", async () => {
-  const pending: Array<ReturnType<typeof deferred<{ bytes: Uint8Array; blob: Blob; mime: string }>>> = [];
+  const pending: Array<
+    ReturnType<typeof deferred<{ bytes: Uint8Array; blob: Blob; mime: string }>>
+  > = [];
   let starts = 0;
   const sent: Array<Record<string, unknown>> = [];
   const dispatcher = new NapDispatcher({
     resource: {
       bytes: () => {
         starts++;
-        const next = deferred<{ bytes: Uint8Array; blob: Blob; mime: string }>();
+        const next = deferred<
+          { bytes: Uint8Array; blob: Blob; mime: string }
+        >();
         pending.push(next);
         return next.promise;
       },
@@ -86,16 +92,40 @@ Deno.test("dispatcher rejects duplicate IDs and a third byte operation before wo
     settings: () => ({ blossomServers: [] }),
     send: (_owner, message) => sent.push(message),
   });
-  const a = dispatcher.dispatch(owner, { type: "resource.bytes", id: "a", url: "https://example.com/a" });
+  const a = dispatcher.dispatch(owner, {
+    type: "resource.bytes",
+    id: "a",
+    url: "https://example.com/a",
+  });
   await Promise.resolve();
-  await dispatcher.dispatch(owner, { type: "resource.bytes", id: "a", url: "https://example.com/a" });
-  const b = dispatcher.dispatch(owner, { type: "resource.bytes", id: "b", url: "https://example.com/b" });
+  await dispatcher.dispatch(owner, {
+    type: "resource.bytes",
+    id: "a",
+    url: "https://example.com/a",
+  });
+  const b = dispatcher.dispatch(owner, {
+    type: "resource.bytes",
+    id: "b",
+    url: "https://example.com/b",
+  });
   await Promise.resolve();
-  await dispatcher.dispatch(owner, { type: "resource.bytes", id: "c", url: "https://example.com/c" });
+  await dispatcher.dispatch(owner, {
+    type: "resource.bytes",
+    id: "c",
+    url: "https://example.com/c",
+  });
   assert(starts === 2, "duplicate and third request never start service work");
-  assert(sent.filter((message) => message.error === "quota-exceeded").length === 2, "both rejections are canonical quota errors");
+  assert(
+    sent.filter((message) => message.error === "quota-exceeded").length === 2,
+    "both rejections are canonical quota errors",
+  );
   dispatcher.destroy();
-  assert(pending.every(({ promise: _promise }, index) => index < 2), "pending operations retained for cleanup");
-  pending.forEach(({ resolve }) => resolve({ bytes: new Uint8Array(), blob: new Blob(), mime: "text/plain" }));
+  assert(
+    pending.every(({ promise: _promise }, index) => index < 2),
+    "pending operations retained for cleanup",
+  );
+  pending.forEach(({ resolve }) =>
+    resolve({ bytes: new Uint8Array(), blob: new Blob(), mime: "text/plain" })
+  );
   await Promise.all([a, b]);
 });
