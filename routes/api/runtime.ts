@@ -31,6 +31,51 @@ export { FIXED_RESOURCE_ID };
 export const FIXED_RESOURCE_BYTES = new TextEncoder().encode(
   "Napplet Portal binary resource tracer\n",
 );
+export const MAX_PENDING_INTENT_CORRELATIONS = 32;
+const INTENT_CORRELATION_TTL_MS = 15_000;
+
+export class ExpiringCorrelationRegistry<T> {
+  readonly #entries = new Map<string, { value: T; timer: number }>();
+
+  constructor(
+    readonly max = MAX_PENDING_INTENT_CORRELATIONS,
+    readonly ttlMs = INTENT_CORRELATION_TTL_MS,
+    readonly setTimer: (callback: () => void, delay: number) => number =
+      setTimeout,
+    readonly clearTimer: (id: number) => void = clearTimeout,
+  ) {}
+
+  add(key: string, value: T): boolean {
+    if (this.#entries.has(key) || this.#entries.size >= this.max) return false;
+    const timer = this.setTimer(() => this.delete(key), this.ttlMs);
+    this.#entries.set(key, { value, timer });
+    return true;
+  }
+
+  take(key: string): T | undefined {
+    const entry = this.#entries.get(key);
+    if (!entry) return undefined;
+    this.#entries.delete(key);
+    this.clearTimer(entry.timer);
+    return entry.value;
+  }
+
+  delete(key: string): boolean {
+    const entry = this.#entries.get(key);
+    if (!entry) return false;
+    this.#entries.delete(key);
+    this.clearTimer(entry.timer);
+    return true;
+  }
+
+  clear(): void {
+    for (const key of [...this.#entries.keys()]) this.delete(key);
+  }
+
+  get size(): number {
+    return this.#entries.size;
+  }
+}
 
 export function handleFixedResourceFrame(
   bytes: Uint8Array,
@@ -194,15 +239,13 @@ export const handler = define.handlers({
     const unsubscribeCatalog = bridge.subscribeCatalog(() => {
       if (socket.readyState === WebSocket.OPEN) void sendCatalog();
     });
-    const pendingIntentReservations = new Map<
-      string,
+    const pendingIntentReservations = new ExpiringCorrelationRegistry<
       Extract<
         IntentNavigationMessage,
         { type: "intent.navigation.reserve" }
       >
     >();
-    const pendingIntentAcks = new Map<
-      string,
+    const pendingIntentAcks = new ExpiringCorrelationRegistry<
       Extract<IntentNavigationMessage, { type: "intent.navigation.ack" }>
     >();
     socket.addEventListener("open", () => {
@@ -229,6 +272,8 @@ export const handler = define.handlers({
       );
       connections.detach(connection.connectionId);
       unsubscribeCatalog();
+      pendingIntentReservations.clear();
+      pendingIntentAcks.clear();
     });
     socket.addEventListener("message", async (event) => {
       if (event.data instanceof ArrayBuffer) {
@@ -393,7 +438,7 @@ export const handler = define.handlers({
         }
         const intentNavigation = decodeIntentNavigationMessage(napMessage);
         if (intentNavigation?.type === "intent.navigation.reserve") {
-          pendingIntentReservations.set(
+          pendingIntentReservations.add(
             intentNavigation.invocationId,
             intentNavigation,
           );
@@ -401,7 +446,7 @@ export const handler = define.handlers({
         }
         if (intentNavigation?.type === "intent.navigation.ack") {
           if (!bridge.acknowledgeIntent(intentNavigation)) {
-            pendingIntentAcks.set(
+            pendingIntentAcks.add(
               intentNavigation.reservationId,
               intentNavigation,
             );
@@ -420,17 +465,35 @@ export const handler = define.handlers({
         }
         const intentCommand = decodeIntentCommand(napMessage);
         if (intentCommand?.type === "intent.invoke") {
-          const reservation = pendingIntentReservations.get(intentCommand.id);
+          const reservation = pendingIntentReservations.take(intentCommand.id);
           if (reservation) {
-            pendingIntentReservations.delete(intentCommand.id);
             await bridge.reserveIntent(reservation, intentCommand);
-            const pendingAck = pendingIntentAcks.get(
+            const pendingAck = pendingIntentAcks.take(
               reservation.reservationId,
             );
             if (pendingAck) {
-              pendingIntentAcks.delete(reservation.reservationId);
               bridge.acknowledgeIntent(pendingAck);
             }
+          } else {
+            connections.send(
+              connection.connectionId,
+              JSON.stringify({
+                type: "runtime.event",
+                connectionId: connection.connectionId,
+                windowId,
+                message: {
+                  type: "intent.invoke.result",
+                  id: intentCommand.id,
+                  result: {
+                    ok: false,
+                    archetype: intentCommand.request.archetype,
+                    action: intentCommand.request.action ?? "open",
+                    handled: false,
+                    error: "failed",
+                  },
+                },
+              }),
+            );
           }
           return;
         }

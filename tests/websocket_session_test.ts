@@ -2,7 +2,10 @@ import {
   ConnectionRegistry,
   PendingCorrelations,
 } from "../runtime/connections.ts";
-import { isSameOriginRuntimeRequest } from "../routes/api/runtime.ts";
+import {
+  ExpiringCorrelationRegistry,
+  isSameOriginRuntimeRequest,
+} from "../routes/api/runtime.ts";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -94,6 +97,31 @@ Deno.test("reconnect rebinds connection output to the resumed sender", () => {
   assert(registry.send(next.connectionId, "authorized"), "send must succeed");
   assert(first.length === 0, "closed sender must not receive bridge output");
   assert(resumed[0] === "authorized", "resumed sender must receive output");
+});
+
+Deno.test("intent correlations are bounded, expiring, and reject duplicates", () => {
+  const timers = new Map<number, () => void>();
+  let sequence = 0;
+  const registry = new ExpiringCorrelationRegistry<string>(
+    2,
+    10,
+    (callback) => {
+      const id = ++sequence;
+      timers.set(id, callback);
+      return id;
+    },
+    (id) => timers.delete(id),
+  );
+  assert(registry.add("a", "first"), "first correlation accepted");
+  assert(!registry.add("a", "duplicate"), "duplicate rejected");
+  assert(registry.add("b", "second"), "capacity accepts second");
+  assert(!registry.add("c", "overflow"), "capacity is enforced");
+  timers.values().next().value?.();
+  assert(registry.size < 2, "expired correlation is removed");
+  registry.clear();
+  const finalSize = registry.size;
+  const finalTimers = timers.size;
+  assert(finalSize === 0 && finalTimers === 0, "close clears timers");
 });
 
 Deno.test("ownership is connection-scoped and expiry deletes before unsubscribe", () => {
