@@ -248,3 +248,15 @@ Deno.test("runtime websocket rejects missing and cross-site origins", () => {
     "missing origin must fail closed for browser command sockets",
   );
 });
+
+Deno.test("runtime socket replays identity only after the open seam", async () => {
+  const endpoint = await Deno.readTextFile("routes/api/runtime.ts");
+  const openHandler = endpoint.slice(
+    endpoint.indexOf('socket.addEventListener("open"'),
+    endpoint.indexOf('socket.addEventListener("close"'),
+  );
+  assert(
+    openHandler.includes("bridge.replayIdentity()"),
+    "new runtime sockets must receive the current identity after opening",
+  );
+});

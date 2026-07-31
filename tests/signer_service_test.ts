@@ -201,7 +201,7 @@ Deno.test("cancel clears state and blocks late activation before a fresh attempt
   await eventually(() => service.state.status === "active");
 });
 
-Deno.test("restored active account hydrates signer state without new sign-in", async () => {
+Deno.test("restored offline account does not project active sign-in", async () => {
   let restores = 0;
   let signedOut = false;
   const identity$ = identitySubject();
@@ -241,15 +241,9 @@ Deno.test("restored active account hydrates signer state without new sign-in", a
   await service.restore();
 
   assert(restores === 1, "restore must share the startup account load");
-  assert(service.state.status === "active", "restored account must hydrate");
-  if (service.state.status !== "active") return;
   assert(
-    service.state.identity.status === "offline",
-    "Nostr Connect restoration may be active but signer-offline",
-  );
-  assert(
-    service.state.identity.pubkey === "c".repeat(64),
-    "restored public key must be available to runtime gates",
+    service.state.status === "idle",
+    "offline restoration must not emit signer.active or pass runtime gates",
   );
 
   await service.signOut();

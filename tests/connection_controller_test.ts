@@ -205,3 +205,39 @@ Deno.test("only a verified artifact resets failure count; stop cannot reopen", (
   h.controller.retryNow();
   assert(h.timers.size === 0 && h.sockets.length === 2, "stop is terminal");
 });
+
+for (
+  const message of [
+    { type: "runtime.signer.error", error: "artifact unavailable" },
+    { type: "runtime.error", error: "unsupported coordinate" },
+    { type: "runtime.auth.required", error: "sign in required" },
+  ]
+) {
+  Deno.test(`${message.type} leaves bootstrapping with retry available`, () => {
+    const h = harness();
+    h.controller.start();
+    const socket = h.sockets[0];
+    socket.open();
+    socket.message({
+      type: "runtime.connected",
+      connectionId: "connection-a",
+      windowId: "window-a",
+      reconnectToken: "secret",
+    });
+    const currentPhase = () => h.controller.snapshot.phase;
+    assert(
+      currentPhase() === "bootstrapping",
+      "runtime start enters bootstrapping",
+    );
+    socket.message(message);
+    assert(
+      currentPhase() === "failed",
+      "terminal runtime response must leave bootstrapping",
+    );
+    assert(h.controller.snapshot.canRetry, "terminal failure offers retry");
+    assert(
+      h.controller.snapshot.nextRetryMs === null,
+      "semantic failures do not schedule reconnect churn",
+    );
+  });
+}

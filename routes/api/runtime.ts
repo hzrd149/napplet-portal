@@ -301,6 +301,7 @@ export const handler = define.handlers({
         windowId,
         resumed: connection.resumed,
       }));
+      bridge.replayIdentity();
       const snapshot = bridge.mediaSnapshot();
       socket.send(JSON.stringify({
         type: "runtime.media.snapshot",

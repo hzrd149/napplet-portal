@@ -618,6 +618,19 @@ export function createPortalRuntime(
         return true;
       };
       return {
+        replayIdentity() {
+          const active = accounts.active;
+          transferSends.get(windowId)?.({
+            type: "identity.changed",
+            identity: active
+              ? {
+                accountId: active.pubkey,
+                pubkey: active.pubkey,
+                status: active.status,
+              }
+              : { accountId: null, pubkey: null, status: "unavailable" },
+          });
+        },
         media(message: unknown, generation?: number) {
           const accountId = accounts.active?.pubkey;
           if (!accountId) {

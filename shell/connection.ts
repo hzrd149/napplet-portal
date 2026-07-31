@@ -239,6 +239,16 @@ export class ConnectionController {
         canRetry: false,
         nextRetryMs: null,
       });
+    } else if (
+      message.type === "runtime.signer.error" ||
+      message.type === "runtime.error" ||
+      message.type === "runtime.auth.required"
+    ) {
+      this.#emit({
+        phase: "failed",
+        canRetry: true,
+        nextRetryMs: null,
+      });
     }
     this.#options.onMessage(message);
   }

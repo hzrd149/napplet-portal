@@ -54,6 +54,25 @@ Deno.test("Fresh composition is singleton, loopback-safe, and starter-free", asy
   );
 });
 
+Deno.test("runtime bridge replays current identity after transport opens", () => {
+  const runtime = createPortalRuntime({ fixture });
+  runtime.signIn("a".repeat(64));
+  const messages: Record<string, unknown>[] = [];
+  const bridge = runtime.openWindow(
+    "connection",
+    "window",
+    {},
+    (message) => messages.push(message),
+  );
+
+  bridge.replayIdentity();
+
+  const identity = messages[0]?.identity as Record<string, unknown> | undefined;
+  assert(messages[0]?.type === "identity.changed", "identity is replayed");
+  assert(identity?.pubkey === "a".repeat(64), "replay uses current account");
+  runtime.destroy();
+});
+
 Deno.test("supplied Security Lab traverses verified mount, handshake, identity, and continuing stream", async () => {
   const runtime = createPortalRuntime({ fixture });
   const trace: string[] = [];

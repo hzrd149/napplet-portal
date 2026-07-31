@@ -197,7 +197,7 @@ export class SignerConnectionService {
       this.state$.next(this.#pending);
       return;
     }
-    if (identity.pubkey && identity.status !== "unavailable") {
+    if (identity.pubkey && identity.status === "active") {
       this.state$.next(Object.freeze({ status: "active", identity }));
       return;
     }

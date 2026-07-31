@@ -1,8 +1,8 @@
 ---
-status: diagnosed
+status: resolved
 trigger: "Investigate why the main loading screen never disappears, even after I connect a signer. The status draw is stuck in the status message saying the napplet is being verified. This could mean either it is not being loaded or there is no default one to load now that we have the installed list."
 created: 2026-07-31
-updated: 2026-07-31T00:10:00Z
+updated: 2026-07-31T00:45:00Z
 ---
 
 # Debug Session: Loading Screen Never Clears
@@ -21,14 +21,14 @@ updated: 2026-07-31T00:10:00Z
 - **hypothesis:** Confirmed: production artifact resolution fails because the configured fixture blob is unavailable, the backend emits `runtime.signer.error`, and the connection controller ignores that terminal error while remaining in `bootstrapping`. Separate projection defects explain the misleading signed-out drawer and sign-in bounce.
 - **test:** Production build/start plus a real Chromium trace of Home and `/signin` WebSocket frames.
 - **expecting:** Confirmed by observed `runtime.signer.error`, persistent ritual, `signer.active` redirect, and backend artifact resolver logs.
-- **next_action:** Return root-cause-only diagnosis; do not modify application code.
+- **next_action:** Resolved; regression tests, full quality gates, build, and revert-and-reconfirm all passed.
 - **reasoning_checkpoint:**
   hypothesis: The loading ritual remains forever when artifact resolution fails because `ConnectionController` enters bootstrapping before `runtime.start` but recognizes only `runtime.artifact` as terminal; it ignores `runtime.signer.error`.
   confirming_evidence:
     - Chromium received `runtime.signer.error` after `runtime.start`, while the DOM still showed "The napplet is being verified" three seconds later.
     - Backend logs show artifact resolution failed with `blob unavailable`, and no `runtime.artifact` was emitted.
   falsification_test: Receipt of `runtime.signer.error` causing the controller to leave bootstrapping or hide the ritual would disprove the code-path claim; the observed controller and DOM did neither.
-  fix_rationale: Diagnose-only mode; a future fix must make runtime failure messages terminal/actionable and separately correct initial identity/offline signer projection.
+  fix_rationale: Marking runtime terminal messages failed ends the false bootstrapping state while preserving manual retry; projecting only truly active identities prevents false sign-in success; replaying identity in the socket-open seam ensures the already-open transport receives the initial snapshot.
   blind_spots: The external reason each configured Blossom source lacked the blob was not decomposed beyond the resolver's deterministic `blob unavailable` result.
   candidate_causes:
     - code: ConnectionController handles `runtime.artifact` but not `runtime.signer.error`, `runtime.error`, or `runtime.auth.required`; initial identity is also emitted before WebSocket open and can be lost.
@@ -106,6 +106,12 @@ updated: 2026-07-31T00:10:00Z
 ## Resolution
 
 - **root_cause:** The configured fixture artifact blob is unavailable from the production resolver, causing the backend to emit `runtime.signer.error`; `ConnectionController` has no transition for that (or other runtime terminal errors), so it remains in `bootstrapping` and the loading ritual says "The napplet is being verified" indefinitely. Independently, the restored remote signer is offline but `SignerConnectionService` projects it as `active`, causing `/signin` to redirect Home, while the initial `identity.changed` projection is sent during runtime session construction before the WebSocket `open` handler and is lost, leaving the Home account drawer signed out.
-- **fix:** Diagnose only; no fix requested.
-- **verification:** Reproduced against `deno task build` output served by `deno serve`; captured Chromium WebSocket frames, persistent DOM state, sign-in redirect, HTTP signer status, and matching backend artifact-resolution logs.
-- **files_changed:** [.planning/debug/loading-screen-never-clears.md]
+- **fix:** ConnectionController now treats runtime.signer.error, runtime.error, and runtime.auth.required as retryable terminal failures; signer projection now requires an actually active identity; the runtime bridge replays the current identity from the WebSocket open seam; the shell surfaces signer launch errors.
+- **verification:**
+  - target_test: { result: pass, suites: [tests/connection_controller_test.ts, tests/signer_service_test.ts, tests/end_to_end_test.ts, tests/websocket_session_test.ts], oracle_type: specified_and_derived }
+  - mutation_check: { result: skipped, reason_if_skipped: "No Stryker or mutation-test configuration is present." }
+  - no_op_deletion: { result: pass, deletion_justified_by_rca: false }
+  - adjacent_tests: { result: pass, suites_run: [deno_task_check, deno_task_test, deno_task_build, tests/shell_resilience_test.tsx] }
+  - revert_and_reconfirm: { result: pass, bug_returned_on_revert: true, fixed_on_reapply: true }
+  - guardrail_verdict: accepted
+- **files_changed:** [shell/connection.ts, runtime/signer_service.ts, runtime/portal_runtime.ts, routes/api/runtime.ts, islands/NappletShell.tsx, tests/connection_controller_test.ts, tests/signer_service_test.ts, tests/end_to_end_test.ts, tests/websocket_session_test.ts, .planning/debug/loading-screen-never-clears.md]

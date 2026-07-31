@@ -1453,6 +1453,17 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
       setNotice("integrity");
       return;
     }
+    if (message.type === "runtime.signer.error") {
+      debug("runtime signer error");
+      setConnecting(false);
+      setRuntimeError(
+        typeof message.error === "string"
+          ? message.error
+          : "Verified napplet could not be opened",
+      );
+      setNotice("integrity");
+      return;
+    }
     if (
       message.type !== "runtime.artifact" ||
       typeof message.srcdoc !== "string" ||
