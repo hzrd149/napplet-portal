@@ -5,6 +5,9 @@ import {
 } from "./resource_policy.ts";
 import { TRANSFER_POLICY } from "./transport.ts";
 import { pinnedFetch } from "./pinned_fetch.ts";
+import { debug as rootDebug, shortId } from "../debug.ts";
+
+const debug = rootDebug.extend("resource");
 
 type FetchLike = (
   input: URL,
@@ -388,14 +391,13 @@ export class ResourceService {
     if (!/^[0-9a-f]{64}$/.test(hash)) {
       throw new ResourceServiceError("blocked-by-policy");
     }
-    return await this.#withDeadline({
-      blossomServers: servers,
-      authorPubkey,
-      signal,
-    }, async (bounded) =>
-      this.#release(
-        await this.#blossomRead(hash, bounded),
-      ));
+    return this.#release(
+      await this.#blossomRead(hash, {
+        blossomServers: servers,
+        authorPubkey,
+        signal,
+      }),
+    );
   }
 
   async blossomBytes(
@@ -407,11 +409,11 @@ export class ResourceService {
     if (!/^[0-9a-f]{64}$/.test(hash)) {
       throw new ResourceServiceError("blocked-by-policy");
     }
-    return await this.#withDeadline({
+    return (await this.#blossomRead(hash, {
       blossomServers: servers,
       authorPubkey,
       signal,
-    }, async (bounded) => (await this.#blossomRead(hash, bounded)).bytes);
+    })).bytes;
   }
 
   async #blossomRead(
@@ -440,23 +442,60 @@ export class ResourceService {
       });
     }
 
+    debug(
+      "blossom read candidates hash=%s local=%s upstream=%d",
+      shortId(hash),
+      Boolean(this.#localCacheUrl),
+      servers.length,
+    );
     let lastError: ResourceServiceError | undefined;
-    for (const candidate of candidates) {
+    for (const [index, candidate] of candidates.entries()) {
+      const timeout = new AbortController();
+      const timer = setTimeout(() => timeout.abort(), this.#deadlineMs);
+      const signal = options.signal
+        ? AbortSignal.any([options.signal, timeout.signal])
+        : timeout.signal;
       try {
+        debug(
+          "blossom fetch started hash=%s candidate=%d class=%s url=%s",
+          shortId(hash),
+          index + 1,
+          candidate.destinationClass,
+          candidate.url.origin,
+        );
         const read = await this.#fetchBytes(
           candidate.url,
           candidate.destinationClass,
-          options.deadlineSignal ?? options.signal ??
-            new AbortController().signal,
+          signal,
           options.signal,
         );
         if (read.sha256 !== hash) {
           lastError = new ResourceServiceError("decode-failed");
+          debug(
+            "blossom fetch hash mismatch hash=%s candidate=%d",
+            shortId(hash),
+            index + 1,
+          );
           continue;
         }
+        debug(
+          "blossom fetch complete hash=%s candidate=%d bytes=%d",
+          shortId(hash),
+          index + 1,
+          read.bytes.byteLength,
+        );
         return read;
       } catch (cause) {
         lastError = errorFrom(cause);
+        debug(
+          "blossom fetch failed hash=%s candidate=%d code=%s",
+          shortId(hash),
+          index + 1,
+          lastError.code,
+        );
+        if (options.signal?.aborted) throw lastError;
+      } finally {
+        clearTimeout(timer);
       }
     }
     throw lastError ?? new ResourceServiceError("not-found");

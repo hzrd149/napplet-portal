@@ -15,6 +15,8 @@ const publicDns: ResolveDns = (_hostname, recordType) =>
   Promise.resolve(recordType === "A" ? ["93.184.216.34"] : []);
 
 const PNG = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10, 1, 2, 3]);
+const ABC_HASH =
+  "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad";
 
 function publicPolicy() {
   return new ResourceDestinationPolicy({ resolveDns: publicDns });
@@ -188,6 +190,47 @@ Deno.test("Blossom hash reads retry corrupt cache upstream and verify integrity"
     "BUD-10 xs hint",
   );
   assert(calls[1] === `https://one.example/${hash}`, "upstream order");
+});
+
+Deno.test("Blossom artifact reads try every configured server with per-source timeout", async () => {
+  const calls: string[] = [];
+  const service = new ResourceService({
+    policy: publicPolicy(),
+    deadlineMs: 5,
+    fetch: (input, init) => {
+      const url = String(input);
+      calls.push(url);
+      if (url.startsWith("https://one.example/")) {
+        return new Promise((_resolve, reject) =>
+          init?.signal?.addEventListener(
+            "abort",
+            () => reject(new DOMException("aborted", "AbortError")),
+            { once: true },
+          )
+        );
+      }
+      if (url.startsWith("https://two.example/")) {
+        return Promise.resolve(new Response(null, { status: 404 }));
+      }
+      return Promise.resolve(new Response("abc"));
+    },
+  });
+
+  const bytes = await service.blossomBytes(ABC_HASH, [
+    "https://one.example/",
+    "https://two.example/",
+    "https://three.example/",
+  ]);
+
+  assert(new TextDecoder().decode(bytes) === "abc", "third server must win");
+  assert(
+    calls.join("\n") === [
+      `https://one.example/${ABC_HASH}`,
+      `https://two.example/${ABC_HASH}`,
+      `https://three.example/${ABC_HASH}`,
+    ].join("\n"),
+    "every configured server must be attempted in order",
+  );
 });
 
 Deno.test("ordered bytesMany retains successful siblings and caps the envelope", async () => {
