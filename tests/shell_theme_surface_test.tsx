@@ -134,3 +134,34 @@ Deno.test("napplet chrome and profile presentation share shell tokens", async ()
     "connection failure is not color-only",
   );
 });
+
+Deno.test("server-rendered routes consume tokens without theme-color conflicts", async () => {
+  assertTokenized([
+    ".settings-frame",
+    ".settings-form fieldset",
+    ".settings-field textarea",
+    ".settings-error-summary",
+    ".settings-success",
+    ".cache-health",
+    ".settings-save",
+    ".sign-in-view",
+    ".sign-in-panel",
+    ".sign-in-panel input",
+    ".primary-button",
+    ".warning-badge",
+    ".form-error",
+  ]);
+  for (
+    const route of [
+      "routes/index.tsx",
+      "routes/signin.tsx",
+      "routes/settings.tsx",
+    ]
+  ) {
+    const source = await Deno.readTextFile(route);
+    assert(
+      !source.includes('name="theme-color"'),
+      `${route} must defer theme-color ownership to the app wrapper`,
+    );
+  }
+});

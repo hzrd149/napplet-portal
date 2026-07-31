@@ -110,4 +110,6 @@ Deno.test("settings uses exact success and validation summaries", () => {
     failure,
     "Some settings could not be saved. Review the highlighted fields and try again.",
   );
+  assertStringIncludes(failure, 'class="settings-error-summary" role="alert"');
+  assertStringIncludes(success, 'class="settings-success" role="status"');
 });
