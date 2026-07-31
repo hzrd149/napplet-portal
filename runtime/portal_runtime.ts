@@ -25,6 +25,7 @@ import {
 } from "./relay_adapter.ts";
 import type { RuntimeSettingsService } from "./settings.ts";
 import type { CatalogProjection, CatalogService } from "./catalog.ts";
+import { decodeArchetypeDeclarations } from "./catalog.ts";
 import type { CatalogCommand } from "./transport.ts";
 import type {
   DispatcherMessage,
@@ -267,6 +268,7 @@ export function createProductionCatalogResolver(
         resolved.identity.dTag,
       version: String(event.created_at),
       capabilities: Object.freeze([...resolved.resolved.manifest.requires]),
+      declarations: decodeArchetypeDeclarations(event.tags),
       launch: Object.freeze({
         dTag: resolved.identity.dTag,
         aggregateHash: resolved.identity.aggregateHash,
@@ -404,6 +406,7 @@ export function createPortalRuntime(
         title,
         version: String(fixture.manifestEvent.created_at),
         capabilities: Object.freeze([...resolved.manifest.requires]),
+        declarations: decodeArchetypeDeclarations(fixture.manifestEvent.tags),
         launch: Object.freeze({
           dTag: resolved.dTag,
           aggregateHash: resolved.aggregateHash,

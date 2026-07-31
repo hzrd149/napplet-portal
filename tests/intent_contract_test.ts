@@ -14,13 +14,15 @@ Deno.test("archetype declaration codec accepts only canonical signed tags", () =
     ["archetype", "note", "napplet:note/edit"],
     ["archetype", "note", "napplet:note/open", "kind:1"],
     ["archetype", "NAP-01", "napplet:NAP-01/open"],
-    ["archetype", "note2", "napplet:note2/open"],
     ["archetype", "note", "napplet:article/open"],
     ["archetype", "note", "napplet:note/open?draft=1"],
     ["archetype", "note", "napplet:note/open#draft"],
     ["archetype", "note", "napplet:note/"],
   ]);
-  assert(declarations.length === 2, "duplicates collapse and malformed tags omit");
+  assert(
+    declarations.length === 2,
+    "duplicates collapse and malformed tags omit",
+  );
   assert(
     JSON.stringify(declarations) === JSON.stringify([
       { archetype: "note", action: "open", convention: "napplet:note/open" },

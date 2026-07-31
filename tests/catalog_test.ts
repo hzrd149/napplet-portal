@@ -40,6 +40,7 @@ function artifact(eventId: string): VerifiedCatalogArtifact {
     title: eventId === pendingId ? "Security Lab Next" : "Security Lab",
     version: eventId === pendingId ? "2" : "1",
     capabilities: eventId === pendingId ? ["identity", "relay"] : ["identity"],
+    declarations: [],
     launch: {
       dTag: "security-lab",
       aggregateHash: "c".repeat(64),

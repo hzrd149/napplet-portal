@@ -10,6 +10,43 @@ export const CATALOG_IDENTIFIER = "org.napplet.portal:installed";
 
 const HEX_64 = /^[0-9a-f]{64}$/;
 const NIP_5A_COORDINATE = /^\d+:[0-9a-f]{64}:[^:\s]+$/;
+const ARCHETYPE_SLUG = /^[a-z][a-z0-9-]*$/;
+const CONVENTION = /^napplet:([^/?#\s]+)\/([^/?#\s]+)$/;
+const COMPONENT_LIMIT = 128;
+
+export interface ArchetypeDeclaration {
+  readonly archetype: string;
+  readonly action: string;
+  readonly convention: string;
+}
+
+export function decodeArchetypeDeclarations(
+  tags: readonly (readonly string[])[],
+): readonly ArchetypeDeclaration[] {
+  const declarations: ArchetypeDeclaration[] = [];
+  const seen = new Set<string>();
+  for (const tag of tags) {
+    if (
+      tag.length !== 3 || tag[0] !== "archetype" ||
+      tag[1].length > COMPONENT_LIMIT || tag[2].length > COMPONENT_LIMIT ||
+      !ARCHETYPE_SLUG.test(tag[1])
+    ) continue;
+    const match = CONVENTION.exec(tag[2]);
+    if (
+      !match || match[1] !== tag[1] || match[2].length > COMPONENT_LIMIT ||
+      !ARCHETYPE_SLUG.test(match[2])
+    ) continue;
+    const key = `${tag[1]}\0${tag[2]}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    declarations.push(Object.freeze({
+      archetype: tag[1],
+      action: match[2],
+      convention: tag[2],
+    }));
+  }
+  return Object.freeze(declarations);
+}
 
 export interface InstalledNappletEntry {
   readonly coordinate: string;
@@ -26,6 +63,7 @@ export interface VerifiedCatalogArtifact {
   readonly title: string;
   readonly version: string;
   readonly capabilities: readonly string[];
+  readonly declarations: readonly ArchetypeDeclaration[];
   readonly launch: {
     readonly dTag: string;
     readonly aggregateHash: string;
@@ -167,6 +205,7 @@ export class CatalogService {
   readonly #listeners = new Set<() => void>();
   #projection: CatalogProjection = EMPTY;
   readonly #inflight = new Map<string, Promise<void>>();
+  readonly #verified = new Map<string, VerifiedCatalogArtifact>();
   readonly #queue: Array<() => Promise<void>> = [];
   #activeJobs = 0;
 
@@ -204,11 +243,42 @@ export class CatalogService {
     );
   }
 
+  authoritySnapshot(): {
+    readonly accountPubkey: string | null;
+    readonly catalogEventId: string | null;
+    readonly artifacts: readonly {
+      readonly coordinate: string;
+      readonly acceptedManifestEventId: string;
+      readonly artifact: VerifiedCatalogArtifact;
+    }[];
+  } {
+    this.#refresh();
+    const artifacts = this.#projection.entries.flatMap((entry) => {
+      if (entry.resolution !== "ready") return [];
+      const artifact = this.#verified.get(
+        `${this.#projection.catalogEventId}:${entry.coordinate}:${entry.acceptedManifestEventId}`,
+      );
+      return artifact
+        ? [{
+          coordinate: entry.coordinate,
+          acceptedManifestEventId: entry.acceptedManifestEventId,
+          artifact,
+        }]
+        : [];
+    });
+    return Object.freeze({
+      accountPubkey: this.options.identity().pubkey,
+      catalogEventId: this.#projection.catalogEventId,
+      artifacts: Object.freeze(artifacts),
+    });
+  }
+
   retry(): void {
     this.#refresh(true);
   }
 
   resetAccount(): void {
+    this.#verified.clear();
     this.#projection = EMPTY;
     this.#notify();
   }
@@ -380,6 +450,10 @@ export class CatalogService {
         capabilities: Object.freeze([...verified.capabilities]),
       })
       : Object.freeze({ ...expected, resolution: "unavailable" });
+    const verifiedKey =
+      `${catalogEventId}:${expected.coordinate}:${expected.acceptedManifestEventId}`;
+    if (verified) this.#verified.set(verifiedKey, verified);
+    else this.#verified.delete(verifiedKey);
     const settled = entries.every((entry) => entry.resolution !== "pending");
     this.#projection = Object.freeze({
       catalogEventId,
