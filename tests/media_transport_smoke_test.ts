@@ -134,6 +134,9 @@ Deno.test({
     const stderr = new Response(child.stderr).text();
     const clients: Client[] = [];
     let failure: unknown;
+    let status: Deno.CommandStatus | undefined;
+    let out = "";
+    let err = "";
     try {
       await waitForHttp(`${origin}/`, child);
       const signIn = await fetch(`${origin}/api/signin/nsec`, {
@@ -319,27 +322,27 @@ Deno.test({
     } catch (error) {
       failure = error;
     } finally {
-      console.log(`media smoke scenario completed=${failure === undefined}`);
-      if (failure) console.error(failure);
       for (const client of clients) {
         if (client.socket.readyState < ClientWebSocket.CLOSING) {
           client.socket.close();
         }
       }
-      await new Deno.Command("kill", {
-        args: ["-TERM", String(child.pid)],
-        stdout: "null",
-        stderr: "null",
-      }).output();
-      const status = await child.status;
-      const [out, err] = await Promise.all([stdout, stderr]);
-      await Deno.remove(temp, { recursive: true });
-      if (failure) {
-        throw new Error(
-          `production smoke failed (exit ${status.code})\nstdout:\n${out}\nstderr:\n${err}`,
-          { cause: failure },
-        );
+      try {
+        child.kill("SIGKILL");
+      } catch {
+        // The isolated production server may already have exited.
       }
+      status = await child.status;
+      [out, err] = await Promise.all([stdout, stderr]);
+      await Deno.remove(temp, { recursive: true });
+    }
+    if (failure) {
+      throw new Error(
+        `production smoke failed (exit ${
+          status?.code ?? "unknown"
+        })\nstdout:\n${out}\nstderr:\n${err}`,
+        { cause: failure },
+      );
     }
   },
 });
