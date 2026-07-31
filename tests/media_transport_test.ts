@@ -25,18 +25,24 @@ Deno.test("snapshot-first two socket tracer validates disjoint portal controls",
     !decodeMediaMessage(transfer).ok,
     "portal transfer cannot enter canonical MEDIA decoding",
   );
-  const forwarded = decodeClientMessage(JSON.stringify({
-    type: "runtime.forward",
-    connectionId: "c1",
-    windowId: "w1",
-    generation: 3,
-    message: {
-      type: "media.state",
-      sessionId: "session-1",
-      status: "playing",
-    },
-  }), owner);
-  assert(forwarded.ok && forwarded.value.generation === 3, "outer generation retained");
+  const forwarded = decodeClientMessage(
+    JSON.stringify({
+      type: "runtime.forward",
+      connectionId: "c1",
+      windowId: "w1",
+      generation: 3,
+      message: {
+        type: "media.state",
+        sessionId: "session-1",
+        status: "playing",
+      },
+    }),
+    owner,
+  );
+  assert(
+    forwarded.ok && forwarded.value.generation === 3,
+    "outer generation retained",
+  );
 });
 
 Deno.test("snapshot-first two socket tracer rejects malformed and nested portal messages", () => {
@@ -51,17 +57,20 @@ Deno.test("snapshot-first two socket tracer rejects malformed and nested portal 
     "negative generations fail closed",
   );
   assert(
-    !decodeClientMessage(JSON.stringify({
-      type: "runtime.forward",
-      connectionId: "c1",
-      windowId: "w1",
-      message: {
-        type: "runtime.media.stop",
-        id: "stop-1",
-        sessionId: "session-1",
-        generation: 1,
-      },
-    }), owner).ok,
+    !decodeClientMessage(
+      JSON.stringify({
+        type: "runtime.forward",
+        connectionId: "c1",
+        windowId: "w1",
+        message: {
+          type: "runtime.media.stop",
+          id: "stop-1",
+          sessionId: "session-1",
+          generation: 1,
+        },
+      }),
+      owner,
+    ).ok,
     "portal controls are never forwarded to an iframe",
   );
 });
