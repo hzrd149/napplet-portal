@@ -47,6 +47,7 @@ async function manifest(identifier = "second-napplet") {
     content: "",
     tags: [
       ["d", identifier],
+      ["archetype", "note", "napplet:note/open"],
       ["path", "/index.html", blobHash],
       ["x", aggregate, "aggregate"],
       ["server", "https://manifest.example"],
@@ -136,7 +137,8 @@ Deno.test("production resolver previews, approves, and launches an arbitrary exa
   );
   assert(
     launched.ok &&
-      launched.value.launch.srcdoc.includes("Second verified napplet"),
+      launched.value.launch.srcdoc.includes("Second verified napplet") &&
+      launched.value.declarations[0]?.convention === "napplet:note/open",
     "only verified bytes launch",
   );
   eventRuntime.destroy();
