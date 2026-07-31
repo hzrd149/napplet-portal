@@ -1,8 +1,4 @@
-import {
-  assert,
-  assertEquals,
-  assertRejects,
-} from "jsr:@std/assert@1";
+import { assert, assertEquals, assertRejects } from "jsr:@std/assert@1";
 import {
   BlossomTransferAdapter,
   type BlossomUploadSdk,
@@ -43,7 +39,7 @@ Deno.test("adapter hashes bytes and scopes backend authorization to server and h
       assert(options.signal);
       return Promise.resolve(descriptor());
     },
-    parseUploadResponse: (value) => value,
+    parseUploadResponse: (value) => value as ReturnType<typeof descriptor>,
   };
   const adapter = new BlossomTransferAdapter({
     sdk,
@@ -78,7 +74,7 @@ Deno.test("adapter rejects a descriptor that does not match the requested bytes"
     createUploadAuth: () => Promise.resolve({}),
     encodeAuthorizationHeader: () => "Nostr token",
     uploadBlob: () => Promise.resolve({ ...descriptor(), size: 4 }),
-    parseUploadResponse: (value) => value,
+    parseUploadResponse: (value) => value as ReturnType<typeof descriptor>,
   };
   const adapter = new BlossomTransferAdapter({
     sdk,

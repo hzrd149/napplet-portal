@@ -36,6 +36,7 @@
     "applesauce-loaders": "npm:applesauce-loaders@6.2.0",
     "applesauce-relay": "npm:applesauce-relay@6.2.1",
     "applesauce-signers": "npm:applesauce-signers@6.2.2",
+    "blossom-client-sdk": "npm:blossom-client-sdk@5.0.0",
     "fresh": "jsr:@fresh/core@2.3.3",
     "nostr-tools": "npm:nostr-tools@2.24.1",
     "preact": "npm:preact@^10.29.7",

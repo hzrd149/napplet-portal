@@ -11,6 +11,7 @@
     "jsr:@fresh/plugin-vite@1.1.2": "1.1.2",
     "jsr:@grammyjs/debug@~0.3.1": "0.3.1",
     "jsr:@libs/qrcode@3.1.0": "3.1.0",
+    "jsr:@std/assert@1": "1.0.16",
     "jsr:@std/assert@1.0.16": "1.0.16",
     "jsr:@std/bytes@^1.0.6": "1.0.6",
     "jsr:@std/dotenv@~0.225.5": "0.225.7",
@@ -53,6 +54,7 @@
     "npm:applesauce-loaders@6.2.0": "6.2.0",
     "npm:applesauce-relay@6.2.1": "6.2.1",
     "npm:applesauce-signers@6.2.2": "6.2.2_@capacitor+core@7.6.8",
+    "npm:blossom-client-sdk@5.0.0": "5.0.0",
     "npm:esbuild-wasm@~0.25.11": "0.25.12",
     "npm:esbuild@0.25.7": "0.25.7",
     "npm:esbuild@~0.25.5": "0.25.12",
@@ -907,6 +909,9 @@
     "@noble/hashes@1.3.2": {
       "integrity": "sha512-MVC8EAQp7MvEcm30KWENFjgR+Mkmf+D189XJTkFIlwohU5hcBbn1ZkKq7KVTi2Hme3PMGF390DaL52beVrIihQ=="
     },
+    "@noble/hashes@1.8.0": {
+      "integrity": "sha512-jCs9ldd7NwzpgXDIf6P3+NrHh9/sD6CQdxHyjQI+h/6rDNo88ypBxxz45UDuZHz9r3tNz7N/VInSVoVdtXEI4A=="
+    },
     "@noble/hashes@2.0.1": {
       "integrity": "sha512-XlOlEbQcE9fmuXxrVTXCTlG2nlRXa9Rj3rr5Ue/+tX+nmkgbX720YHh0VR3hBF9xDvwnb8D2shVGOwNx+ulArw=="
     },
@@ -1314,6 +1319,12 @@
     "baseline-browser-mapping@2.11.7": {
       "integrity": "sha512-APw5YuIQAg6L9w4sHDI6j26DGFJI6RpYOhnkMPdC9lWbkKvsyPHzDsve1yd73lk21yz7Y09Kci8B2Pp9FonzWA==",
       "bin": true
+    },
+    "blossom-client-sdk@5.0.0": {
+      "integrity": "sha512-xz7w6eBQv6uiNK9ogh5AymnzCAohiU029XySpKxJyG7RsDHkoru+xoZhY55tiIOyWFX/5s8pip4hVh5hO1PN/Q==",
+      "dependencies": [
+        "@noble/hashes@1.8.0"
+      ]
     },
     "browserslist@4.28.7": {
       "integrity": "sha512-JxV13hNrFxqjOc8alRbq9dK1MM79NEXYpma2B2J4wAtpWS5zIEIKqWPGCl7N4o7Uc7B7itylh7SuDujATRyyTw==",
@@ -1777,6 +1788,7 @@
       "npm:applesauce-loaders@6.2.0",
       "npm:applesauce-relay@6.2.1",
       "npm:applesauce-signers@6.2.2",
+      "npm:blossom-client-sdk@5.0.0",
       "npm:nostr-tools@2.24.1",
       "npm:preact@^10.29.7",
       "npm:tailwindcss@^4.3.3",
