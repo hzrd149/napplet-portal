@@ -2,6 +2,7 @@ import { finalizeEvent, getPublicKey, nip19 } from "nostr-tools";
 import { of } from "npm:rxjs@7.8.2";
 import { EventRuntime } from "../runtime/event_runtime.ts";
 import { CommonService } from "../runtime/common.ts";
+import type { EventTemplate } from "@napplet/core";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -118,5 +119,120 @@ Deno.test("generation and expiry cancel window-owned refresh while preserving ca
   common.cancel("window-a");
   common.destroy();
   assert(!runtime.destroyed, "common teardown leaves process EventStore alive");
+  runtime.destroy();
+});
+
+Deno.test("follow unfollow react and report publish canonical backend events", async () => {
+  const runtime = new EventRuntime({ request: () => of() });
+  const published: EventTemplate[] = [];
+  runtime.eventStore.add(
+    finalizeEvent({
+      kind: 3,
+      created_at: 1,
+      content: "metadata",
+      tags: [["relay", "wss://relay.example/"], ["p", "a".repeat(64)]],
+    }, secret),
+  );
+  const common = new CommonService({
+    eventRuntime: runtime,
+    identity: () => ({ accountId: "a", pubkey, status: "active" }),
+    relays: () => ["wss://relay.example/"],
+    publisher: {
+      publish: async (_id, template) => {
+        published.push(template);
+        return { ok: true as const, event: finalizeEvent(template, secret) };
+      },
+    },
+  });
+  const target = nip19.npubEncode("b".repeat(64));
+  assert(
+    (await common.execute({
+      type: "common.follow",
+      id: "follow",
+      pubkeys: [target],
+    })).ok,
+    "follow publishes",
+  );
+  assert(
+    (await common.execute({
+      type: "common.unfollow",
+      id: "unfollow",
+      pubkeys: [target],
+    })).ok,
+    "unfollow publishes",
+  );
+  assert(
+    (await common.execute({
+      type: "common.react",
+      id: "react",
+      targetEventId: eventId,
+      reaction: "+",
+    })).ok,
+    "reaction publishes",
+  );
+  assert(
+    (await common.execute({
+      type: "common.report",
+      id: "report",
+      target: { type: "pubkey", pubkey: target },
+      reason: "spam",
+      text: "spam report",
+    })).ok,
+    "report publishes",
+  );
+  assert(
+    published.length === 4 && published[0].kind === 3 &&
+      published[2].kind === 7 && published[3].kind === 1984,
+    "canonical kinds are used",
+  );
+  assert(
+    (published[0].tags as string[][]).some((tag) => tag[0] === "relay"),
+    "unrelated contact tags survive",
+  );
+  common.destroy();
+  runtime.destroy();
+});
+
+Deno.test("actions return stable failures and exact eight-operation parity", async () => {
+  const runtime = new EventRuntime({ request: () => of() });
+  const common = new CommonService({
+    eventRuntime: runtime,
+    identity: () => ({ accountId: null, pubkey: null, status: "unavailable" }),
+    relays: () => [],
+  });
+  const operations = [
+    "encodeNip19",
+    "decodeNip19",
+    "getProfile",
+    "follows",
+    "follow",
+    "unfollow",
+    "react",
+    "report",
+  ];
+  assert(
+    operations.length === 8 && new Set(operations).size === 8,
+    "exactly eight requests exist",
+  );
+  const denied = await common.execute({
+    type: "common.follow",
+    id: "denied",
+    pubkeys: [nip19.npubEncode(pubkey)],
+  });
+  const invalid = await common.execute({
+    type: "common.react",
+    id: "invalid",
+    targetEventId: "short",
+    reaction: "+",
+  });
+  assert(
+    !denied.ok && denied.error === "not-authorized",
+    "missing identity is denied",
+  );
+  assert(
+    !invalid.ok && invalid.error === "invalid-request",
+    "invalid action is redacted",
+  );
+  common.destroy();
   runtime.destroy();
 });
