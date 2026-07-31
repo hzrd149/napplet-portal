@@ -8,7 +8,7 @@ Milestone v1.1 expands the proven backend runtime into a resilient mobile napple
 
 - [x] **Phase 3: Mobile Shell Resilience** — Polish the shell and make runtime connectivity legible and recoverable on mobile. (completed 2026-07-31)
 - [x] **Phase 4: Installed Napplet Discovery** — Install, synchronize, search, and launch trusted napplets from the home catalog. (completed 2026-07-31)
-- [ ] **Phase 5: Resource and Blossom Transfer** — Add bounded resource resolution and explicit multi-server uploads.
+- [x] **Phase 5: Resource and Blossom Transfer** — Add bounded resource resolution and explicit multi-server uploads. (completed 2026-07-31)
 - [ ] **Phase 6: Common Data and Durable Storage** — Expose stream-oriented common Nostr helpers and isolated persistent napplet state.
 - [ ] **Phase 7: Intent Navigation** — Route declared intents to trusted installed handlers across shell surfaces.
 - [ ] **Phase 8: Cross-Tab Media Sessions** — Coordinate one ownership-aware media session across mobile browser tabs.

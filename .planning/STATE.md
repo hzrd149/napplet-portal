@@ -4,17 +4,17 @@ milestone: v1.1
 milestone_name: Runtime & UX Expansion
 current_phase: 5
 current_phase_name: Resource and Blossom Transfer
-status: executing
-stopped_at: Completed 05-02-PLAN.md
-last_updated: "2026-07-31T02:30:12.059Z"
+status: phase_complete
+stopped_at: Completed 05-04-PLAN.md
+last_updated: "2026-07-31T02:46:36.232Z"
 last_activity: 2026-07-31
-last_activity_desc: Completed binary RESOURCE/UPLOAD transport seam and closed policy inspection
+last_activity_desc: Completed Phase 5 RESOURCE and Blossom transfer runtime integration
 progress:
   total_phases: 7
-  completed_phases: 2
-  total_plans: 20
-  completed_plans: 11
-  percent: 29
+  completed_phases: 3
+  total_plans: 23
+  completed_plans: 13
+  percent: 43
 ---
 
 # Project State
@@ -29,9 +29,9 @@ See: .planning/PROJECT.md (updated 2026-07-30)
 ## Current Position
 
 Phase: 5 — Resource and Blossom Transfer
-Plan: 2 of 4 complete
-Status: Ready to execute
-Last activity: 2026-07-31 — Completed binary RESOURCE/UPLOAD transport seam and closed policy inspection
+Plan: 4 of 4 complete
+Status: Phase complete
+Last activity: 2026-07-31 — Completed Phase 5 RESOURCE and Blossom transfer runtime integration
 
 ## Performance Metrics
 
@@ -85,6 +85,7 @@ Last activity: 2026-07-31 — Completed binary RESOURCE/UPLOAD transport seam an
 | Phase 04 P04 | 16min | 2 tasks | 5 files |
 | Phase 05 P01 | 14min | 2 tasks | 5 files |
 | Phase 05 P02 | 11min | 2 tasks | 7 files |
+| Phase 05 P04 | 14min | 2 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -147,6 +148,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase ?]: [Phase 05]: Generate canonical RESOURCE and UPLOAD inspection envelopes from one immutable backend transfer policy snapshot.
 - [Phase ?]: [Phase 05]: Authorize only the exact 127.0.0.1 cache origin as a separate destination class.
 - [Phase ?]: [Phase 05]: Release resource bytes only after streamed size, observed MIME, and SHA-256 policy succeeds.
+- [Phase ?]: [Phase 05]: Bind transfer authority to connection, window, verified napplet identity, and active account.
+- [Phase ?]: [Phase 05]: Preserve transfer work through reconnect grace and abort only on authority invalidation or shutdown.
 
 ### Pending Todos
 
@@ -175,6 +178,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-07-31T02:30:12.045Z
-Stopped at: Completed 05-02-PLAN.md
+Last session: 2026-07-31T02:46:08.395Z
+Stopped at: Completed 05-04-PLAN.md
 Resume file: None

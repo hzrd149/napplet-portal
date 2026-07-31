@@ -18,8 +18,8 @@
 - [x] **RES-02**: Napplet can resolve bounded HTTP(S), Blossom, and BUD-10 resources through the backend without gaining unrestricted network access.
 - [x] **RES-03**: Runtime tries configured local Blossom cache servers before upstream Blossom sources while preserving content hash, MIME, size, redirect, timeout, and SSRF policy checks.
 - [x] **UPL-01**: Napplet can inspect configured upload rails and coarse limits and submit bytes through the pinned NAP-UPLOAD contract.
-- [ ] **UPL-02**: Runtime uploads through a reviewed pinned `blossom-client-sdk` using the user's configured Blossom servers and backend-owned authorization.
-- [ ] **UPL-03**: User receives explicit per-server upload outcomes, including partial failures, and optional local Blossom copying occurs only after required remote upload success.
+- [x] **UPL-02**: Runtime uploads through a reviewed pinned `blossom-client-sdk` using the user's configured Blossom servers and backend-owned authorization.
+- [x] **UPL-03**: User receives explicit per-server upload outcomes, including partial failures, and optional local Blossom copying occurs only after required remote upload success.
 
 ### Common and Storage
 
@@ -81,8 +81,8 @@
 | SHL-01, SHL-02, SHL-03 | Phase 3 | Complete |
 | CON-01, CON-02, CON-03, CON-04 | Phase 3 | Complete |
 | CAT-01, CAT-02, CAT-03, CAT-04 | Phase 4 | Pending |
-| RES-01, RES-02, RES-03 | Phase 5 | Pending |
-| UPL-01, UPL-02, UPL-03 | Phase 5 | Pending |
+| RES-01, RES-02, RES-03 | Phase 5 | Complete |
+| UPL-01, UPL-02, UPL-03 | Phase 5 | Complete |
 | COM-01, COM-02 | Phase 6 | Pending |
 | STO-01, STO-02, STO-03 | Phase 6 | Pending |
 | INT-01, INT-02, INT-03 | Phase 7 | Pending |
