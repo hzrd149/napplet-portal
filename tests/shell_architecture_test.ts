@@ -118,20 +118,21 @@ Deno.test("shell structure reserves content and safe-area navigation rows", asyn
   );
 });
 
-Deno.test("socket close projects current offline and connection state", async () => {
+Deno.test("socket loss preserves signer identity and projects connection truth", async () => {
   const shell = await Deno.readTextFile("islands/NappletShell.tsx");
+  const connection = await Deno.readTextFile("shell/connection.ts");
   assert(
     shell.includes("hasMountedNapplet.current = Boolean(srcdoc)"),
     "close handler must not depend on stale first-render srcdoc",
   );
   assert(
-    shell.includes("setProfile((current)") &&
-      shell.includes('current ? { ...current, status: "offline" } : null'),
-    "close handler must project the current profile offline",
+    connection.includes('phase: canRetry ? "failed" : "retrying"') &&
+      shell.includes('snapshot.phase === "failed"'),
+    "transport loss must use quiet recovery before actionable failure",
   );
   assert(
-    shell.includes('if (hasMountedNapplet.current) setNotice("connection")'),
-    "active napplet must show a connection notice after disconnect",
+    !shell.includes('current ? { ...current, status: "offline" } : null'),
+    "backend transport loss must not mislabel signer identity offline",
   );
 });
 
