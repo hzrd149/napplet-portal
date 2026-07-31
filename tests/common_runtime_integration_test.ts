@@ -47,6 +47,12 @@ function harness(accept = true) {
   });
   runtime.configureTransfers(dispatcher);
   runtime.configureCatalog({
+    authoritySnapshot: () => ({
+      accountPubkey: null,
+      catalogEventId: null,
+      artifacts: [],
+      status: "ready",
+    }),
     project: () =>
       Promise.resolve({
         catalogEventId: "catalog",

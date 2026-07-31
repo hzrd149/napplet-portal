@@ -232,6 +232,12 @@ Deno.test("catalog launch binds backend authority before full proxy forwarding",
   });
   runtime.configureTransfers(dispatcher);
   runtime.configureCatalog({
+    authoritySnapshot: () => ({
+      accountPubkey: null,
+      catalogEventId: null,
+      artifacts: [],
+      status: "ready",
+    }),
     project: () =>
       Promise.resolve({
         catalogEventId: "catalog",
