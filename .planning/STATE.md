@@ -5,16 +5,16 @@ milestone_name: Runtime & UX Expansion
 current_phase: 3
 current_phase_name: Mobile Shell Resilience
 status: executing
-stopped_at: Completed 03-04-PLAN.md
-last_updated: "2026-07-31T00:38:16.119Z"
+stopped_at: Completed 03-05-PLAN.md
+last_updated: "2026-07-31T00:42:39.656Z"
 last_activity: 2026-07-31
 last_activity_desc: Completed connection resilience and constellation presentation
 progress:
   total_phases: 7
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 5
-  completed_plans: 4
-  percent: 0
+  completed_plans: 5
+  percent: 14
 ---
 
 # Project State
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-07-30)
 ## Current Position
 
 Phase: 3 — Mobile Shell Resilience
-Plan: 4 of 5
+Plan: 5 of 5
 Status: In progress — Plan 03-01 complete
 Last activity: 2026-07-31 — Completed connection resilience and constellation presentation
 
@@ -76,6 +76,7 @@ Last activity: 2026-07-31 — Completed connection resilience and constellation 
 | Phase 03 P02 | 10min | 2 tasks | 9 files |
 | Phase 03 P03 | 8min | 2 tasks | 6 files |
 | Phase 03 P04 | 6min | 3 tasks | 6 files |
+| Phase 03 P05 | 3min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -123,6 +124,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase ?]: [Phase 03]: One stable pre-paint script owns document theme and browser theme-color without crossing the napplet boundary.
 - [Phase ?]: [Phase 03]: Resolve every shell color through one closed semantic token vocabulary under html[data-theme], without adding component theme state.
 - [Phase ?]: [Phase 03]: Leave routes/_app.tsx as the sole owner of browser theme-color metadata.
+- [Phase ?]: [Phase 03]: Stable geometry identifiers mechanically link the ready PortalMark to the static SVG asset.
+- [Phase ?]: [Phase 03]: The canonical square SVG is the sole favicon; the stale Fresh ICO fallback is removed.
 
 ### Pending Todos
 
@@ -151,6 +154,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-07-31T00:38:16.109Z
-Stopped at: Completed 03-04-PLAN.md
+Last session: 2026-07-31T00:42:39.645Z
+Stopped at: Completed 03-05-PLAN.md
 Resume file: None
