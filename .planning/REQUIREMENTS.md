@@ -10,7 +10,7 @@
 - [x] **CAT-01**: User can install a napplet by submitting a valid `naddr` and approving the resolved verified manifest.
 - [x] **CAT-02**: User can see installed napplets on the home page with partial, stale, empty, loading, and error states preserved during synchronization.
 - [x] **CAT-03**: User can launch an installed napplet only from its accepted manifest event identity.
-- [ ] **CAT-04**: User can search installed napplets on the home page by meaningful manifest metadata without waiting for relay synchronization to finish.
+- [x] **CAT-04**: User can search installed napplets on the home page by meaningful manifest metadata without waiting for relay synchronization to finish.
 
 ### Resource and Upload
 

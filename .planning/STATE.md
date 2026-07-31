@@ -5,16 +5,16 @@ milestone_name: Runtime & UX Expansion
 current_phase: 4
 current_phase_name: Installed Napplet Discovery
 status: executing
-stopped_at: Completed 04-03-PLAN.md
-last_updated: "2026-07-31T01:31:19.483Z"
+stopped_at: Completed 04-04-PLAN.md
+last_updated: "2026-07-31T01:40:15.128Z"
 last_activity: 2026-07-31
 last_activity_desc: Completed Phase 4 Plan 01 backend catalog authority
 progress:
   total_phases: 7
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 9
-  completed_plans: 8
-  percent: 14
+  completed_plans: 9
+  percent: 29
 ---
 
 # Project State
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-07-30)
 ## Current Position
 
 Phase: 4 — Installed Napplet Discovery
-Plan: 3 of 4 complete
+Plan: 4 of 4 complete
 Status: Ready to execute
 Last activity: 2026-07-31 — Completed Phase 4 Plan 01 backend catalog authority
 
@@ -81,6 +81,7 @@ Last activity: 2026-07-31 — Completed Phase 4 Plan 01 backend catalog authorit
 | Phase 04 P01 | 14min | 2 tasks | 4 files |
 | Phase 04 P02 | 7min | 2 tasks | 5 files |
 | Phase 04 P03 | 12min | 2 tasks | 7 files |
+| Phase 04 P04 | 16min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -137,6 +138,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase ?]: [Phase 04]: Catalog projections contain display metadata only; executable bytes cross the WebSocket solely in a correlated successful launch result.
 - [Phase ?]: [Phase 04]: Every socket generation uses a bounded 32-entry command registry settled on result, timeout, replacement, closure, or teardown.
 - [Phase ?]: [Phase 04]: Catalog status travels independently from optional projection data so transient errors preserve last-good cards.
+- [Phase ?]: [Phase 04]: Keep the raw catalog query in the shell and derive visible entries synchronously without transport work.
+- [Phase ?]: [Phase 04]: Bind immutable install review to its source catalog generation and clear input only after accepted approval.
 
 ### Pending Todos
 
@@ -165,6 +168,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-07-31T01:31:19.470Z
-Stopped at: Completed 04-03-PLAN.md
+Last session: 2026-07-31T01:40:15.115Z
+Stopped at: Completed 04-04-PLAN.md
 Resume file: None
