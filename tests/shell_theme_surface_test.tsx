@@ -98,3 +98,39 @@ Deno.test("reusable home and account surfaces consume semantic tokens", () => {
     !/transition:\s*(?:all|[^;]*(?:color|background|border))/.test(styles),
   );
 });
+
+Deno.test("napplet chrome and profile presentation share shell tokens", async () => {
+  assertTokenized([
+    ".connection-ritual",
+    ".connection-sheet-backdrop",
+    ".connection-sheet",
+    ".portal-shell",
+    ".profile-card",
+    ".profile-avatar-fallback",
+    ".signer-status",
+    ".shell-notice",
+    ".stream-status",
+    ".bottom-nav",
+  ]);
+  const shell = await Deno.readTextFile("islands/NappletShell.tsx");
+  assert(
+    shell.match(/<NappletFrame/g)?.length === 1,
+    "theme application must retain one mounted napplet frame",
+  );
+  assert(
+    !shell.includes("themePreference"),
+    "shell must not own a second theme state",
+  );
+  assert(
+    shell.includes('aria-live="polite"'),
+    "runtime state keeps text semantics",
+  );
+  assert(
+    styles.includes('data-state="failed"'),
+    "connection failure keeps geometry state",
+  );
+  assert(
+    styles.includes("stroke-dasharray"),
+    "connection failure is not color-only",
+  );
+});
