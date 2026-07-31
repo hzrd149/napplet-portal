@@ -43,7 +43,7 @@
 
 - [ ] **SHL-01**: User can select or follow system dark/light theme across server-rendered shell views and runtime states.
 - [ ] **SHL-02**: User sees a Napplet Portal SVG icon instead of Fresh starter branding.
-- [ ] **SHL-03**: User sees sign-in/account controls in a home-page header card and a compact bottom navigation with home and current-account controls while a napplet is open.
+- [x] **SHL-03**: User sees sign-in/account controls in a home-page header card and a compact bottom navigation with home and current-account controls while a napplet is open.
 - [x] **CON-01**: User sees a polished cyberpunk connection sequence driven by actual pending, connected, bootstrapping, ready, retry, and failure states, with reduced-motion and accessible status support.
 - [x] **CON-02**: User sees a compact bottom-navigation indicator reflecting the current tab's backend runtime connection state.
 - [x] **CON-03**: A disconnected or resumed mobile tab reconnects automatically with capped exponential backoff and jitter while preserving the existing reconnect-token/grace semantics.

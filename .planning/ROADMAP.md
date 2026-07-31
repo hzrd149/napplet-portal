@@ -20,7 +20,13 @@ Milestone v1.1 expands the proven backend runtime into a resilient mobile napple
 
 **Goal:** Users can understand and recover the mobile shell's backend connection while using coherent portal navigation and branding.
 **Requirements:** SHL-01, SHL-02, SHL-03, CON-01, CON-02, CON-03, CON-04
-**Plans:** 1/5 complete
+**Plans:** 2/5 plans executed
+
+- [x] 03-01-PLAN.md
+- [x] 03-02-PLAN.md
+- [ ] 03-03-PLAN.md
+- [ ] 03-04-PLAN.md
+- [ ] 03-05-PLAN.md
 
 **Success Criteria:**
 
