@@ -4,26 +4,48 @@ import {
   auditContractParity,
   CONTRACT_REGISTRY,
   type ContractRow,
+  expandContractMatrix,
 } from "../runtime/nap_contract_registry.ts";
 
+const canonical = expandContractMatrix(matrix as never);
+
 Deno.test("pinned 0.31.0 ten-domain matrix exactly matches production registry", () => {
-  assertEquals(auditContractParity(matrix as ContractRow[], CONTRACT_REGISTRY), {
+  assertEquals(auditContractParity(canonical, CONTRACT_REGISTRY), {
     blockers: [],
-    canonicalCount: matrix.length,
+    canonicalCount: canonical.length,
     registeredCount: CONTRACT_REGISTRY.length,
     domains: 10,
   });
 });
 
+Deno.test("fixture literals are extracted exactly from pinned NAP declarations", async () => {
+  for (const domain of matrix.filter((entry) => entry.domain !== "shell")) {
+    const moduleUrl = import.meta.resolve(`@napplet/nap/${domain.domain}`);
+    const declarationUrl = new URL("./types.d.ts", moduleUrl);
+    const declaration = await Deno.readTextFile(declarationUrl);
+    const extracted = [...declaration.matchAll(/type: '([^']+)'/g)]
+      .map((match) => match[1]).filter((value) =>
+        value.startsWith(`${domain.domain}.`)
+      );
+    assertEquals(
+      [...new Set(extracted)].sort(),
+      [...domain.outbound, ...domain.inbound].sort(),
+    );
+  }
+});
+
 Deno.test("contract parity blocks every malformed or silent disposition", () => {
-  const canonical = matrix as ContractRow[];
   const row = canonical[0];
   const mutations: ContractRow[][] = [
     canonical.slice(1),
     [...canonical, { ...row, discriminant: `${row.discriminant}.invented` }],
-    canonical.map((item, index) => index ? item : { ...item, direction: "runtime-to-napplet" }),
+    canonical.map((item, index) =>
+      index ? item : { ...item, direction: "runtime-to-napplet" }
+    ),
     canonical.map((item, index) => index ? item : { ...item, test: "" }),
-    canonical.map((item, index) => index ? item : { ...item, disposition: "SILENT_IGNORE" as never }),
+    canonical.map((item, index) =>
+      index ? item : { ...item, disposition: "SILENT_IGNORE" as never }
+    ),
   ];
   for (const registry of mutations) {
     assertThrows(() => auditContractParity(canonical, registry));

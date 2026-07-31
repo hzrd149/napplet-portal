@@ -10,4 +10,19 @@ Deno.test("all 33 v1.1 requirements map exactly once with honest evidence status
   assertEquals(result.unmapped, []);
   assertEquals(result.illegalStatuses, []);
   assertEquals(result.roadmapMismatches, []);
+  assertEquals(result.claimContradictions, [
+    "CAT-01",
+    "CAT-02",
+    "CAT-03",
+    "CAT-04",
+    "COM-01",
+    "COM-02",
+    "STO-01",
+    "STO-02",
+    "STO-03",
+    "MED-01",
+    "MED-02",
+    "MED-03",
+    "MED-04",
+  ]);
 });

@@ -1,0 +1,170 @@
+[
+  {
+    "domain": "shell",
+    "packageSource": "@napplet/core@0.31.0",
+    "outbound": ["shell.ready"],
+    "inbound": ["shell.init"]
+  },
+  {
+    "domain": "identity",
+    "packageSource": "@napplet/nap@0.31.0",
+    "outbound": [
+      "identity.getPublicKey",
+      "identity.getRelays",
+      "identity.getProfile",
+      "identity.getFollows",
+      "identity.getList",
+      "identity.getZaps",
+      "identity.getMutes",
+      "identity.getBlocked",
+      "identity.getBadges"
+    ],
+    "inbound": [
+      "identity.getPublicKey.result",
+      "identity.changed",
+      "identity.getRelays.result",
+      "identity.getProfile.result",
+      "identity.getFollows.result",
+      "identity.getList.result",
+      "identity.getZaps.result",
+      "identity.getMutes.result",
+      "identity.getBlocked.result",
+      "identity.getBadges.result"
+    ]
+  },
+  {
+    "domain": "relay",
+    "packageSource": "@napplet/nap@0.31.0",
+    "outbound": [
+      "relay.subscribe",
+      "relay.close",
+      "relay.publish",
+      "relay.publishEncrypted",
+      "relay.query"
+    ],
+    "inbound": [
+      "relay.event",
+      "relay.eose",
+      "relay.closed",
+      "relay.publish.result",
+      "relay.publishEncrypted.result",
+      "relay.query.result"
+    ]
+  },
+  {
+    "domain": "outbox",
+    "packageSource": "@napplet/nap@0.31.0",
+    "outbound": [
+      "outbox.getEvent",
+      "outbox.query",
+      "outbox.subscribe",
+      "outbox.close",
+      "outbox.publish",
+      "outbox.resolveRelays"
+    ],
+    "inbound": [
+      "outbox.getEvent.result",
+      "outbox.query.result",
+      "outbox.event",
+      "outbox.closed",
+      "outbox.publish.result",
+      "outbox.resolveRelays.result"
+    ]
+  },
+  {
+    "domain": "resource",
+    "packageSource": "@napplet/nap@0.31.0",
+    "outbound": [
+      "resource.info",
+      "resource.bytes",
+      "resource.bytesMany",
+      "resource.cancel"
+    ],
+    "inbound": [
+      "resource.info.result",
+      "resource.info.error",
+      "resource.bytes.result",
+      "resource.bytes.error",
+      "resource.bytesMany.result",
+      "resource.bytesMany.error"
+    ]
+  },
+  {
+    "domain": "upload",
+    "packageSource": "@napplet/nap@0.31.0",
+    "outbound": ["upload.info", "upload.upload", "upload.status"],
+    "inbound": [
+      "upload.info.result",
+      "upload.upload.result",
+      "upload.status.result",
+      "upload.status.changed"
+    ]
+  },
+  {
+    "domain": "common",
+    "packageSource": "@napplet/nap@0.31.0",
+    "outbound": [
+      "common.encodeNip19",
+      "common.decodeNip19",
+      "common.getProfile",
+      "common.follows",
+      "common.follow",
+      "common.unfollow",
+      "common.react",
+      "common.report"
+    ],
+    "inbound": [
+      "common.encodeNip19.result",
+      "common.decodeNip19.result",
+      "common.getProfile.result",
+      "common.follows.result",
+      "common.follow.result",
+      "common.unfollow.result",
+      "common.react.result",
+      "common.report.result"
+    ]
+  },
+  {
+    "domain": "storage",
+    "packageSource": "@napplet/nap@0.31.0",
+    "outbound": [
+      "storage.get",
+      "storage.set",
+      "storage.remove",
+      "storage.keys"
+    ],
+    "inbound": [
+      "storage.get.result",
+      "storage.set.result",
+      "storage.remove.result",
+      "storage.keys.result"
+    ]
+  },
+  {
+    "domain": "intent",
+    "packageSource": "@napplet/nap@0.31.0",
+    "outbound": ["intent.invoke", "intent.available", "intent.handlers"],
+    "inbound": [
+      "intent.invoke.result",
+      "intent.available.result",
+      "intent.handlers.result",
+      "intent.changed"
+    ]
+  },
+  {
+    "domain": "media",
+    "packageSource": "@napplet/nap@0.31.0",
+    "outbound": [
+      "media.session.create",
+      "media.session.update",
+      "media.session.destroy",
+      "media.state",
+      "media.capabilities"
+    ],
+    "inbound": [
+      "media.session.create.result",
+      "media.command",
+      "media.controls"
+    ]
+  }
+]
