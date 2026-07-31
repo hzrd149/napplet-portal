@@ -4,11 +4,11 @@
 
 Napplet Portal is a Deno Fresh server-side runtime for napplets. It serves lightweight web pages that primarily mount sandboxed napplet iframes while the backend runtime owns complex Nostr logic, application state, relay/blossom operations, account handling, storage, and NAP API execution.
 
-Phase 1 delivered the mobile shell, backend-owned sign-in, verified sandboxed napplet launch, and continuing RELAY/OUTBOX runtime seam. The immediate goal is now to expand that proven boundary into durable backend event, relay, account, and local cache foundations without moving authority into the browser.
+Phase 1 delivered the mobile shell, backend-owned sign-in, verified sandboxed napplet launch, and continuing RELAY/OUTBOX runtime seam. Milestone v1.1 expanded that boundary with installed-app discovery, backend RESOURCE/UPLOAD/COMMON/STORAGE/INTENT/MEDIA capabilities, resilient shell state, and adversarial proxy hardening. Physical-device and one media-browser acceptance flow remain explicit residual risks.
 
-## Current Milestone: v1.1 Runtime & UX Expansion
+## Current State: v1.1 Runtime & UX Expansion Archived
 
-**Goal:** Turn the proven backend runtime seam into a broader, resilient mobile napplet platform with installed-app discovery, additional NAP capabilities, and a polished shell.
+**Closeout:** Override archive on 2026-07-31 with 32/33 requirements satisfied. QLT-04 remains incomplete; see `.planning/milestones/v1.1-MILESTONE-AUDIT.md`.
 
 **Target features:**
 - Installed napplet catalog, `naddr` installation and launch, and home-page search
@@ -31,13 +31,18 @@ A napplet can run in a mobile browser while a server-side Deno runtime handles t
 - ✓ Proxy correlated napplet messages and SHELL/IDENTITY/RELAY/OUTBOX calls to backend TypeScript — Phase 1
 - ✓ Use Applesauce and RxJS stream composition without nested subscriptions or wait-for-completeness flows — Phase 1
 - ✓ Keep signer material, relay authority, persistent account state, and complex Nostr processing behind the iframe boundary — Phase 1
+- ✓ Install, synchronize, search, and launch verified napplets by exact accepted catalog identity — v1.1
+- ✓ Proxy bounded RESOURCE and UPLOAD operations through backend-owned URL, integrity, and Blossom policy — v1.1
+- ✓ Provide backend COMMON helpers and isolated durable STORAGE with quotas and restart persistence — v1.1
+- ✓ Discover and invoke verified INTENT handlers through shell-controlled reuse, stack, and new-tab navigation — v1.1
+- ✓ Coordinate generation-fenced MEDIA ownership and reconnect lifecycle across runtime clients — v1.1
+- ✓ Harden sandbox, capability, signer, storage, transport, CSP, reconnect, and async-generation boundaries — v1.1
 
 ### Active
 
-- [ ] Users can install napplets by `naddr`, launch installed napplets, and search their installed catalog.
-- [ ] Napplets can use backend-mediated RESOURCE, UPLOAD, COMMON, INTENT, STORAGE, and MEDIA capabilities.
-- [ ] The mobile shell provides coherent themes, branding, account/navigation chrome, runtime loading feedback, connection status, and reconnect recovery.
-- [ ] Blossom transfers use configured servers and the ecosystem client SDK while preserving backend verification and policy boundaries.
+- [ ] Complete physical iOS Safari and Android Chrome safe-area, backgrounding, popup, touch, autoplay, and reconnect UAT.
+- [ ] Close the two-page Chromium media acceptance fixture so verified artifact resolution reaches revoke-before-grant playback ownership.
+- [ ] Run the documented public/local relay and Blossom interoperability and target-deployment persistence checks.
 
 ### Out of Scope
 
@@ -51,7 +56,7 @@ A napplet can run in a mobile browser while a server-side Deno runtime handles t
 
 ## Context
 
-The codebase is now a Fresh 2 Napplet Portal runtime using Deno, Vite, Preact, RxJS, Applesauce, and pinned Kehto/Napplet packages. `main.ts` composes one process-owned runtime and signer service; routes expose browser-safe projections and WebSocket commands; islands own only UI and transport behavior.
+The codebase is now a Fresh 2 Napplet Portal runtime using Deno, Vite, Preact, RxJS, Applesauce, and pinned Kehto/Napplet packages. `main.ts` composes process-owned signer, catalog, storage, intent, media, relay, transfer, and runtime services; routes expose browser-safe projections and WebSocket commands; islands own only UI and transport behavior. The v1.1 automated gate ends at 275 passing Deno tests plus production build and four non-media Chromium rows.
 
 The larger project has two categories of future features. The first is the backend Nostr client runtime: authentication/sign-in, account state, relay and blossom configuration, local relay/blob cache integration, relay sync, event storage, database integration, relay connections, and other Nostr client responsibilities. The second is NAP API implementation: exposing the interfaces expected by Kehto and implementing behavior defined by the NAP specifications at `https://github.com/napplet/naps`.
 
@@ -89,6 +94,9 @@ Local-first caching is part of the long-term runtime value. The runtime should b
 | Verify NIP-5D manifest signatures, aggregate hashes, and blob hashes before assigning iframe `srcdoc` | Executable napplet bytes must fail closed at the network-to-iframe boundary. | Validated in Phase 1 |
 | Own signer attempts in a process service rather than transient WebSocket sessions | Signer state must survive browser reconnects without exposing authority. | Validated in Phase 1 |
 | Require every routed OUTBOX relay to accept before publish succeeds | Success must represent the complete required fanout, not a partial write. | Validated in Phase 1 |
+| Bind all NAP work to backend-issued window, account, manifest, instance, and generation authority | Reconnects and stale browser work must not retain effects. | ✓ Validated in v1.1 |
+| Keep accepted residual observations distinct from automated passes | Physical/live evidence cannot be inferred from deterministic transport tests. | ⚠ Revisit in next milestone |
+| Restrict scripts and WebSockets with response-specific CSP | Fresh hydration needs its validated nonce while sandboxed content must not gain arbitrary network authority. | ✓ Validated in v1.1 |
 
 ## Evolution
 
@@ -108,4 +116,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-30 after starting milestone v1.1*
+*Last updated: 2026-07-31 after v1.1 override closeout*

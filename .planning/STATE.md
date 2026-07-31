@@ -2,19 +2,19 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Runtime & UX Expansion
-current_phase: 9
-current_phase_name: Runtime Expansion Hardening
-status: verifying
-stopped_at: "09-09 complete: QLT-04 accepted residual risk"
-last_updated: "2026-07-31T07:34:29.424Z"
+status: Awaiting next milestone
+stopped_at: "09-08 gaps found: media browser artifact fixture"
+last_updated: "2026-07-31T08:36:22.356Z"
 last_activity: 2026-07-31
-last_activity_desc: Completed Phase 9 automated hardening evidence with QLT-04 accepted residual risk
+last_activity_desc: Milestone v1.1 completed and archived
 progress:
   total_phases: 7
-  completed_phases: 6
+  completed_phases: 7
   total_plans: 32
-  completed_plans: 31
-  percent: 86
+  completed_plans: 32
+  percent: 100
+current_phase: 9
+current_phase_name: Runtime Expansion Hardening
 ---
 
 # Project State
@@ -28,10 +28,10 @@ See: .planning/PROJECT.md (updated 2026-07-30)
 
 ## Current Position
 
-Phase: 9 — Runtime Expansion Hardening
-Plan: 9 of 9 complete
-Status: Automated hardening complete — QLT-04 incomplete with accepted residual risk
-Last activity: 2026-07-31 — Completed Phase 9 automated hardening evidence with QLT-04 accepted residual risk
+Phase: Milestone v1.1 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-07-31 — Milestone v1.1 completed and archived
 
 ## Performance Metrics
 
@@ -216,8 +216,27 @@ None yet.
 | NAP APIs | Full NAP-RELAY, NAP-STORAGE, NAP-RESOURCE, NAP-INTENT, NAP-THEME, NAP-NOTIFY, approvals | Deferred to Phase 3 | MVP scope alignment |
 | Security | Production hardening, CSP/Permissions-Policy audit, full security tests | Deferred to Phase 3 | MVP scope alignment |
 
+Items acknowledged and deferred at v1.1 milestone close on 2026-07-31:
+
+| Category | Item | Status |
+|----------|------|--------|
+| debug | media-browser-local-blossom | investigating |
+| debug | portal-bind-custom-ip | investigating |
+| debug | runtime-reconnect-smoke-startup | awaiting_human_verify |
+| seed | 001-nostr-signin-flow-needs-to-support-nsec-nip-46-nostr-connect | dormant |
+| seed | 002-use-blossom-client-sdk-for-multi-server-transfers | dormant |
+| seed | 003-it-would-be-great-to-support-nap-notify-using-web-push-notif | dormant |
+| seed | 004-there-should-be-a-nice-loading-overload-on-the-client-side-w | dormant |
+| seed | 005-simple-status-dot-bottom-nav-backend-runtime-connection | dormant |
+| seed | 006-client-browser-app-should-be-pwa-offline-installable-mobile | dormant |
+| verification | Phase 09 09-VERIFICATION.md | gaps_found |
+
 ## Session Continuity
 
 Last session: 2026-07-31T07:34:29.408Z
 Stopped at: 09-08 gaps found: media browser artifact fixture
 Resume file: .planning/phases/09-runtime-expansion-hardening/09-08-SUMMARY.md
+
+## Operator Next Steps
+
+- Start the next milestone with /gsd-new-milestone
