@@ -17,10 +17,13 @@ Deno.test("production multi-client suite retains ownership and reconnect gates",
     "two-client proof is included",
   );
   assert(
-    media.includes("revoke before grant"),
+    media.includes("prior owner stop is received before the new-owner grant"),
     "ordered ownership is asserted",
   );
-  assert(media.includes("intent"), "intent correlation is exercised");
+  assert(
+    reconnect.includes("runtime.intent.ticket"),
+    "intent correlation is exercised",
+  );
   assert(reconnect.includes("reconnectToken"), "reconnect token is exercised");
   assert(reconnect.includes("resumed === true"), "grace resume is asserted");
 });
