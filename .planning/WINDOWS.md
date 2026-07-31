@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 4
+open_count: 2
 waived_count: 0
-fixed_count: 7
+fixed_count: 9
 total_count: 11
-last_updated: 2026-07-31T01:31:18.664Z
+last_updated: 2026-07-31T01:31:55.053Z
 ---
 
 # Broken Windows Ledger
@@ -24,8 +24,8 @@ last_updated: 2026-07-31T01:31:18.664Z
 | 7 | 04 | unrun-verify | tests/runtime_reconnect_smoke_test.ts |  | Production reconnect smoke could not reach its spawned loopback server; focused Phase 04-01 verification passed | open |  | 2026-07-31T01:16:43.974Z |  |
 | 8 | 04 | deviation | runtime/catalog.ts |  | Corrected redundant async and mutable in-flight task binding during static verification | fixed |  | 2026-07-31T01:16:44.087Z | 2026-07-31T01:17:17.220Z |
 | 9 | 04 | deviation | runtime/catalog.ts |  | Normalized absent catalog generation from undefined to null for first-install approval | fixed |  | 2026-07-31T01:23:55.401Z | 2026-07-31T01:24:28.480Z |
-| 10 | 04 | deviation | shell/connection.ts |  | Added socket terminal callback required for pending catalog command cleanup | open |  | 2026-07-31T01:31:18.558Z |  |
-| 11 | 04 | deviation | components/HomeView.tsx |  | Removed projected executable launch bytes from the catalog card contract | open |  | 2026-07-31T01:31:18.664Z |  |
+| 10 | 04 | deviation | shell/connection.ts |  | Added socket terminal callback required for pending catalog command cleanup | fixed |  | 2026-07-31T01:31:18.558Z | 2026-07-31T01:31:54.949Z |
+| 11 | 04 | deviation | components/HomeView.tsx |  | Removed projected executable launch bytes from the catalog card contract | fixed |  | 2026-07-31T01:31:18.664Z | 2026-07-31T01:31:55.053Z |
 
 ````json
 [
@@ -144,10 +144,10 @@ last_updated: 2026-07-31T01:31:18.664Z
     "file": "shell/connection.ts",
     "line": null,
     "description": "Added socket terminal callback required for pending catalog command cleanup",
-    "status": "open",
+    "status": "fixed",
     "reason": "",
     "recorded_at": "2026-07-31T01:31:18.558Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-31T01:31:54.949Z"
   },
   {
     "id": 11,
@@ -156,10 +156,10 @@ last_updated: 2026-07-31T01:31:18.664Z
     "file": "components/HomeView.tsx",
     "line": null,
     "description": "Removed projected executable launch bytes from the catalog card contract",
-    "status": "open",
+    "status": "fixed",
     "reason": "",
     "recorded_at": "2026-07-31T01:31:18.664Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-31T01:31:55.053Z"
   }
 ]
 ````
