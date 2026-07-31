@@ -155,6 +155,7 @@ export class OutboxAdapter {
   async publish(
     id: string,
     template: EventTemplate,
+    authority?: IdentitySnapshot,
   ): Promise<OutboxPublishResult> {
     const identity = this.#options.identity();
     if (identity.status !== "active" || !identity.pubkey) {
@@ -164,6 +165,9 @@ export class OutboxAdapter {
         identity.status,
       );
       return { id, ok: false, error: "signer unavailable", outcomes: [] };
+    }
+    if (authority && identity !== authority) {
+      return { id, ok: false, error: "not authorized", outcomes: [] };
     }
     let event: NostrEvent;
     try {
@@ -177,8 +181,15 @@ export class OutboxAdapter {
       debug("publish signing failed id=%s", shortId(id));
       return { id, ok: false, error: "event signing failed", outcomes: [] };
     }
+    if (
+      this.#options.identity() !== identity || event.pubkey !== identity.pubkey
+    ) return { id, ok: false, error: "not authorized", outcomes: [] };
+    const relays = this.#relays(identity.pubkey);
     const outcomes = await Promise.all(
-      this.#relays().map(async (relay) => {
+      relays.map(async (relay) => {
+        if (this.#options.identity() !== identity) {
+          return { relay, accepted: false };
+        }
         try {
           return {
             relay,
@@ -189,6 +200,9 @@ export class OutboxAdapter {
         }
       }),
     );
+    if (this.#options.identity() !== identity) {
+      return { id, ok: false, error: "not authorized", outcomes };
+    }
     if (outcomes.length > 0 && outcomes.every((outcome) => outcome.accepted)) {
       debug(
         "publish accepted id=%s event=%s relays=%d",
@@ -221,8 +235,8 @@ export class OutboxAdapter {
     debug("destroy complete");
   }
 
-  #relays(): readonly string[] {
-    const pubkey = this.#options.identity().pubkey;
+  #relays(pinnedPubkey?: string): readonly string[] {
+    const pubkey = pinnedPubkey ?? this.#options.identity().pubkey;
     const nip65 = pubkey ? this.#options.nip65Relays(pubkey) : [];
     return this.#options.relayPolicy
       ? this.#options.relayPolicy.write({ inboxes: [], outboxes: nip65 })

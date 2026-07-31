@@ -38,7 +38,11 @@ const REPORT_REASONS = new Set([
 ]);
 
 export interface CommonPublishPort {
-  publish(id: string, template: EventTemplate): Promise<
+  publish(
+    id: string,
+    template: EventTemplate,
+    authority: IdentitySnapshot,
+  ): Promise<
     | { readonly ok: true; readonly event: NostrEvent }
     | { readonly ok: false; readonly error: string }
   >;
@@ -202,7 +206,7 @@ export class CommonService {
       created_at: Math.floor(Date.now() / 1000),
       content: current?.content ?? "",
       tags,
-    }, identity.pubkey);
+    }, identity);
   }
 
   async #react(
@@ -233,7 +237,7 @@ export class CommonService {
       created_at: Math.floor(Date.now() / 1000),
       content: message.reaction,
       tags,
-    }, identity.pubkey);
+    }, identity);
   }
 
   async #report(
@@ -263,31 +267,39 @@ export class CommonService {
       created_at: Math.floor(Date.now() / 1000),
       content: message.text,
       tags: [tag],
-    }, identity.pubkey);
+    }, identity);
   }
 
-  #activeIdentity(): { pubkey: string } {
+  #activeIdentity(): IdentitySnapshot & { pubkey: string } {
     const identity = this.#options.identity();
     if (identity.status !== "active" || !identity.pubkey) {
       throw new CommonDenied();
     }
-    return { pubkey: identity.pubkey };
+    return identity as IdentitySnapshot & { pubkey: string };
   }
 
   async #publish(
     id: unknown,
     template: EventTemplate,
-    expectedPubkey: string,
+    authority: IdentitySnapshot & { pubkey: string },
   ): Promise<Record<string, unknown>> {
     if (typeof id !== "string" || !this.#options.publisher) {
       return { ok: false, error: "publication-failed" };
     }
     const current = this.#options.identity();
-    if (current.status !== "active" || current.pubkey !== expectedPubkey) {
+    if (current !== authority) {
       return { ok: false, error: "not-authorized" };
     }
-    const result = await this.#options.publisher.publish(id, template);
+    const result = await this.#options.publisher.publish(
+      id,
+      template,
+      authority,
+    );
     if (!result.ok) return { ok: false, error: "publication-failed" };
+    if (
+      this.#options.identity() !== authority ||
+      result.event.pubkey !== authority.pubkey
+    ) return { ok: false, error: "not-authorized" };
     this.#options.eventRuntime.eventStore.add(result.event);
     return { ok: true, eventId: result.event.id, event: result.event };
   }
