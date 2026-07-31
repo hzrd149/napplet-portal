@@ -86,3 +86,29 @@ Deno.test("document metadata names only the canonical SVG icon", async () => {
   );
   assert(!app.toLowerCase().includes("fresh"), "metadata has no Fresh brand");
 });
+
+Deno.test("SVG favicon is scalable and replaces every starter fallback", async () => {
+  const logo = await Deno.readTextFile("static/logo.svg");
+  const viewBox = logo.match(/viewBox="([^"]+)"/)?.[1].split(/\s+/).map(Number);
+
+  assert(viewBox?.length === 4, "favicon declares a four-value viewBox");
+  assert(
+    viewBox![2] > 0 && viewBox![2] === viewBox![3],
+    "favicon viewBox is positive and square",
+  );
+  assert(
+    !(await exists("static/favicon.ico")),
+    "obsolete Fresh ICO fallback is removed",
+  );
+  assert(!logo.toLowerCase().includes("fresh"), "SVG has no Fresh branding");
+});
+
+async function exists(path: string): Promise<boolean> {
+  try {
+    await Deno.stat(path);
+    return true;
+  } catch (error) {
+    if (error instanceof Deno.errors.NotFound) return false;
+    throw error;
+  }
+}
