@@ -75,3 +75,110 @@ Deno.test("browser boundary tracer denies a forged frame and closes response pol
     "closed Permissions-Policy must be present",
   );
 });
+
+Deno.test("mandatory browser boundary matrix is closed", async () => {
+  const frameSource = await Deno.readTextFile("components/NappletFrame.tsx");
+  assert(
+    /sandbox="allow-scripts"/.test(frameSource),
+    "the one locked sandbox token must remain present",
+  );
+  for (
+    const forbidden of [
+      "allow-same-origin",
+      "allow-top-navigation",
+      "allow-popups",
+      "allow-forms",
+      "allow-modals",
+      "allow-downloads",
+    ]
+  ) {
+    assert(!frameSource.includes(forbidden), `${forbidden} must stay denied`);
+  }
+
+  const csp = BROWSER_SECURITY_POLICY.contentSecurityPolicy;
+  for (
+    const directive of [
+      "default-src 'self'",
+      "base-uri 'none'",
+      "object-src 'none'",
+      "frame-ancestors 'none'",
+      "form-action 'none'",
+      "worker-src 'none'",
+      "media-src 'none'",
+      "manifest-src 'none'",
+    ]
+  ) {
+    assert(csp.includes(directive), `CSP must include ${directive}`);
+  }
+  const hostile = new Response("denied", {
+    headers: {
+      "Content-Security-Policy": "default-src *",
+      "Permissions-Policy": "camera=*",
+    },
+  });
+  applyBrowserSecurityHeaders(hostile);
+  assert(
+    !hostile.headers.get("content-security-policy")?.includes("default-src *"),
+    "caller policy cannot weaken CSP",
+  );
+  assert(
+    !hostile.headers.get("permissions-policy")?.includes("camera=*"),
+    "caller policy cannot weaken Permissions-Policy",
+  );
+
+  const trusted = {} as Window;
+  for (
+    const row of [
+      { source: {} as Window, origin: "null" },
+      { source: trusted, origin: "https://evil.example" },
+      { source: trusted, origin: "" },
+    ]
+  ) {
+    let dispatches = 0;
+    createIframeBridge({
+      source: () => trusted,
+      post: () => dispatches++,
+      forward: () => dispatches++,
+    }).receive({
+      ...row,
+      data: { type: "storage.keys", id: "sensitive-correlation" },
+    });
+    assert(dispatches === 0, "hostile frame row must stay silent");
+  }
+
+  const authority = {
+    connectionId: "connection",
+    windowId: "window",
+    accountPubkey: "d".repeat(64),
+    coordinate: "35129:" + "d".repeat(64) + ":boundary",
+    manifestEventId: "e".repeat(64),
+    dTag: "boundary",
+    aggregateHash: "f".repeat(64),
+    grantedDomains: ["storage"],
+    grantedCapabilities: ["storage.keys"],
+    instanceId: "instance",
+    generation: 8,
+  } as const;
+  for (
+    const candidate of [
+      { connectionId: "foreign", windowId: "window" },
+      { connectionId: "connection", windowId: "foreign" },
+      { connectionId: "connection", windowId: "window", generation: 7 },
+      {
+        connectionId: "connection",
+        windowId: "window",
+        account: "0".repeat(64),
+      },
+      {
+        connectionId: "connection",
+        windowId: "window",
+        napplet: "forged@identity",
+      },
+    ]
+  ) {
+    assert(
+      !isCurrentTransferRecipient(candidate, authority),
+      "foreign or stale recipient must receive zero data",
+    );
+  }
+});
