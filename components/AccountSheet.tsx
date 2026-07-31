@@ -1,5 +1,6 @@
 import { type PublicProfile, UserIcon } from "./ProfileView.tsx";
 import { shortenPubkey } from "./HomeHeader.tsx";
+import { ThemeControls } from "./ThemeControls.tsx";
 
 interface AccountSheetProps {
   readonly open: boolean;
@@ -74,6 +75,7 @@ export function AccountSheet(
             </dd>
           </div>
         </dl>
+        <ThemeControls />
         <div class="account-actions">
           {!profile
             ? <a class="primary-button" href="/signin">Sign in</a>

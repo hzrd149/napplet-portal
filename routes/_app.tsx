@@ -1,3 +1,4 @@
+// deno-lint-ignore-file react-no-danger -- static hashable first-paint script
 import { define } from "../utils.ts";
 import { LIGHT_THEME_COLOR, THEME_BOOTSTRAP_SCRIPT } from "../shell/theme.ts";
 

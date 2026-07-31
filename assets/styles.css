@@ -181,6 +181,61 @@ button:disabled {
   opacity: 0.58;
 }
 
+.theme-controls {
+  min-width: 0;
+  margin: 18px 0 0;
+  padding: 0;
+  border: 0;
+}
+
+.theme-controls legend {
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.theme-options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid #64748b;
+  border-radius: 12px;
+}
+
+.theme-options label {
+  position: relative;
+  display: grid;
+  min-height: 44px;
+  place-items: center;
+  cursor: pointer;
+}
+
+.theme-options input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.theme-options span {
+  display: grid;
+  width: 100%;
+  min-height: 44px;
+  place-items: center;
+  border-radius: 8px;
+}
+
+.theme-options input:checked + span {
+  color: #111318;
+  background: #f59e0b;
+  font-weight: 700;
+}
+
+.theme-options input:focus-visible + span {
+  outline: 2px solid #7c3aed;
+  outline-offset: 2px;
+}
+
 svg {
   width: 20px;
   height: 20px;
