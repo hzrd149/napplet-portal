@@ -7,7 +7,11 @@ import {
   decodeArchetypeDeclarations,
   type VerifiedCatalogArtifact,
 } from "../runtime/catalog.ts";
-import { type IntentReply, IntentService } from "../runtime/intent.ts";
+import {
+  type IntentNotification,
+  type IntentReply,
+  IntentService,
+} from "../runtime/intent.ts";
 import {
   decodeIntentCommand,
   decodeIntentNavigationMessage,
@@ -287,4 +291,21 @@ Deno.test("authenticated invocation codecs reject extra keys and foreign ownersh
     "foreign caller/source cannot authorize navigation",
   );
   assert(results.length === 1, "foreign request must settle canonically");
+});
+
+Deno.test("removed intent handlers emit canonical unavailable changes", async () => {
+  const h = await readyHarness();
+  const changes: IntentNotification[] = [];
+  h.intents.subscribe((message) => changes.push(message));
+  h.signOut();
+  const removed = changes.find((message) =>
+    message.type === "intent.changed" &&
+    message.availability.archetype === "note"
+  );
+  assert(removed?.availability?.available === false, "removal must be emitted");
+  assert(
+    removed.availability.candidates?.length === 0,
+    "removed availability must not retain candidates",
+  );
+  assert(Object.isFrozen(removed.availability), "projection must be frozen");
 });

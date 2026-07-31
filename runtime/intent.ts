@@ -424,6 +424,7 @@ export class IntentService {
 
   #rebuild(): void {
     const snapshot = this.#catalog.authoritySnapshot();
+    const previous = this.#lastGood;
     const next = new Map<string, AuthorityCandidate[]>();
     if (snapshot.accountPubkey && snapshot.catalogEventId) {
       for (const entry of snapshot.artifacts) {
@@ -503,7 +504,20 @@ export class IntentService {
       changed.size > 0 || !snapshot.accountPubkey ||
       !["refreshing", "stale", "error"].includes(snapshot.status ?? "idle")
     ) this.#lastGood = changed;
-    for (const availability of changed.values()) {
+    const notifications = new Map(changed);
+    for (const archetype of previous.keys()) {
+      if (this.#lastGood.has(archetype)) continue;
+      notifications.set(
+        archetype,
+        Object.freeze({
+          archetype,
+          available: false,
+          candidates: Object.freeze([]) as unknown as IntentCandidate[],
+          hasDefault: false,
+        }),
+      );
+    }
+    for (const availability of notifications.values()) {
       const message = Object.freeze({
         type: "intent.changed" as const,
         availability,
