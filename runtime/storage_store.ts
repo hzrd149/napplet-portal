@@ -126,13 +126,26 @@ export class NappletStorageStore {
     const temporary = `${directory}/.${name}.${crypto.randomUUID()}.tmp`;
     await Deno.mkdir(directory, { recursive: true, mode: 0o700 });
     try {
-      await Deno.writeTextFile(temporary, serialized, {
-        create: true,
-        mode: 0o600,
-      });
+      {
+        using file = await Deno.open(temporary, {
+          write: true,
+          createNew: true,
+          mode: 0o600,
+        });
+        const bytes = new TextEncoder().encode(serialized);
+        let offset = 0;
+        while (offset < bytes.length) {
+          offset += await file.write(bytes.subarray(offset));
+        }
+        await file.sync();
+      }
       if (Deno.build.os !== "windows") await Deno.chmod(temporary, 0o600);
       await this.#hooks.beforeRename?.();
       await Deno.rename(temporary, this.#path);
+      if (Deno.build.os !== "windows") {
+        using directoryHandle = await Deno.open(directory, { read: true });
+        await directoryHandle.sync();
+      }
     } catch {
       try {
         await Deno.remove(temporary);
