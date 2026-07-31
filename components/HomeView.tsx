@@ -24,6 +24,17 @@ export interface CatalogViewProjection {
   readonly entries: readonly CatalogViewEntry[];
 }
 
+export interface InstallPreview {
+  readonly publisher: string;
+  readonly coordinate: string;
+  readonly manifestEventId: string;
+  readonly title?: string;
+  readonly version?: string;
+  readonly aggregateHash: string;
+  readonly capabilities: readonly string[];
+  readonly sourceCatalogEventId: string | null;
+}
+
 export type CatalogStreamStatus = "loading" | "ready" | "stale" | "error";
 
 interface HomeViewProps {
@@ -31,6 +42,8 @@ interface HomeViewProps {
   readonly catalog: CatalogViewProjection;
   readonly status: CatalogStreamStatus;
   readonly signedIn: boolean;
+  readonly query?: string;
+  readonly onQueryChange?: (query: string) => void;
   readonly onOpen: (entry: CatalogViewEntry) => void;
   readonly onCommand: (
     command: CatalogMutationCommand,
@@ -42,6 +55,7 @@ export type CatalogCardCommand =
   | { readonly type: "uninstall"; readonly entry: CatalogViewEntry };
 
 export type CatalogMutationCommand =
+  | { readonly type: "catalog.preview"; readonly naddr: string }
   | {
     readonly type: "catalog.approve";
     readonly coordinate: string;
@@ -53,6 +67,25 @@ export type CatalogMutationCommand =
 export interface CatalogCommandOutcome {
   readonly ok: boolean;
   readonly error?: string;
+  readonly value?: unknown;
+}
+
+export function filterCatalogEntries(
+  entries: readonly CatalogViewEntry[],
+  query: string,
+): readonly CatalogViewEntry[] {
+  const needle = query.trim().toLocaleLowerCase();
+  if (!needle) return entries;
+  return entries.filter((entry) => {
+    const identifier = entry.coordinate.split(":").at(-1) ?? "";
+    return [
+      entry.title ?? "",
+      identifier,
+      entry.version ?? "",
+      ...(entry.capabilities ?? []),
+    ]
+      .some((value) => value.toLocaleLowerCase().includes(needle));
+  });
 }
 
 export function HomeView({
@@ -60,6 +93,8 @@ export function HomeView({
   configured = true,
   status,
   signedIn,
+  query = "",
+  onQueryChange = () => undefined,
   onOpen,
   onCommand,
 }: HomeViewProps) {
@@ -68,6 +103,12 @@ export function HomeView({
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
   const [announcement, setAnnouncement] = useState("");
+  const [naddr, setNaddr] = useState("");
+  const [installPreview, setInstallPreview] = useState<InstallPreview | null>(
+    null,
+  );
+  const [installPending, setInstallPending] = useState(false);
+  const [installError, setInstallError] = useState("");
   const invoker = useRef<HTMLElement | null>(null);
   const openedCatalogId = useRef<string | null>(null);
 
@@ -95,6 +136,21 @@ export function HomeView({
   }, [catalog.catalogEventId]);
 
   useEffect(() => {
+    if (
+      installPreview &&
+      installPreview.sourceCatalogEventId !== catalog.catalogEventId
+    ) {
+      setInstallPreview(null);
+      setInstallPending(false);
+      setInstallError("");
+      setAnnouncement(
+        "The installed catalog changed. Review the latest version before continuing.",
+      );
+      queueMicrotask(() => invoker.current?.focus());
+    }
+  }, [catalog.catalogEventId, installPreview]);
+
+  useEffect(() => {
     const closeCatalogDialog = () => dialog && closeDialog();
     globalThis.addEventListener("catalog-dialog-close", closeCatalogDialog);
     return () =>
@@ -120,6 +176,51 @@ export function HomeView({
       );
     }
   }
+
+  async function previewInstall(event: Event): Promise<void> {
+    event.preventDefault();
+    if (installPending || !naddr.trim()) return;
+    invoker.current = event.currentTarget instanceof HTMLFormElement
+      ? event.currentTarget.querySelector("input")
+      : null;
+    setInstallPending(true);
+    setInstallError("");
+    const result = await onCommand({
+      type: "catalog.preview",
+      naddr: naddr.trim(),
+    });
+    setInstallPending(false);
+    if (!result.ok || !result.value || typeof result.value !== "object") {
+      setInstallError(
+        "That naddr could not be resolved. Check it and try again.",
+      );
+      return;
+    }
+    setInstallPreview(result.value as InstallPreview);
+  }
+
+  async function approveInstall(): Promise<void> {
+    if (!installPreview || installPending) return;
+    setInstallPending(true);
+    setInstallError("");
+    const result = await onCommand({
+      type: "catalog.approve",
+      coordinate: installPreview.coordinate,
+      manifestEventId: installPreview.manifestEventId,
+      sourceCatalogEventId: installPreview.sourceCatalogEventId,
+    });
+    setInstallPending(false);
+    if (!result.ok) {
+      setInstallError(
+        "The napplet could not be installed. Review the details and try again.",
+      );
+      return;
+    }
+    setInstallPreview(null);
+    setNaddr("");
+    setAnnouncement("Napplet installed.");
+    queueMicrotask(() => invoker.current?.focus());
+  }
   return (
     <section class="portal-view catalog-view" aria-label="Home">
       {!configured
@@ -140,6 +241,13 @@ export function HomeView({
             signedIn={signedIn}
             announcement={announcement}
             hasEntries={hasEntries}
+            query={query}
+            onQueryChange={onQueryChange}
+            naddr={naddr}
+            installPending={installPending}
+            installError={installError}
+            onNaddrChange={setNaddr}
+            onInstall={previewInstall}
             onOpen={onOpen}
             onCommand={openDialog}
           />
@@ -176,6 +284,18 @@ export function HomeView({
           });
         }}
       />
+      <InstallReviewDialog
+        preview={installPreview}
+        open={installPreview !== null}
+        pending={installPending}
+        error={installError}
+        onApprove={() => void approveInstall()}
+        onClose={() => {
+          setInstallPreview(null);
+          setInstallError("");
+          queueMicrotask(() => invoker.current?.focus());
+        }}
+      />
     </section>
   );
 }
@@ -186,6 +306,13 @@ function CatalogContent({
   signedIn,
   announcement,
   hasEntries,
+  query,
+  onQueryChange,
+  naddr,
+  installPending,
+  installError,
+  onNaddrChange,
+  onInstall,
   onOpen,
   onCommand,
 }: {
@@ -194,9 +321,17 @@ function CatalogContent({
   signedIn: boolean;
   announcement: string;
   hasEntries: boolean;
+  query: string;
+  onQueryChange: (query: string) => void;
+  naddr: string;
+  installPending: boolean;
+  installError: string;
+  onNaddrChange: (value: string) => void;
+  onInstall: (event: Event) => void;
   onOpen: (entry: CatalogViewEntry) => void;
   onCommand: (command: CatalogCardCommand) => void;
 }) {
+  const results = filterCatalogEntries(catalog.entries, query);
   return (
     <>
       <p class="visually-hidden" role="status" aria-live="polite">
@@ -206,6 +341,31 @@ function CatalogContent({
         <h1>Installed napplets</h1>
         <InlineStatusNotice status={status} hasEntries={hasEntries} />
       </header>
+      {signedIn && (
+        <form class="catalog-install" onSubmit={onInstall}>
+          <label for="install-naddr">Install a napplet</label>
+          <div class="catalog-control-row">
+            <input
+              id="install-naddr"
+              name="naddr"
+              type="text"
+              inputMode="url"
+              value={naddr}
+              placeholder="naddr1…"
+              aria-describedby={installError ? "install-error" : undefined}
+              onInput={(event) => onNaddrChange(event.currentTarget.value)}
+            />
+            <button type="submit" disabled={installPending || !naddr.trim()}>
+              {installPending ? "Resolving…" : "Review install"}
+            </button>
+          </div>
+          {installError && (
+            <p id="install-error" class="field-error" role="alert">
+              {installError}
+            </p>
+          )}
+        </form>
+      )}
       {!signedIn && (
         <div class="signin-callout">
           <p>Sign in to connect a Nostr account before opening napplets.</p>
@@ -217,6 +377,34 @@ function CatalogContent({
           Connect a signer to change installed napplets.
         </p>
       )}
+      {hasEntries && (
+        <div class="catalog-search">
+          <label for="catalog-search">Search installed napplets</label>
+          <div class="catalog-control-row">
+            <input
+              id="catalog-search"
+              type="search"
+              value={query}
+              onInput={(event) => onQueryChange(event.currentTarget.value)}
+            />
+            {query && (
+              <button type="button" onClick={() => onQueryChange("")}>
+                Clear
+              </button>
+            )}
+          </div>
+          <p
+            class="visually-hidden"
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
+          >
+            {results.length} {results.length === 1 ? "napplet" : "napplets"}
+            {" "}
+            found
+          </p>
+        </div>
+      )}
       {!hasEntries && status !== "loading"
         ? (
           <div class="empty-state catalog-empty">
@@ -227,9 +415,16 @@ function CatalogContent({
             </p>
           </div>
         )
+        : results.length === 0
+        ? (
+          <div class="empty-state catalog-empty">
+            <h2>No installed napplets match this search</h2>
+            <p>Try a different title, identifier, version, or capability.</p>
+          </div>
+        )
         : (
           <div class="catalog-grid">
-            {catalog.entries.map((entry) => (
+            {results.map((entry) => (
               <NappletCard
                 key={entry.coordinate}
                 entry={entry}
@@ -354,6 +549,79 @@ export function UpdateReviewDialog({
         </button>
         <button type="button" disabled={pending} onClick={onApprove}>
           {pending ? "Approving…" : "Approve update"}
+        </button>
+      </div>
+    </dialog>
+  );
+}
+
+export function InstallReviewDialog({
+  preview,
+  open,
+  pending,
+  error,
+  onApprove,
+  onClose,
+}: {
+  preview: InstallPreview | null;
+  open: boolean;
+  pending: boolean;
+  error: string;
+  onApprove: () => void;
+  onClose: () => void;
+}) {
+  const element = useRef<HTMLDialogElement | null>(null);
+  useEffect(() => {
+    if (open && !element.current?.open) element.current?.showModal();
+    if (!open && element.current?.open) element.current.close();
+  }, [open]);
+  if (!preview) return null;
+  return (
+    <dialog
+      ref={element}
+      open={open}
+      class="catalog-dialog"
+      aria-labelledby="install-review-title"
+      onClose={onClose}
+    >
+      <h2 id="install-review-title" tabIndex={-1}>Review napplet install</h2>
+      <div class="dialog-comparison">
+        <dl>
+          <PublicIdentifier label="Publisher" value={preview.publisher} />
+          <PublicIdentifier label="Coordinate" value={preview.coordinate} />
+          <PublicIdentifier
+            label="Manifest ID"
+            value={preview.manifestEventId}
+          />
+          <div class="comparison-field">
+            <dt>Display name</dt>
+            <dd>{preview.title || "Not provided"}</dd>
+          </div>
+          <div class="comparison-field">
+            <dt>Version</dt>
+            <dd>{preview.version || "Not provided"}</dd>
+          </div>
+          <PublicIdentifier
+            label="Aggregate hash"
+            value={preview.aggregateHash}
+          />
+          <div class="comparison-field">
+            <dt>Capabilities</dt>
+            <dd>
+              {preview.capabilities.length
+                ? preview.capabilities.join(", ")
+                : "None declared"}
+            </dd>
+          </div>
+        </dl>
+      </div>
+      {error && <p class="dialog-error" role="alert">{error}</p>}
+      <div class="dialog-actions">
+        <button type="button" disabled={pending} onClick={onClose}>
+          Cancel
+        </button>
+        <button type="button" disabled={pending} onClick={onApprove}>
+          {pending ? "Installing…" : "Install napplet"}
         </button>
       </div>
     </dialog>

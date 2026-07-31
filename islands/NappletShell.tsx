@@ -205,6 +205,7 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
   const [catalogStatus, setCatalogStatus] = useState<CatalogStreamStatus>(
     "loading",
   );
+  const [catalogQuery, setCatalogQuery] = useState("");
   const controller = useRef<ConnectionController | null>(null);
   const iframe = useRef<HTMLIFrameElement | null>(null);
   const owner = useRef<{ connectionId: string; windowId: string } | null>(null);
@@ -558,7 +559,9 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
       });
     }
     return registry.request(
-      command.type === "catalog.approve"
+      command.type === "catalog.preview"
+        ? { type: "catalog.preview", naddr: command.naddr }
+        : command.type === "catalog.approve"
         ? {
           type: "catalog.approve",
           coordinate: command.coordinate,
@@ -611,6 +614,8 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
             catalog={catalog}
             status={catalogStatus}
             signedIn={signedIn}
+            query={catalogQuery}
+            onQueryChange={setCatalogQuery}
             onOpen={openCatalogEntry}
             onCommand={sendCatalogCommand}
           />

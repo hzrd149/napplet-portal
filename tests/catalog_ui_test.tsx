@@ -3,7 +3,9 @@ import { renderToString } from "npm:preact-render-to-string@^6.6.3";
 import {
   capabilityChanges,
   type CatalogViewEntry,
+  filterCatalogEntries,
   HomeView,
+  InstallReviewDialog,
   UninstallDialog,
   UpdateReviewDialog,
 } from "../components/HomeView.tsx";
@@ -69,6 +71,99 @@ Deno.test("installed catalog covers empty, loading, stale, error, populated, and
   assertStringIncludes(partial, "security-lab");
   assertStringIncludes(partial, "Manifest details unavailable");
   assertStringIncludes(partial, "disabled");
+});
+
+Deno.test("install form and immutable review expose every trust fact with retry state", () => {
+  const home = render([entry()]);
+  assertStringIncludes(home, 'for="install-naddr"');
+  assertStringIncludes(home, "Install a napplet");
+  assertStringIncludes(home, "Review install");
+  const preview = {
+    publisher: "a".repeat(64),
+    coordinate,
+    manifestEventId: "e".repeat(64),
+    title: "Security Lab",
+    version: "2.0.0",
+    aggregateHash: "f".repeat(64),
+    capabilities: ["relay.query", "outbox.publish"],
+    sourceCatalogEventId: "d".repeat(64),
+  };
+  const dialog = renderToString(
+    <InstallReviewDialog
+      preview={preview}
+      open
+      pending={false}
+      error="The napplet could not be installed. Review the details and try again."
+      onApprove={() => undefined}
+      onClose={() => undefined}
+    />,
+  );
+  for (
+    const fact of [
+      "Review napplet install",
+      preview.publisher,
+      coordinate,
+      preview.manifestEventId,
+      "Security Lab",
+      "2.0.0",
+      preview.aggregateHash,
+      "relay.query, outbox.publish",
+      "Install napplet",
+      "could not be installed",
+    ]
+  ) {
+    assertStringIncludes(dialog, fact);
+  }
+});
+
+Deno.test("local catalog search matches only current public metadata", () => {
+  const entries = [
+    entry(),
+    entry({
+      coordinate: `30078:${"e".repeat(64)}:field-notes`,
+      acceptedManifestEventId: "f".repeat(64),
+      title: "",
+      version: "Preview 2",
+      capabilities: ["OUTBOX.Publish"],
+      resolution: "pending",
+    }),
+  ];
+  assertEquals(filterCatalogEntries(entries, " security "), [entries[0]]);
+  assertEquals(filterCatalogEntries(entries, "FIELD-NOTES"), [entries[1]]);
+  assertEquals(filterCatalogEntries(entries, "preview 2"), [entries[1]]);
+  assertEquals(filterCatalogEntries(entries, "outbox.publish"), [entries[1]]);
+  assertEquals(filterCatalogEntries(entries, acceptedManifestEventId), []);
+  assertEquals(filterCatalogEntries(entries, "  "), entries);
+});
+
+Deno.test("search distinguishes no-match and keeps sync context accessible", () => {
+  const html = renderToString(
+    <HomeView
+      catalog={{ catalogEventId: "d".repeat(64), entries: [entry()] }}
+      status="error"
+      signedIn
+      query="missing"
+      onQueryChange={() => undefined}
+      onOpen={() => undefined}
+      onCommand={() => Promise.resolve({ ok: true })}
+    />,
+  );
+  assertStringIncludes(html, "No installed napplets match this search");
+  assertStringIncludes(html, "Installed napplets could not be refreshed");
+  assertStringIncludes(html, 'type="search"');
+  assertStringIncludes(html, 'aria-live="polite"');
+  assertStringIncludes(html, 'aria-atomic="true"');
+  assertStringIncludes(html, "0 napplets found");
+});
+
+Deno.test("query lives in the shell and search dispatches no runtime command", async () => {
+  const shell = await Deno.readTextFile("islands/NappletShell.tsx");
+  const home = await Deno.readTextFile("components/HomeView.tsx");
+  assertStringIncludes(shell, 'useState("")');
+  assertStringIncludes(shell, "query={catalogQuery}");
+  assertStringIncludes(shell, "onQueryChange={setCatalogQuery}");
+  assertEquals(home.includes("catalog.search"), false);
+  assertEquals(home.includes("fetch("), false);
 });
 
 Deno.test("zero, one, and many catalog entries use stable coordinate keys", () => {
