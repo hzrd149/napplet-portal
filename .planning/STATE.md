@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Runtime & UX Expansion
-current_phase: 3
-current_phase_name: Mobile Shell Resilience
-status: executing
+current_phase: 4
+current_phase_name: Installed Napplet Discovery
+status: planning
 stopped_at: Completed 03-05-PLAN.md
-last_updated: "2026-07-31T00:42:39.656Z"
+last_updated: "2026-07-31T00:47:47.855Z"
 last_activity: 2026-07-31
-last_activity_desc: Completed connection resilience and constellation presentation
+last_activity_desc: Phase 3 complete, transitioned to Phase 4
 progress:
   total_phases: 7
   completed_phases: 1
@@ -28,16 +28,16 @@ See: .planning/PROJECT.md (updated 2026-07-30)
 
 ## Current Position
 
-Phase: 3 — Mobile Shell Resilience
-Plan: 5 of 5
-Status: In progress — Plan 03-01 complete
-Last activity: 2026-07-31 — Completed connection resilience and constellation presentation
+Phase: 4 — Installed Napplet Discovery
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-07-31 — Phase 3 complete, transitioned to Phase 4
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 7
+- Total plans completed: 5
 - Average duration: N/A
 - Total execution time: 0.0 hours
 
@@ -48,6 +48,7 @@ Last activity: 2026-07-31 — Completed connection resilience and constellation 
 | 1. One-Day Napplet Runtime MVP | 6/6 | 99min | 17min |
 | 2. Backend Runtime Expansion | 1/7 | 6min | 6min |
 | 3. NAP Coverage, Policy, and Production Hardening | 0/TBD | - | - |
+| 3 | 5 | - | - |
 
 **Recent Trend:**
 

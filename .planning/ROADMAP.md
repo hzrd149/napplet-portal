@@ -6,7 +6,7 @@ Milestone v1.1 expands the proven backend runtime into a resilient mobile napple
 
 ## Phases
 
-- [ ] **Phase 3: Mobile Shell Resilience** — Polish the shell and make runtime connectivity legible and recoverable on mobile.
+- [x] **Phase 3: Mobile Shell Resilience** — Polish the shell and make runtime connectivity legible and recoverable on mobile. (completed 2026-07-31)
 - [ ] **Phase 4: Installed Napplet Discovery** — Install, synchronize, search, and launch trusted napplets from the home catalog.
 - [ ] **Phase 5: Resource and Blossom Transfer** — Add bounded resource resolution and explicit multi-server uploads.
 - [ ] **Phase 6: Common Data and Durable Storage** — Expose stream-oriented common Nostr helpers and isolated persistent napplet state.
@@ -20,7 +20,7 @@ Milestone v1.1 expands the proven backend runtime into a resilient mobile napple
 
 **Goal:** Users can understand and recover the mobile shell's backend connection while using coherent portal navigation and branding.
 **Requirements:** SHL-01, SHL-02, SHL-03, CON-01, CON-02, CON-03, CON-04
-**Plans:** 5/5 plans executed
+**Plans:** 5/5 plans complete
 
 - [x] 03-01-PLAN.md
 - [x] 03-02-PLAN.md
