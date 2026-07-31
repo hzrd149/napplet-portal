@@ -6,6 +6,8 @@ import {
   decodeCatalogEvent,
   type VerifiedCatalogArtifact,
 } from "../runtime/catalog.ts";
+import { RelayPolicy } from "../runtime/relay_policy.ts";
+import { nip19 } from "nostr-tools";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -44,6 +46,20 @@ function artifact(eventId: string): VerifiedCatalogArtifact {
       srcdoc: "<main>verified</main>",
     },
   };
+}
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (error: unknown) => void;
+  const promise = new Promise<T>((yes, no) => {
+    resolve = yes;
+    reject = no;
+  });
+  return { promise, resolve, reject };
+}
+
+async function settle(): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, 0));
 }
 
 Deno.test("catalog codec rejects malformed, foreign, unsigned, and secret-bearing public content", () => {
@@ -127,16 +143,18 @@ Deno.test("latest valid replacement is isolated to active account and projects v
     "many results retain only valid replacements",
   );
   const projected = await service.project();
+  await settle();
+  const ready = await service.project();
   assert(
     projected.catalogEventId === newer.id,
     "latest valid replacement wins",
   );
   assert(
-    projected.entries[0].title === "Security Lab Next",
+    ready.entries[0].title === "Security Lab Next",
     "identity comes from verified manifest",
   );
   assert(
-    !("iframeMetadata" in projected.entries[0]),
+    !("iframeMetadata" in ready.entries[0]) && !("launch" in ready.entries[0]),
     "iframe metadata is never identity input",
   );
   const foreign = new CatalogService({
@@ -278,7 +296,199 @@ Deno.test("catalog listeners observe synchronized loads and accepted mutations",
   await service.uninstallNapplet("remove-listener", coordinate);
   unsubscribe();
   assert(
-    notifications.length === 2,
-    "load and accepted replacement must each notify projection listeners",
+    notifications.length >= 2,
+    "raw and enriched projections must notify listeners",
+  );
+});
+
+Deno.test("accepted truth emits pending immediately, retains failure, retries, and discards stale completion", async () => {
+  const store = new EventStore();
+  const first = deferred<VerifiedCatalogArtifact>();
+  let activePubkey = pubkey;
+  let attempts = 0;
+  const service = new CatalogService({
+    eventStore: store,
+    identity: () => ({
+      accountId: activePubkey,
+      pubkey: activePubkey,
+      status: "active",
+    }),
+    resolveVerifiedArtifact: (_coordinate, eventId) => {
+      attempts++;
+      return attempts === 1
+        ? first.promise
+        : Promise.resolve(artifact(eventId));
+    },
+    signEvent: () => Promise.reject(new Error("unused")),
+    publish: () => Promise.resolve([]),
+  });
+  service.load([
+    catalogEvent([{ coordinate, acceptedManifestEventId: acceptedId }]),
+  ]);
+  const pending = await service.project();
+  assert(
+    pending.entries.length === 1 && pending.entries[0].resolution === "pending",
+    "accepted membership is immediate",
+  );
+  assert(
+    !("launch" in pending.entries[0]),
+    "ordinary projection never exposes bytes",
+  );
+  activePubkey = getPublicKey(otherKey);
+  await service.project();
+  first.resolve(artifact(acceptedId));
+  await settle();
+  assert(
+    (await service.project()).entries.length === 0,
+    "old account completion cannot reanimate truth",
+  );
+
+  activePubkey = pubkey;
+  service.retry();
+  await settle();
+  const ready = await service.project();
+  assert(
+    ready.entries[0].resolution === "ready",
+    "retry enriches the same accepted entry",
+  );
+});
+
+Deno.test("enrichment queue caps at four and shares exact in-flight work", async () => {
+  const store = new EventStore();
+  const gates = Array.from(
+    { length: 6 },
+    () => deferred<VerifiedCatalogArtifact>(),
+  );
+  let running = 0;
+  let maximum = 0;
+  let calls = 0;
+  const entries = gates.map((_, index) => ({
+    coordinate: `35129:${getPublicKey(otherKey)}:app-${index}`,
+    acceptedManifestEventId: index.toString(16).padStart(64, "0"),
+  }));
+  const service = new CatalogService({
+    eventStore: store,
+    identity: () => ({ accountId: pubkey, pubkey, status: "active" }),
+    resolveVerifiedArtifact: (_coordinate, eventId) => {
+      const index = Number.parseInt(eventId, 16);
+      calls++;
+      running++;
+      maximum = Math.max(maximum, running);
+      return gates[index].promise.finally(() => running--);
+    },
+    signEvent: () => Promise.reject(new Error("unused")),
+    publish: () => Promise.resolve([]),
+  });
+  service.load([catalogEvent(entries)]);
+  await service.project();
+  await service.project();
+  assert(
+    calls === 4 && maximum === 4,
+    "only four exact resolutions run and duplicate refresh shares them",
+  );
+  gates.forEach((gate, index) =>
+    gate.resolve(artifact(entries[index].acceptedManifestEventId))
+  );
+  await settle();
+  await settle();
+  assert(
+    (await service.project()).entries.every((entry) =>
+      entry.resolution === "ready"
+    ),
+    "queued work completes without dropping entries",
+  );
+});
+
+Deno.test("preview derives immutable facts, approval is generation-bound, and launch rechecks exact accepted triple", async () => {
+  const store = new EventStore();
+  const original = catalogEvent([{
+    coordinate,
+    acceptedManifestEventId: acceptedId,
+  }]);
+  store.add(original);
+  const previewArtifact = artifact(pendingId);
+  let previewRelays: readonly string[] = [];
+  const service = new CatalogService({
+    eventStore: store,
+    identity: () => ({ accountId: pubkey, pubkey, status: "active" }),
+    relayPolicy: new RelayPolicy({
+      defaults: [],
+      blocked: ["wss://blocked.example"],
+    }),
+    configuredReadRelays: () => ["wss://configured.example"],
+    resolvePreviewArtifact: (_coordinate, relays) => {
+      previewRelays = relays;
+      return Promise.resolve(previewArtifact);
+    },
+    resolveVerifiedArtifact: (_coordinate, eventId) =>
+      Promise.resolve(artifact(eventId)),
+    signEvent: (template) => Promise.resolve(finalizeEvent(template, key)),
+    publish: () => Promise.resolve([{ relay: "wss://one", accepted: true }]),
+  });
+  const naddr = nip19.naddrEncode({
+    kind: 35129,
+    pubkey: getPublicKey(otherKey),
+    identifier: "security-lab",
+    relays: [
+      "https://bad.example",
+      "wss://blocked.example",
+      "wss://hint.example",
+    ],
+  });
+  const preview = await service.previewInstall(`nostr:${naddr}`);
+  assert(
+    preview.ok && preview.value.sourceCatalogEventId === original.id,
+    "review is bound to current catalog generation",
+  );
+  assert(
+    preview.ok &&
+      preview.value.aggregateHash === previewArtifact.launch.aggregateHash,
+    "review facts come from verified artifact",
+  );
+  assert(
+    previewRelays.join(",") === "wss://hint.example/,wss://configured.example/",
+    "preview reads use policy-approved hints first",
+  );
+  assert(
+    !(await service.previewInstall("x".repeat(5001))).ok,
+    "oversized input fails closed",
+  );
+  assert(
+    !(await service.previewInstall(
+      nip19.naddrEncode({ kind: 1, pubkey, identifier: "wrong" }),
+    )).ok,
+    "wrong kind fails closed",
+  );
+
+  const staleApproval = await service.approveManifestUpdate(
+    "stale",
+    coordinate,
+    pendingId,
+    "f".repeat(64),
+  );
+  assert(
+    !staleApproval.ok &&
+      store.getReplaceable(30078, pubkey, CATALOG_IDENTIFIER)?.id ===
+        original.id,
+    "changed generation cannot sign or advance",
+  );
+  const staleLaunch = await service.launch(
+    "f".repeat(64),
+    coordinate,
+    acceptedId,
+  );
+  const mismatchLaunch = await service.launch(
+    original.id,
+    coordinate,
+    pendingId,
+  );
+  const launched = await service.launch(original.id, coordinate, acceptedId);
+  assert(
+    !staleLaunch.ok && staleLaunch.retryable && !mismatchLaunch.ok,
+    "stale launch selectors are retryable failures",
+  );
+  assert(
+    launched.ok && launched.value.launch.srcdoc.includes("verified"),
+    "exact accepted artifact releases verified bytes",
   );
 });
