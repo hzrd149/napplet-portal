@@ -59,11 +59,12 @@ Deno.test("media create tracer rejects invalid input without effects", () => {
 
 Deno.test("replacement stops old owner before result and all projections", () => {
   const deliveries: Array<{ recipient: MediaActorRef; message: unknown }> = [];
+  let failDelivery = false;
   const coordinator = new MediaSessionCoordinator({
     createId: () => "replacement",
     deliver: (recipient, message) => {
       deliveries.push({ recipient, message });
-      return false;
+      return !failDelivery;
     },
   });
   coordinator.connect("account", origin);
@@ -75,6 +76,7 @@ Deno.test("replacement stops old owner before result and all projections", () =>
     sessionId: "first",
   });
   deliveries.length = 0;
+  failDelivery = true;
   const result = coordinator.receive("account", origin, {
     type: "media.session.create",
     id: "second",

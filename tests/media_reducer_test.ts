@@ -110,7 +110,7 @@ Deno.test("stale reports fail and every accepted report broadcasts", () => {
   }, { generation });
   assert(accepted.accepted, "current owner report succeeds");
   assert(
-    effects.length === 2,
+    Number(effects.length) === 2,
     "each eligible tab receives accepted transition",
   );
 });
