@@ -11,10 +11,40 @@ import {
   decodeCatalogCommand,
   decodeClientMessage,
 } from "../../runtime/transport.ts";
+import {
+  BinaryFrameKind,
+  decodeBinaryFrames,
+  encodeBinaryFrame,
+  FIXED_RESOURCE_ID,
+} from "../../runtime/binary_transport.ts";
 import { define } from "../../utils.ts";
 import { debug as rootDebug, shortId } from "../../debug.ts";
 
 const debug = rootDebug.extend("runtime-endpoint");
+
+export { FIXED_RESOURCE_ID };
+export const FIXED_RESOURCE_BYTES = new TextEncoder().encode(
+  "Napplet Portal binary resource tracer\n",
+);
+
+export function handleFixedResourceFrame(
+  bytes: Uint8Array,
+  owner: { readonly connectionId: string; readonly windowId: string },
+  _dependencies: { readonly fetch?: typeof fetch } = {},
+): Uint8Array | null {
+  const decoded = decodeBinaryFrames(bytes, owner);
+  if (!decoded.ok || decoded.frames.length !== 1) return null;
+  const frame = decoded.frames[0];
+  if (
+    frame.kind !== BinaryFrameKind.ResourceRequest ||
+    frame.payload.length !== 0
+  ) return null;
+  return encodeBinaryFrame({
+    kind: BinaryFrameKind.ResourceResult,
+    id: frame.id,
+    payload: FIXED_RESOURCE_BYTES,
+  });
+}
 
 export const runtime = createPortalRuntime({ fixture });
 const sessions = new Map<
@@ -139,7 +169,30 @@ export const handler = define.handlers({
       unsubscribeCatalog();
     });
     socket.addEventListener("message", async (event) => {
-      const raw = String(event.data);
+      if (event.data instanceof ArrayBuffer) {
+        const result = await handleFixedResourceFrame(
+          new Uint8Array(event.data),
+          { connectionId: connection.connectionId, windowId },
+        );
+        if (result) socket.send(result.slice().buffer as ArrayBuffer);
+        else socket.close(1008, "invalid binary message");
+        return;
+      }
+      if (ArrayBuffer.isView(event.data)) {
+        const view = event.data as ArrayBufferView;
+        const result = await handleFixedResourceFrame(
+          new Uint8Array(view.buffer, view.byteOffset, view.byteLength),
+          { connectionId: connection.connectionId, windowId },
+        );
+        if (result) socket.send(result.slice().buffer as ArrayBuffer);
+        else socket.close(1008, "invalid binary message");
+        return;
+      }
+      if (typeof event.data !== "string") {
+        socket.close(1003, "unsupported message data");
+        return;
+      }
+      const raw = event.data;
       if (raw.length > 256_000) {
         debug(
           "closing oversized message connection=%s bytes=%d",

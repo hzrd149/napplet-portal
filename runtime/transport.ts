@@ -1,4 +1,5 @@
 import type { NappletMessage } from "@napplet/core";
+import type { UploadRequest } from "@napplet/core";
 
 export interface MessageOwner {
   readonly connectionId: string;
@@ -48,6 +49,75 @@ function exactKeys(value: Record<string, unknown>, keys: readonly string[]) {
 
 function boundedId(value: unknown): value is string {
   return typeof value === "string" && value.length > 0 && value.length <= 128;
+}
+
+export type NapControlMessage =
+  | { readonly type: "resource.info"; readonly id: string }
+  | {
+    readonly type: "resource.bytes";
+    readonly id: string;
+    readonly url: string;
+  }
+  | { readonly type: "upload.info"; readonly id: string }
+  | {
+    readonly type: "upload.upload";
+    readonly id: string;
+    readonly request: UploadRequest;
+  };
+
+function decodeUploadRequest(value: unknown): value is UploadRequest {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const request = value as Record<string, unknown>;
+  const allowed = [
+    "rail",
+    "data",
+    "mimeType",
+    "filename",
+    "caption",
+    "noTransform",
+    "metadata",
+  ];
+  if (Object.keys(request).some((key) => !allowed.includes(key))) return false;
+  if (!(request.data instanceof Blob || request.data instanceof ArrayBuffer)) {
+    return false;
+  }
+  if (request.rail !== undefined && request.rail !== "blossom") return false;
+  if (
+    [request.mimeType, request.filename, request.caption].some((field) =>
+      field !== undefined && typeof field !== "string"
+    ) ||
+    (request.noTransform !== undefined &&
+      typeof request.noTransform !== "boolean") ||
+    (request.metadata !== undefined &&
+      (!request.metadata || typeof request.metadata !== "object" ||
+        Array.isArray(request.metadata)))
+  ) return false;
+  return true;
+}
+
+export function decodeNapControlMessage(
+  value: unknown,
+): NapControlMessage | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const message = value as Record<string, unknown>;
+  if (!boundedId(message.id)) return null;
+  if (
+    message.type === "resource.info" && exactKeys(message, ["type", "id"])
+  ) return message as unknown as NapControlMessage;
+  if (
+    message.type === "resource.bytes" &&
+    exactKeys(message, ["type", "id", "url"]) &&
+    typeof message.url === "string" && message.url.length <= 2_048
+  ) return message as unknown as NapControlMessage;
+  if (
+    message.type === "upload.info" && exactKeys(message, ["type", "id"])
+  ) return message as unknown as NapControlMessage;
+  if (
+    message.type === "upload.upload" &&
+    exactKeys(message, ["type", "id", "request"]) &&
+    decodeUploadRequest(message.request)
+  ) return message as unknown as NapControlMessage;
+  return null;
 }
 
 function coordinate(value: unknown): value is string {

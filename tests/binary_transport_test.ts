@@ -11,6 +11,7 @@ import {
   FIXED_RESOURCE_ID,
   handleFixedResourceFrame,
 } from "../routes/api/runtime.ts";
+import { decodeResourceBinaryResult } from "../islands/NappletShell.tsx";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -34,8 +35,14 @@ Deno.test("binary frames decode fragmented and concatenated input deterministica
   joined.set(second, first.length);
 
   const decoder = new BinaryFrameStreamDecoder(owner);
-  assert(decoder.push(joined.slice(0, 7)).length === 0, "header fragment waits");
-  assert(decoder.push(joined.slice(7, first.length - 1)).length === 0, "body fragment waits");
+  assert(
+    decoder.push(joined.slice(0, 7)).length === 0,
+    "header fragment waits",
+  );
+  assert(
+    decoder.push(joined.slice(7, first.length - 1)).length === 0,
+    "body fragment waits",
+  );
   const frames = decoder.push(joined.slice(first.length - 1));
   assert(frames.length === 2, "both concatenated frames decode");
   assert(frames[0].id === "resource-1", "first correlation retained");
@@ -49,11 +56,13 @@ Deno.test("binary frames fail closed for malformed headers and limits", () => {
     id: "resource-1",
     payload: new Uint8Array(),
   });
-  for (const [name, mutate] of [
-    ["magic", (bytes: Uint8Array) => bytes[0] ^= 0xff],
-    ["version", (bytes: Uint8Array) => bytes[4] = 99],
-    ["kind", (bytes: Uint8Array) => bytes[5] = 99],
-  ] as const) {
+  for (
+    const [name, mutate] of [
+      ["magic", (bytes: Uint8Array) => bytes[0] ^= 0xff],
+      ["version", (bytes: Uint8Array) => bytes[4] = 99],
+      ["kind", (bytes: Uint8Array) => bytes[5] = 99],
+    ] as const
+  ) {
     const bytes = valid.slice();
     mutate(bytes);
     assert(!decodeBinaryFrames(bytes, owner).ok, `${name} rejected`);
@@ -113,11 +122,32 @@ Deno.test("fixed RESOURCE tracer returns binary bytes without network access", a
   assert(response !== null, "fixed resource responds");
   const decoded = decodeBinaryFrames(response, owner);
   assert(decoded.ok && decoded.frames.length === 1, "result frame decodes");
-  assert(decoded.frames[0].kind === BinaryFrameKind.ResourceResult, "result kind");
+  assert(
+    decoded.frames[0].kind === BinaryFrameKind.ResourceResult,
+    "result kind",
+  );
   assert(decoded.frames[0].id === FIXED_RESOURCE_ID, "correlation retained");
   assert(
     decoded.frames[0].payload.join(",") === FIXED_RESOURCE_BYTES.join(","),
     "fixed bytes returned",
   );
   assert(fetchCalls === 0, "no fetch call occurs");
+
+  const pending = new ActiveBinaryRequests(2);
+  assert(pending.open(owner, FIXED_RESOURCE_ID), "browser request is active");
+  const canonical = decodeResourceBinaryResult(response, owner, pending) as {
+    type: string;
+    id: string;
+    blob: Blob;
+    mime: string;
+  } | null;
+  assert(canonical?.type === "resource.bytes.result", "canonical result type");
+  assert(canonical.id === FIXED_RESOURCE_ID, "canonical id retained");
+  assert(canonical.blob instanceof Blob, "canonical result contains a Blob");
+  assert(canonical.mime === "text/plain", "bounded tracer MIME retained");
+  assert(
+    new Uint8Array(await canonical.blob.arrayBuffer()).join(",") ===
+      FIXED_RESOURCE_BYTES.join(","),
+    "Blob contains exact backend bytes",
+  );
 });

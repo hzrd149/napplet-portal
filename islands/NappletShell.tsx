@@ -31,6 +31,14 @@ import {
   ConnectionController,
   type ConnectionSnapshot,
 } from "../shell/connection.ts";
+import {
+  ActiveBinaryRequests,
+  BinaryFrameKind,
+  decodeBinaryFrames,
+  encodeBinaryFrame,
+  FIXED_RESOURCE_ID,
+  FIXED_RESOURCE_URL,
+} from "../runtime/binary_transport.ts";
 
 const debug = rootDebug.extend("shell");
 
@@ -61,6 +69,26 @@ interface CatalogResult extends CatalogCommandOutcome {
 interface PendingCatalogCommand {
   readonly resolve: (result: CatalogResult) => void;
   readonly timeout: number;
+}
+
+export function decodeResourceBinaryResult(
+  bytes: Uint8Array,
+  currentOwner: { readonly connectionId: string; readonly windowId: string },
+  requests: ActiveBinaryRequests,
+): Record<string, unknown> | null {
+  const decoded = decodeBinaryFrames(bytes, currentOwner);
+  if (!decoded.ok || decoded.frames.length !== 1) return null;
+  const result = decoded.frames[0];
+  if (
+    result.kind !== BinaryFrameKind.ResourceResult ||
+    !requests.settle(currentOwner, result.id)
+  ) return null;
+  return {
+    type: "resource.bytes.result",
+    id: result.id,
+    blob: new Blob([result.payload.slice().buffer], { type: "text/plain" }),
+    mime: "text/plain",
+  };
 }
 
 export class CatalogCommandRegistry {
@@ -224,6 +252,7 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
   >({ current: null, retired: new Set() });
   const catalogAccount = useRef<string | null>(null);
   const mountedAt = useRef(Date.now());
+  const binaryRequests = useRef(new ActiveBinaryRequests(2));
 
   const registry = useMemo<FrameIdentityRegistry>(() => ({
     register(source, nextIdentity) {
@@ -279,7 +308,34 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
 
   useEffect(() => {
     debug("shell mounted coordinate=%s", coordinate ? "configured" : "empty");
-    const receive = (event: MessageEvent) => bridge.receive(event);
+    const receive = (event: MessageEvent) => {
+      const frame = iframe.current?.contentWindow;
+      const registration = registered.current;
+      const message = event.data as Record<string, unknown> | null;
+      if (
+        frame && event.source === frame && registration?.source === frame &&
+        message && typeof message === "object" &&
+        message.type === "resource.bytes" &&
+        Object.keys(message).sort().join(",") === "id,type,url" &&
+        message.id === FIXED_RESOURCE_ID && message.url === FIXED_RESOURCE_URL
+      ) {
+        const ws = controller.current?.socket;
+        const currentOwner = owner.current;
+        if (
+          ws instanceof WebSocket && ws.readyState === WebSocket.OPEN &&
+          currentOwner && binaryRequests.current.open(currentOwner, message.id)
+        ) {
+          const request = encodeBinaryFrame({
+            kind: BinaryFrameKind.ResourceRequest,
+            id: message.id,
+            payload: new Uint8Array(),
+          });
+          ws.send(request.slice().buffer as ArrayBuffer);
+        }
+        return;
+      }
+      bridge.receive(event);
+    };
     globalThis.addEventListener("message", receive);
     const back = (event: PopStateEvent) => {
       closeCatalogDialog();
@@ -296,8 +352,28 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
       controller.current = new ConnectionController({
         coordinate,
         socketBaseUrl: `${protocol}//${location.host}/api/runtime`,
-        createSocket: (url) => new WebSocket(url),
-        onSocketTerminal: () => catalogCommands.current?.clear(),
+        createSocket: (url) => {
+          const socket = new WebSocket(url);
+          socket.binaryType = "arraybuffer";
+          socket.addEventListener("message", (event) => {
+            if (!(event.data instanceof ArrayBuffer)) return;
+            const currentOwner = owner.current;
+            if (!currentOwner) return;
+            const message = decodeResourceBinaryResult(
+              new Uint8Array(event.data),
+              currentOwner,
+              binaryRequests.current,
+            );
+            if (message) {
+              iframe.current?.contentWindow?.postMessage(message, "*");
+            }
+          });
+          return socket;
+        },
+        onSocketTerminal: () => {
+          catalogCommands.current?.clear();
+          binaryRequests.current.clear();
+        },
         onSnapshot: (snapshot) => {
           setConnection(snapshot);
           setConnecting(

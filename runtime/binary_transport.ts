@@ -1,0 +1,187 @@
+import type { MessageOwner } from "./transport.ts";
+
+const MAGIC = new Uint8Array([0x4e, 0x41, 0x50, 0x42]); // NAPB
+const VERSION = 1;
+const HEADER_BYTES = 12;
+export const MAX_BINARY_ID_BYTES = 128;
+export const MAX_BINARY_PAYLOAD_BYTES = 5 * 1024 * 1024;
+export const FIXED_RESOURCE_URL =
+  "https://napplet.invalid/__portal_resource_tracer__";
+export const FIXED_RESOURCE_ID = "portal-fixed-resource";
+
+export enum BinaryFrameKind {
+  ResourceRequest = 1,
+  ResourceResult = 2,
+  UploadRequest = 3,
+  UploadResult = 4,
+}
+
+export interface BinaryFrame {
+  readonly kind: BinaryFrameKind;
+  readonly id: string;
+  readonly payload: Uint8Array;
+  readonly owner: MessageOwner;
+}
+
+interface EncodableFrame {
+  readonly kind: BinaryFrameKind;
+  readonly id: string;
+  readonly payload: Uint8Array;
+}
+
+const encoder = new TextEncoder();
+const decoder = new TextDecoder("utf-8", { fatal: true });
+
+function validKind(value: number): value is BinaryFrameKind {
+  return value === BinaryFrameKind.ResourceRequest ||
+    value === BinaryFrameKind.ResourceResult ||
+    value === BinaryFrameKind.UploadRequest ||
+    value === BinaryFrameKind.UploadResult;
+}
+
+export function encodeBinaryFrame(frame: EncodableFrame): Uint8Array {
+  const id = encoder.encode(frame.id);
+  if (!id.length || id.length > MAX_BINARY_ID_BYTES) {
+    throw new TypeError("invalid binary correlation id");
+  }
+  if (!validKind(frame.kind)) throw new TypeError("invalid binary frame kind");
+  if (frame.payload.length > MAX_BINARY_PAYLOAD_BYTES) {
+    throw new RangeError("binary payload too large");
+  }
+  const bytes = new Uint8Array(HEADER_BYTES + id.length + frame.payload.length);
+  bytes.set(MAGIC, 0);
+  bytes[4] = VERSION;
+  bytes[5] = frame.kind;
+  const view = new DataView(bytes.buffer);
+  view.setUint16(6, id.length, false);
+  view.setUint32(8, frame.payload.length, false);
+  bytes.set(id, HEADER_BYTES);
+  bytes.set(frame.payload, HEADER_BYTES + id.length);
+  return bytes;
+}
+
+function frameLength(bytes: Uint8Array, offset: number): number | null {
+  if (bytes.length - offset < HEADER_BYTES) return null;
+  for (let index = 0; index < MAGIC.length; index++) {
+    if (bytes[offset + index] !== MAGIC[index]) {
+      throw new TypeError("invalid binary frame");
+    }
+  }
+  if (bytes[offset + 4] !== VERSION || !validKind(bytes[offset + 5])) {
+    throw new TypeError("invalid binary frame");
+  }
+  const view = new DataView(bytes.buffer, bytes.byteOffset + offset);
+  const idLength = view.getUint16(6, false);
+  const payloadLength = view.getUint32(8, false);
+  if (
+    !idLength || idLength > MAX_BINARY_ID_BYTES ||
+    payloadLength > MAX_BINARY_PAYLOAD_BYTES
+  ) throw new TypeError("invalid binary frame");
+  return HEADER_BYTES + idLength + payloadLength;
+}
+
+function decodeOne(
+  bytes: Uint8Array,
+  offset: number,
+  length: number,
+  owner: MessageOwner,
+): BinaryFrame {
+  const view = new DataView(bytes.buffer, bytes.byteOffset + offset);
+  const idLength = view.getUint16(6, false);
+  let id: string;
+  try {
+    id = decoder.decode(
+      bytes.subarray(offset + HEADER_BYTES, offset + HEADER_BYTES + idLength),
+    );
+  } catch {
+    throw new TypeError("invalid binary frame");
+  }
+  if (
+    !id || [...id].some((character) => {
+      const code = character.codePointAt(0) ?? 0;
+      return code < 32 || code === 127;
+    })
+  ) {
+    throw new TypeError("invalid binary frame");
+  }
+  return {
+    kind: bytes[offset + 5] as BinaryFrameKind,
+    id,
+    payload: bytes.slice(offset + HEADER_BYTES + idLength, offset + length),
+    owner,
+  };
+}
+
+export class BinaryFrameStreamDecoder {
+  #buffer = new Uint8Array();
+
+  constructor(readonly owner: MessageOwner) {}
+
+  push(chunk: Uint8Array): BinaryFrame[] {
+    if (chunk.length) {
+      const combined = new Uint8Array(this.#buffer.length + chunk.length);
+      combined.set(this.#buffer);
+      combined.set(chunk, this.#buffer.length);
+      this.#buffer = combined;
+    }
+    const frames: BinaryFrame[] = [];
+    let offset = 0;
+    while (offset < this.#buffer.length) {
+      const length = frameLength(this.#buffer, offset);
+      if (length === null || this.#buffer.length - offset < length) break;
+      frames.push(decodeOne(this.#buffer, offset, length, this.owner));
+      offset += length;
+    }
+    this.#buffer = this.#buffer.slice(offset);
+    return frames;
+  }
+
+  get pendingBytes(): number {
+    return this.#buffer.length;
+  }
+}
+
+export type DecodeBinaryResult =
+  | { readonly ok: true; readonly frames: readonly BinaryFrame[] }
+  | { readonly ok: false; readonly error: "invalid-binary-frame" };
+
+export function decodeBinaryFrames(
+  bytes: Uint8Array,
+  owner: MessageOwner,
+): DecodeBinaryResult {
+  try {
+    const stream = new BinaryFrameStreamDecoder(owner);
+    const frames = stream.push(bytes);
+    if (stream.pendingBytes || !frames.length) {
+      return { ok: false, error: "invalid-binary-frame" };
+    }
+    return { ok: true, frames };
+  } catch {
+    return { ok: false, error: "invalid-binary-frame" };
+  }
+}
+
+function requestKey(owner: MessageOwner, id: string): string {
+  return `${owner.connectionId.length}:${owner.connectionId}${owner.windowId.length}:${owner.windowId}${id}`;
+}
+
+export class ActiveBinaryRequests {
+  readonly #active = new Set<string>();
+
+  constructor(readonly limit: number) {}
+
+  open(owner: MessageOwner, id: string): boolean {
+    const key = requestKey(owner, id);
+    if (this.#active.has(key) || this.#active.size >= this.limit) return false;
+    this.#active.add(key);
+    return true;
+  }
+
+  settle(owner: MessageOwner, id: string): boolean {
+    return this.#active.delete(requestKey(owner, id));
+  }
+
+  clear(): void {
+    this.#active.clear();
+  }
+}
