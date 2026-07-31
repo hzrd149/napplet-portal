@@ -26,6 +26,10 @@ import {
 import { ConnectionSheet } from "../components/ConnectionSheet.tsx";
 import { HomeHeader } from "../components/HomeHeader.tsx";
 import { AccountSheet } from "../components/AccountSheet.tsx";
+import { MediaControls } from "../components/MediaControls.tsx";
+import type { MediaAction, MediaPlaybackOwner } from "@napplet/core";
+import type { MediaStateMessage } from "@napplet/nap/media";
+import type { MediaActorRef } from "../runtime/media_reducer.ts";
 import { debug as rootDebug, shortId } from "../debug.ts";
 import {
   ConnectionController,
@@ -58,6 +62,210 @@ export interface IntentSurface {
   readonly identity: VerifiedNappletIdentity;
   readonly srcdoc: string;
   readonly owner: { readonly connectionId: string; readonly windowId: string };
+}
+
+export interface ShellMediaProjection {
+  readonly sessionId: string;
+  readonly generation: number;
+  readonly playbackOwner: MediaPlaybackOwner;
+  readonly owner: MediaActorRef | null;
+  readonly origin: MediaActorRef;
+  readonly status: MediaStateMessage["status"];
+  readonly position?: number;
+  readonly duration?: number;
+  readonly volume?: number;
+  readonly capabilities: readonly MediaAction[];
+  readonly transferable: boolean;
+  readonly terminal: boolean;
+  readonly metadata: Readonly<Record<string, unknown>>;
+}
+
+interface MediaShellOptions {
+  readonly send: (message: Record<string, unknown>) => void;
+  readonly post: (message: Record<string, unknown>) => void;
+  readonly stopLocal: () => void;
+  readonly changed?: () => void;
+}
+
+const MEDIA_STATUSES = new Set(["playing", "paused", "stopped", "buffering"]);
+const MEDIA_ACTIONS = new Set([
+  "play",
+  "pause",
+  "stop",
+  "next",
+  "prev",
+  "seek",
+  "volume",
+]);
+const actor = (value: unknown): value is MediaActorRef => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const item = value as Record<string, unknown>;
+  return typeof item.connectionId === "string" &&
+    typeof item.windowId === "string";
+};
+
+export function decodeShellMediaProjection(
+  value: unknown,
+): ShellMediaProjection | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const item = value as Record<string, unknown>;
+  if (
+    typeof item.sessionId !== "string" ||
+    !Number.isSafeInteger(item.generation) ||
+    (item.owner !== null && !actor(item.owner)) || !actor(item.origin) ||
+    (item.playbackOwner !== "shell" && item.playbackOwner !== "napplet") ||
+    !MEDIA_STATUSES.has(String(item.status)) ||
+    !Array.isArray(item.capabilities) ||
+    !item.capabilities.every((action) => MEDIA_ACTIONS.has(String(action))) ||
+    typeof item.transferable !== "boolean" ||
+    typeof item.terminal !== "boolean" ||
+    !item.metadata || typeof item.metadata !== "object" ||
+    Array.isArray(item.metadata)
+  ) return null;
+  return item as unknown as ShellMediaProjection;
+}
+
+export class MediaShellController {
+  #owner: MediaActorRef | null = null;
+  #epoch = -1;
+  #projection: ShellMediaProjection | null = null;
+  #ready = false;
+  #hiddenReported = false;
+  #retryRequired = false;
+  #pending = new Set<string>();
+
+  constructor(readonly options: MediaShellOptions) {}
+  get ready() {
+    return this.#ready;
+  }
+  get projection() {
+    return this.#projection;
+  }
+  get retryRequired() {
+    return this.#retryRequired;
+  }
+  get pending() {
+    return this.#pending.size > 0;
+  }
+  get isOwner() {
+    return this.#owner !== null &&
+      this.#projection?.owner?.connectionId === this.#owner.connectionId &&
+      this.#projection.owner.windowId === this.#owner.windowId &&
+      !this.#projection.terminal;
+  }
+  connect(owner: MediaActorRef): void {
+    if (this.isOwner) this.options.stopLocal();
+    this.#owner = owner;
+    this.#epoch = -1;
+    this.#projection = null;
+    this.#ready = false;
+    this.#hiddenReported = false;
+    this.#retryRequired = false;
+    this.#pending.clear();
+    this.options.changed?.();
+  }
+  snapshot(
+    accountEpoch: number,
+    projection: ShellMediaProjection | null,
+  ): boolean {
+    if (!Number.isSafeInteger(accountEpoch) || accountEpoch < this.#epoch) {
+      return false;
+    }
+    if (
+      projection && this.#projection &&
+      projection.generation < this.#projection.generation
+    ) return false;
+    const willOwn = projection !== null && this.#owner !== null &&
+      projection.owner?.connectionId === this.#owner.connectionId &&
+      projection.owner.windowId === this.#owner.windowId &&
+      !projection.terminal;
+    if (!willOwn && this.isOwner) this.options.stopLocal();
+    this.#epoch = accountEpoch;
+    this.#projection = projection;
+    this.#ready = true;
+    if (!willOwn) this.#retryRequired = false;
+    if (projection?.status !== "playing") this.#hiddenReported = false;
+    this.options.changed?.();
+    return true;
+  }
+  request(action: "transfer" | "stop"): boolean {
+    const projection = this.#projection;
+    if (
+      !this.#ready || !projection || projection.terminal ||
+      (action === "transfer" && (this.isOwner || !projection.transferable))
+    ) return false;
+    const id = crypto.randomUUID();
+    this.#pending.add(id);
+    this.options.send({
+      type: `runtime.media.${action}`,
+      id,
+      sessionId: projection.sessionId,
+      generation: projection.generation,
+    });
+    this.options.changed?.();
+    return true;
+  }
+  result(message: Record<string, unknown>): boolean {
+    if (
+      message.type !== "runtime.media.result" ||
+      typeof message.id !== "string" || !this.#pending.delete(message.id)
+    ) return false;
+    if (
+      typeof message.generation === "number" && this.#projection &&
+      message.generation < this.#projection.generation
+    ) return false;
+    this.options.changed?.();
+    return true;
+  }
+  forward(message: Record<string, unknown>): boolean {
+    if (!this.isOwner || !this.#projection || !this.#owner) return false;
+    this.options.send({
+      type: "runtime.forward",
+      ...this.#owner,
+      generation: this.#projection.generation,
+      message,
+    });
+    return true;
+  }
+  command(message: Record<string, unknown>): boolean {
+    if (!this.isOwner || message.type !== "media.command") return false;
+    this.options.post(message);
+    return true;
+  }
+  hidden(status: "paused" | "stopped" = "paused"): void {
+    this.options.stopLocal();
+    if (!this.isOwner || this.#hiddenReported || !this.#projection) return;
+    this.#hiddenReported = true;
+    this.forward({
+      type: "media.state",
+      sessionId: this.#projection.sessionId,
+      status,
+    });
+  }
+  async play(enact: () => Promise<void>): Promise<boolean> {
+    if (!this.isOwner || !this.#projection) return false;
+    try {
+      await enact();
+      this.#retryRequired = false;
+      this.forward({
+        type: "media.state",
+        sessionId: this.#projection.sessionId,
+        status: "playing",
+      });
+      this.options.changed?.();
+      return true;
+    } catch {
+      this.options.stopLocal();
+      this.#retryRequired = true;
+      this.forward({
+        type: "media.state",
+        sessionId: this.#projection.sessionId,
+        status: "paused",
+      });
+      this.options.changed?.();
+      return false;
+    }
+  }
 }
 
 interface SurfaceStackOptions {
@@ -607,6 +815,25 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
   const popupReservations = useRef<PopupReservationController | null>(null);
   const inlineReservations = useRef(new Map<string, InlineReservation>());
   const surfaceStack = useRef<SurfaceStackController | null>(null);
+  const [, renderMedia] = useState(0);
+  const stopLocalMedia = () => {
+    const frame = iframe.current;
+    frame?.contentDocument?.querySelectorAll("audio,video").forEach(
+      (element) => {
+        (element as HTMLMediaElement).pause();
+      },
+    );
+  };
+  const media = useRef<MediaShellController | null>(null);
+  if (!media.current) {
+    media.current = new MediaShellController({
+      send: (message) => controller.current?.send(message),
+      post: (message) =>
+        iframe.current?.contentWindow?.postMessage(message, "*"),
+      stopLocal: stopLocalMedia,
+      changed: () => renderMedia((value) => value + 1),
+    });
+  }
   if (!surfaceStack.current) {
     surfaceStack.current = new SurfaceStackController({
       pushHistory: (state) => history.pushState(state, "", location.href),
@@ -883,7 +1110,12 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
       catalogCommands.current = new CatalogCommandRegistry((message) =>
         controller.current?.send(message) ?? false
       );
-      const visibility = () => controller.current?.visibilityChanged();
+      const visibility = () => {
+        controller.current?.visibilityChanged();
+        if (document.visibilityState === "hidden") {
+          media.current?.hidden("paused");
+        }
+      };
       const online = () => controller.current?.onlineChanged();
       document.addEventListener("visibilitychange", visibility);
       globalThis.addEventListener("online", online);
@@ -931,6 +1163,7 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
         connectionId: message.connectionId,
         windowId: message.windowId,
       };
+      media.current?.connect(owner.current);
       activeSocket.current ??= controller.current?.socket ?? null;
       debug(
         "runtime connected connection=%s window=%s resumed=%s",
@@ -947,6 +1180,10 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
         message.windowId !== currentOwner.windowId
       ) return;
       const eventMessage = message.message as Record<string, unknown>;
+      if (eventMessage.type === "media.command") {
+        media.current?.command(eventMessage);
+        return;
+      }
       if (eventMessage.type === "intent.navigation.authorized") {
         const decoded = eventMessage as Extract<IntentNavigationMessage, {
           type: "intent.navigation.authorized";
@@ -1122,6 +1359,19 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
           setCatalog(next);
         }
       }
+      return;
+    }
+    if (message.type === "runtime.media.snapshot") {
+      if (!Number.isSafeInteger(message.accountEpoch)) return;
+      const projection = message.session === null
+        ? null
+        : decodeShellMediaProjection(message.session);
+      if (message.session !== null && !projection) return;
+      media.current?.snapshot(Number(message.accountEpoch), projection);
+      return;
+    }
+    if (message.type === "runtime.media.result") {
+      media.current?.result(message);
       return;
     }
     if (
@@ -1442,14 +1692,31 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
           )}
         </div>
       </main>
-      <PrimaryNavigation
-        view={view}
-        signedIn={signedIn}
-        connection={connection}
-        onNavigate={navigate}
-        onConnection={() => setConnectionSheetOpen(true)}
-        onAccount={() => setAccountSheetOpen(true)}
-      />
+      <footer class="shell-chrome">
+        <MediaControls
+          ready={media.current?.ready ?? false}
+          projection={media.current?.projection ?? null}
+          currentOwner={owner.current}
+          pending={media.current?.pending ?? false}
+          retryRequired={media.current?.retryRequired ?? false}
+          onTransfer={() => media.current?.request("transfer")}
+          onStop={() => media.current?.request("stop")}
+          onRetry={() => {
+            const element = iframe.current?.contentDocument?.querySelector(
+              "audio,video",
+            ) as HTMLMediaElement | null;
+            if (element) void media.current?.play(() => element.play());
+          }}
+        />
+        <PrimaryNavigation
+          view={view}
+          signedIn={signedIn}
+          connection={connection}
+          onNavigate={navigate}
+          onConnection={() => setConnectionSheetOpen(true)}
+          onAccount={() => setAccountSheetOpen(true)}
+        />
+      </footer>
       <ConnectionSheet
         state={connection}
         open={connectionSheetOpen}

@@ -440,7 +440,7 @@ svg {
 
 .portal-shell {
   display: grid;
-  grid-template-rows: minmax(0, 1fr) calc(64px + env(safe-area-inset-bottom));
+  grid-template-rows: minmax(0, 1fr) auto;
   height: 100vh;
   height: 100dvh;
   background: var(--shell-bg);
@@ -1221,6 +1221,66 @@ svg {
   font-weight: 600;
 }
 
+.media-controls {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+  padding: 6px max(8px, env(safe-area-inset-left));
+  border-top: 1px solid var(--shell-border);
+  color: var(--shell-text);
+  background: var(--shell-surface);
+}
+.shell-chrome {
+  display: grid;
+  min-height: 0;
+}
+.shell-chrome:has(.media-controls) {
+  grid-template-rows: auto minmax(48px, 1fr);
+}
+.media-controls-copy {
+  display: grid;
+  min-width: 0;
+  flex: 1;
+  font-size: 12px;
+}
+.media-controls-copy > * {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.media-controls-actions {
+  display: flex;
+  gap: 6px;
+}
+.media-controls-actions button {
+  min-height: 44px;
+  padding: 6px 10px;
+  border: 1px solid var(--shell-border-strong);
+  border-radius: 999px;
+  color: inherit;
+  background: var(--shell-surface-raised);
+}
+.media-controls-actions button:focus-visible {
+  outline: 3px solid var(--shell-accent);
+  outline-offset: 2px;
+}
+
+@media (max-width: 420px), (max-height: 520px) {
+  .media-controls {
+    gap: 4px;
+    padding-block: 2px;
+  }
+  .media-controls-copy span:not(.sr-only) {
+    display: none;
+  }
+  .media-controls-actions button {
+    min-height: 40px;
+    padding-inline: 8px;
+    font-size: 12px;
+  }
+}
+
 .signout-dialog {
   width: min(calc(100% - 32px), 28rem);
   padding: 24px;
@@ -1254,9 +1314,6 @@ svg {
 }
 
 @media (orientation: landscape) {
-  .portal-shell {
-    grid-template-rows: minmax(0, 1fr) calc(48px + env(safe-area-inset-bottom));
-  }
   .bottom-nav button {
     gap: 0;
     min-height: 44px;
@@ -1265,9 +1322,6 @@ svg {
 }
 
 @media (max-height: 520px) {
-  .portal-shell {
-    grid-template-rows: minmax(0, 1fr) calc(48px + env(safe-area-inset-bottom));
-  }
   .bottom-nav button {
     gap: 0;
     min-height: 44px;
