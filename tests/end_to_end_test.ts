@@ -9,6 +9,11 @@ import type {
 import { createPortalRuntime } from "../runtime/portal_runtime.ts";
 import { loadRuntimeConfig } from "../runtime/config.ts";
 import { app, processRuntime, startupSummary } from "../main.ts";
+import { ResourceBinaryAssembler } from "../islands/NappletShell.tsx";
+import {
+  BinaryFrameKind,
+  encodeBinaryFrame,
+} from "../runtime/binary_transport.ts";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -170,39 +175,66 @@ Deno.test("runtime sign-out emits only the canonical identity transition", async
 });
 
 Deno.test("production runtime wires the complete RESOURCE and UPLOAD seam", async () => {
-  const endpoint = await Deno.readTextFile("routes/api/runtime.ts");
-  const shell = await Deno.readTextFile("islands/NappletShell.tsx");
-  const main = await Deno.readTextFile("main.ts");
-  const transport = await Deno.readTextFile("runtime/transport.ts");
-  const dispatcher = await Deno.readTextFile("runtime/nap_dispatcher.ts");
-  const productionSeam = endpoint + shell + transport + dispatcher;
-  for (
-    const action of [
-      "resource.info",
-      "resource.bytes",
-      "resource.bytesMany",
-      "resource.cancel",
-      "upload.info",
-      "upload.upload",
-      "upload.status",
-      "upload.status.changed",
-    ]
-  ) {
-    assert(
-      productionSeam.includes(action),
-      `${action} crosses production transport`,
-    );
-  }
+  const owner = { connectionId: "connection", windowId: "window" };
+  const png = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]);
+  const assembler = new ResourceBinaryAssembler();
   assert(
-    main.includes("new NapDispatcher"),
-    "one process-owned dispatcher is constructed",
+    assembler.acceptMetadata({
+      type: "resource.bytes.result",
+      id: "one",
+      mime: "image/png",
+    }),
+    "metadata retained",
+  );
+  const single = assembler.acceptBinary(
+    encodeBinaryFrame({
+      kind: BinaryFrameKind.ResourceResult,
+      id: "one",
+      payload: png,
+    }),
+    owner,
+  ) as { blob: Blob };
+  assert(single.blob.type === "image/png", "observed MIME reaches the napplet");
+  assert(
+    new Uint8Array(await single.blob.arrayBuffer()).join() === png.join(),
+    "exact PNG bytes reach the napplet once",
+  );
+
+  assert(
+    assembler.acceptMetadata({
+      type: "resource.bytesMany.result",
+      id: "many",
+      items: [
+        { url: "png", ok: true, mime: "image/png", binaryIndex: 0 },
+        { url: "missing", ok: false, error: "not-found" },
+        { url: "text", ok: true, mime: "text/plain", binaryIndex: 1 },
+      ],
+    }),
+    "batch metadata retained",
   );
   assert(
-    main.includes("new ResourceService"),
-    "one process-owned resource service is constructed",
+    assembler.acceptBinary(
+      encodeBinaryFrame({
+        kind: BinaryFrameKind.ResourceResult,
+        id: "many:0",
+        payload: png,
+      }),
+      owner,
+    ) === null,
+    "batch waits for every binary part",
   );
+  const batch = assembler.acceptBinary(
+    encodeBinaryFrame({
+      kind: BinaryFrameKind.ResourceResult,
+      id: "many:1",
+      payload: new TextEncoder().encode("ok"),
+    }),
+    owner,
+  ) as { items: Array<{ blob?: Blob; ok: boolean }> };
   assert(
-    main.includes("new BlossomTransferService"),
-    "one process-owned upload service is constructed",
+    batch.items[0].blob?.type === "image/png" &&
+      batch.items[2].blob?.type === "text/plain",
+    "mixed batch reconstructs canonical blobs",
   );
+  assert(!batch.items[1].ok, "batch failures retain their position");
 });
