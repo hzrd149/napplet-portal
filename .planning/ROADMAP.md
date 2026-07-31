@@ -122,13 +122,13 @@ Plans:
 
 **Goal:** The full v1.1 expansion is contract-compatible, secure at every proxy boundary, and verified on mobile devices.
 **Requirements:** QLT-01, QLT-02, QLT-03, QLT-04
-**Plans:** 2/9 plans executed
+**Plans:** 3/9 plans executed
 
 Plans:
 
 - [x] 09-01-PLAN.md — Generate exhaustive ten-domain codec/action parity and traceability evidence.
 - [x] 09-02-PLAN.md — Close hostile transport, URL, redirect, and RESOURCE/UPLOAD transfer boundaries.
-- [ ] 09-03-PLAN.md — Close capability, catalog, identity, and signer authority boundaries.
+- [x] 09-03-PLAN.md — Close capability, catalog, identity, and signer authority boundaries.
 - [ ] 09-04-PLAN.md — Close COMMON stream and STORAGE namespace isolation boundaries.
 - [ ] 09-05-PLAN.md — Close iframe sandbox, source/origin, CSP, and Permissions-Policy boundaries.
 - [ ] 09-06-PLAN.md — Close intent, media, reconnect, replacement, and shutdown lifecycle boundaries.

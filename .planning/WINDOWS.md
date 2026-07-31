@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 4
+open_count: 5
 waived_count: 0
 fixed_count: 13
-total_count: 17
-last_updated: 2026-07-31T05:14:14.644Z
+total_count: 18
+last_updated: 2026-07-31T06:22:40.172Z
 ---
 
 # Broken Windows Ledger
@@ -32,6 +32,7 @@ last_updated: 2026-07-31T05:14:14.644Z
 | 15 | 07 | deviation | islands/IntentReservation.tsx |  | Used globalThis.opener to satisfy Deno no-window lint while preserving opener-first ordering | fixed |  | 2026-07-31T04:32:20.762Z | 2026-07-31T04:32:34.104Z |
 | 16 | 08 | deviation | runtime/connections.ts |  | Stale attachment close fencing added for reconnect correctness | fixed |  | 2026-07-31T05:13:48.670Z | 2026-07-31T05:14:14.508Z |
 | 17 | 08 | deviation | tests/media_lifecycle_test.ts |  | Lifecycle fixture adjusted to satisfy prefer-const lint | fixed |  | 2026-07-31T05:13:48.785Z | 2026-07-31T05:14:14.644Z |
+| 18 | 09 | deviation | tests/requirement_traceability_test.ts |  | Full-suite traceability expectation still lists concurrently advanced QLT-02 and QLT-03 as pending | open |  | 2026-07-31T06:22:40.172Z |  |
 
 ````json
 [
@@ -238,6 +239,18 @@ last_updated: 2026-07-31T05:14:14.644Z
     "reason": "",
     "recorded_at": "2026-07-31T05:13:48.785Z",
     "resolved_at": "2026-07-31T05:14:14.644Z"
+  },
+  {
+    "id": 18,
+    "kind": "deviation",
+    "phase": "09",
+    "file": "tests/requirement_traceability_test.ts",
+    "line": null,
+    "description": "Full-suite traceability expectation still lists concurrently advanced QLT-02 and QLT-03 as pending",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-07-31T06:22:40.172Z",
+    "resolved_at": null
   }
 ]
 ````
