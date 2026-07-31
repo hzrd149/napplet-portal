@@ -5,16 +5,16 @@ milestone_name: Runtime & UX Expansion
 current_phase: 7
 current_phase_name: Intent Navigation
 status: verifying
-stopped_at: Completed 08-02-PLAN.md
-last_updated: "2026-07-31T05:13:49.532Z"
+stopped_at: Completed 08-03-PLAN.md
+last_updated: "2026-07-31T05:35:15.313Z"
 last_activity: 2026-07-31
 last_activity_desc: Completed Phase 7 production intent navigation integration
 progress:
   total_phases: 7
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 32
-  completed_plans: 22
-  percent: 69
+  completed_plans: 23
+  percent: 72
 ---
 
 # Project State
@@ -92,6 +92,7 @@ Last activity: 2026-07-31 — Completed Phase 7 production intent navigation int
 | Phase 07 P04 | 14min | 3 tasks | 12 files |
 | Phase 08-cross-tab-media-sessions P01 | 7min | 2 tasks | 7 files |
 | Phase 08-cross-tab-media-sessions P02 | 7min | 2 tasks | 8 files |
+| Phase 08-cross-tab-media-sessions P03 | 35min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -169,6 +170,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase ?]: [Phase 08]: Commit media authority before ordered delivery and convert current-owner delivery failure into immediate owner loss.
 - [Phase ?]: [Phase 08]: Keep portal media controls top-level and canonical MEDIA confined to runtime.forward/runtime.event.
 - [Phase ?]: [Phase 08]: Fence socket detach with attachment generations so stale closes cannot revoke resumed successors.
+- [Phase ?]: [Phase 08]: Keep socket/account epoch and media generation exclusively in the shell controller while iframe messages remain canonical.
+- [Phase ?]: [Phase 08]: Treat play promise fulfillment and rejection as the only source of browser playback truth.
 
 ### Pending Todos
 
@@ -197,6 +200,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-07-31T05:13:49.515Z
-Stopped at: Completed 08-02-PLAN.md
+Last session: 2026-07-31T05:35:15.298Z
+Stopped at: Completed 08-03-PLAN.md
 Resume file: None
