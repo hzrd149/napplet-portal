@@ -42,14 +42,48 @@ export async function pinnedFetch(
     },
   });
   try {
-    return await undiciFetch(
+    const response = await undiciFetch(
       url,
       {
         ...init,
         dispatcher,
       } as Parameters<typeof undiciFetch>[1],
     ) as unknown as Response;
-  } finally {
+    if (!response.body) {
+      await dispatcher.close();
+      return response;
+    }
+    const reader = response.body.getReader();
+    const body = new ReadableStream<Uint8Array>({
+      async pull(controller) {
+        try {
+          const chunk = await reader.read();
+          if (chunk.done) {
+            controller.close();
+            await dispatcher.close();
+          } else {
+            controller.enqueue(chunk.value);
+          }
+        } catch (error) {
+          controller.error(error);
+          await dispatcher.close();
+        }
+      },
+      async cancel(reason) {
+        try {
+          await reader.cancel(reason);
+        } finally {
+          await dispatcher.close();
+        }
+      },
+    });
+    return new Response(body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers: response.headers,
+    });
+  } catch (error) {
     await dispatcher.close();
+    throw error;
   }
 }
