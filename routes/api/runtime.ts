@@ -11,8 +11,6 @@ import {
   decodeCatalogCommand,
   decodeClientMessage,
   decodeNapControlMessage,
-  RESOURCE_INFO,
-  UPLOAD_INFO,
 } from "../../runtime/transport.ts";
 import {
   BinaryFrameKind,
@@ -108,7 +106,32 @@ export const handler = define.handlers({
       session = {
         windowId,
         source,
-        bridge: runtime.openWindow(connection.connectionId, windowId, source),
+        bridge: runtime.openWindow(
+          connection.connectionId,
+          windowId,
+          source,
+          (message, payloads) => {
+            if (socket.readyState !== WebSocket.OPEN) return;
+            socket.send(JSON.stringify({
+              type: "runtime.event",
+              connectionId: connection.connectionId,
+              windowId,
+              message,
+            }));
+            payloads?.forEach((payload, index) => {
+              const id = payloads.length === 1
+                ? String(message.id)
+                : `${String(message.id)}:${index}`;
+              socket.send(
+                encodeBinaryFrame({
+                  kind: BinaryFrameKind.ResourceResult,
+                  id,
+                  payload,
+                }).slice().buffer as ArrayBuffer,
+              );
+            });
+          },
+        ),
       };
       sessions.set(connection.connectionId, session);
       debug(
@@ -174,12 +197,31 @@ export const handler = define.handlers({
     });
     socket.addEventListener("message", async (event) => {
       if (event.data instanceof ArrayBuffer) {
-        const result = await handleFixedResourceFrame(
-          new Uint8Array(event.data),
-          { connectionId: connection.connectionId, windowId },
-        );
-        if (result) socket.send(result.slice().buffer as ArrayBuffer);
-        else socket.close(1008, "invalid binary message");
+        const incoming = new Uint8Array(event.data);
+        const decoded = decodeBinaryFrames(incoming, {
+          connectionId: connection.connectionId,
+          windowId,
+        });
+        const frame = decoded.ok && decoded.frames.length === 1
+          ? decoded.frames[0]
+          : undefined;
+        if (frame?.kind === BinaryFrameKind.UploadRequest) {
+          await bridge.dispatchTransfer({
+            type: "upload.upload",
+            id: frame.id,
+            request: {
+              rail: "blossom",
+              data: frame.payload.slice().buffer as ArrayBuffer,
+            },
+          });
+        } else {
+          const result = await handleFixedResourceFrame(incoming, {
+            connectionId: connection.connectionId,
+            windowId,
+          });
+          if (result) socket.send(result.slice().buffer as ArrayBuffer);
+          else socket.close(1008, "invalid binary message");
+        }
         return;
       }
       if (ArrayBuffer.isView(event.data)) {
@@ -304,57 +346,8 @@ export const handler = define.handlers({
           napMessage.type,
         );
         const transfer = decodeNapControlMessage(napMessage);
-        if (transfer?.type === "resource.info") {
-          socket.send(JSON.stringify({
-            type: "runtime.event",
-            connectionId: connection.connectionId,
-            windowId,
-            message: {
-              type: "resource.info.result",
-              id: transfer.id,
-              info: RESOURCE_INFO,
-            },
-          }));
-          return;
-        }
-        if (transfer?.type === "upload.info") {
-          socket.send(JSON.stringify({
-            type: "runtime.event",
-            connectionId: connection.connectionId,
-            windowId,
-            message: {
-              type: "upload.info.result",
-              id: transfer.id,
-              info: UPLOAD_INFO,
-            },
-          }));
-          return;
-        }
-        if (transfer?.type === "resource.bytes") {
-          socket.send(JSON.stringify({
-            type: "runtime.event",
-            connectionId: connection.connectionId,
-            windowId,
-            message: {
-              type: "resource.bytes.error",
-              id: transfer.id,
-              error: "blocked-by-policy",
-              message: "Resource transfer is unavailable",
-            },
-          }));
-          return;
-        }
-        if (transfer?.type === "upload.upload") {
-          socket.send(JSON.stringify({
-            type: "runtime.event",
-            connectionId: connection.connectionId,
-            windowId,
-            message: {
-              type: "upload.upload.result",
-              id: transfer.id,
-              error: "Upload transfer is unavailable",
-            },
-          }));
+        if (transfer) {
+          await bridge.dispatchTransfer(transfer);
           return;
         }
         if (napMessage.type === "shell.ready") {
@@ -431,6 +424,10 @@ export const handler = define.handlers({
         const account = runtime.signIn(pubkey);
         const artifact = await runtime.resolveArtifact();
         if (socket.readyState !== WebSocket.OPEN) return;
+        bridge.verifyNapplet({
+          dTag: artifact.dTag,
+          aggregateHash: artifact.aggregateHash,
+        });
         socket.send(JSON.stringify({
           type: "runtime.artifact",
           srcdoc: artifact.indexHtml,

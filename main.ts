@@ -15,6 +15,12 @@ import { CatalogSyncOwner } from "./runtime/event_runtime.ts";
 import { CatalogService } from "./runtime/catalog.ts";
 import { RelayPolicy } from "./runtime/relay_policy.ts";
 import { map } from "npm:rxjs@7.8.2";
+import { ResourceService } from "./runtime/resource_service.ts";
+import {
+  BlossomTransferAdapter,
+  BlossomTransferService,
+} from "./runtime/blossom_transfer.ts";
+import { NapDispatcher } from "./runtime/nap_dispatcher.ts";
 
 const debug = rootDebug.extend("backend");
 
@@ -43,12 +49,11 @@ runtimeSettings.settings$.subscribe((settings) => {
     relay: settings.localRelay ? "checking" : "degraded",
   };
 });
-void discoverLocalBlossom().then((endpoint) => {
-  cacheHealthState = {
-    ...cacheHealthState,
-    blossom: endpoint ? "healthy" : "degraded",
-  };
-});
+const localBlossom = await discoverLocalBlossom();
+cacheHealthState = {
+  ...cacheHealthState,
+  blossom: localBlossom ? "healthy" : "degraded",
+};
 const signerAccounts = new PortalAccounts(
   new AccountStore(".data/accounts.json"),
   {
@@ -131,6 +136,31 @@ const catalogService = new CatalogService({
   },
 });
 processRuntime.configureCatalog(catalogService);
+const resourceService = new ResourceService({ localCacheUrl: localBlossom });
+const blossomTransfer = new BlossomTransferService({
+  uploader: new BlossomTransferAdapter({
+    signEvent: (template) => signerAccounts.signEvent(template),
+  }),
+});
+export const napDispatcher = new NapDispatcher({
+  resource: resourceService,
+  transfer: blossomTransfer,
+  settings: () => ({
+    blossomServers: runtimeSettings.settings.blossomServers.filter((value) => {
+      try {
+        const host = new URL(value).hostname;
+        return host !== "localhost" && host !== "::1" &&
+          !host.startsWith("127.");
+      } catch {
+        return false;
+      }
+    }),
+    localBlossom,
+  }),
+  send: (owner, message, bytes) =>
+    processRuntime.deliverTransfer(owner, message, bytes),
+});
+processRuntime.configureTransfers(napDispatcher);
 export const catalogSync = new CatalogSyncOwner({
   eventRuntime: processRuntime.eventRuntime,
   catalog: catalogService,

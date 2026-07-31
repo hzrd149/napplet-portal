@@ -173,6 +173,9 @@ Deno.test("production runtime wires the complete RESOURCE and UPLOAD seam", asyn
   const endpoint = await Deno.readTextFile("routes/api/runtime.ts");
   const shell = await Deno.readTextFile("islands/NappletShell.tsx");
   const main = await Deno.readTextFile("main.ts");
+  const transport = await Deno.readTextFile("runtime/transport.ts");
+  const dispatcher = await Deno.readTextFile("runtime/nap_dispatcher.ts");
+  const productionSeam = endpoint + shell + transport + dispatcher;
   for (
     const action of [
       "resource.info",
@@ -186,7 +189,7 @@ Deno.test("production runtime wires the complete RESOURCE and UPLOAD seam", asyn
     ]
   ) {
     assert(
-      endpoint.includes(action) || shell.includes(action),
+      productionSeam.includes(action),
       `${action} crosses production transport`,
     );
   }

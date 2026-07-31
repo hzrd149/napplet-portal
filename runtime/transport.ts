@@ -123,11 +123,22 @@ export type NapControlMessage =
     readonly id: string;
     readonly url: string;
   }
+  | {
+    readonly type: "resource.bytesMany";
+    readonly id: string;
+    readonly urls: readonly string[];
+  }
+  | { readonly type: "resource.cancel"; readonly id: string }
   | { readonly type: "upload.info"; readonly id: string }
   | {
     readonly type: "upload.upload";
     readonly id: string;
     readonly request: UploadRequest;
+  }
+  | {
+    readonly type: "upload.status";
+    readonly id: string;
+    readonly uploadId: string;
   };
 
 function decodeUploadRequest(value: unknown): value is UploadRequest {
@@ -176,12 +187,31 @@ export function decodeNapControlMessage(
     message.url.length <= TRANSFER_POLICY.maxUrlChars
   ) return message as unknown as NapControlMessage;
   if (
+    message.type === "resource.bytesMany" &&
+    exactKeys(message, ["type", "id", "urls"]) &&
+    Array.isArray(message.urls) && message.urls.length > 0 &&
+    message.urls.length <= TRANSFER_POLICY.maxUrls &&
+    message.urls.every((url) =>
+      typeof url === "string" && url.length > 0 &&
+      url.length <= TRANSFER_POLICY.maxUrlChars
+    )
+  ) return message as unknown as NapControlMessage;
+  if (
+    message.type === "resource.cancel" &&
+    exactKeys(message, ["type", "id"])
+  ) return message as unknown as NapControlMessage;
+  if (
     message.type === "upload.info" && exactKeys(message, ["type", "id"])
   ) return message as unknown as NapControlMessage;
   if (
     message.type === "upload.upload" &&
     exactKeys(message, ["type", "id", "request"]) &&
     decodeUploadRequest(message.request)
+  ) return message as unknown as NapControlMessage;
+  if (
+    message.type === "upload.status" &&
+    exactKeys(message, ["type", "id", "uploadId"]) &&
+    boundedId(message.uploadId)
   ) return message as unknown as NapControlMessage;
   return null;
 }

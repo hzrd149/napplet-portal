@@ -18,7 +18,7 @@ export interface ConnectionSnapshot {
 
 export interface SocketLike extends EventTarget {
   readonly readyState: number;
-  send(data: string): void;
+  send(data: string | ArrayBuffer): void;
   close(code?: number, reason?: string): void;
 }
 

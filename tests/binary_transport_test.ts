@@ -116,12 +116,28 @@ Deno.test("RESOURCE and UPLOAD controls accept only exact canonical shapes", () 
       "upload.info",
     "upload info accepted",
   );
+  assert(
+    decodeNapControlMessage({
+      type: "resource.bytesMany",
+      id: "r",
+      urls: [FIXED_RESOURCE_URL],
+    })?.type === "resource.bytesMany",
+    "resource batch accepted",
+  );
+  assert(
+    decodeNapControlMessage({
+      type: "upload.status",
+      id: "u",
+      uploadId: "owned",
+    })?.type === "upload.status",
+    "upload status accepted",
+  );
   for (
     const malformed of [
       { type: "resource.info", id: "", extra: true },
       { type: "resource.bytes", id: "r", url: FIXED_RESOURCE_URL, extra: true },
-      { type: "resource.bytesMany", id: "r", urls: [FIXED_RESOURCE_URL] },
-      { type: "upload.status", id: "u", uploadId: "foreign" },
+      { type: "resource.bytesMany", id: "r", urls: [] },
+      { type: "upload.status", id: "u", uploadId: "" },
       {
         type: "upload.upload",
         id: "u",

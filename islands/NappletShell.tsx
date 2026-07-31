@@ -338,40 +338,36 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
       if (
         frame && event.source === frame && registration?.source === frame &&
         message && typeof message === "object" &&
-        (message.type === "resource.info" || message.type === "upload.info")
+        typeof message.type === "string" &&
+        /^(resource|upload)\./.test(message.type)
       ) {
         const control = decodeNapControlMessage(message);
         const ws = controller.current?.socket;
         const currentOwner = owner.current;
-        if (control && ws?.readyState === WebSocket.OPEN && currentOwner) {
+        if (!control || ws?.readyState !== WebSocket.OPEN || !currentOwner) {
+          return;
+        }
+        if (control.type === "upload.upload") {
+          const data = control.request.data;
+          void (data instanceof Blob
+            ? data.arrayBuffer()
+            : Promise.resolve(data))
+            .then((buffer) => {
+              if (ws.readyState !== WebSocket.OPEN) return;
+              ws.send(
+                encodeBinaryFrame({
+                  kind: BinaryFrameKind.UploadRequest,
+                  id: control.id,
+                  payload: new Uint8Array(buffer),
+                }).slice().buffer as ArrayBuffer,
+              );
+            });
+        } else {
           ws.send(JSON.stringify({
             type: "runtime.forward",
             ...currentOwner,
             message: control,
           }));
-        }
-        return;
-      }
-      if (
-        frame && event.source === frame && registration?.source === frame &&
-        message && typeof message === "object" &&
-        typeof message.type === "string" &&
-        /^(resource|upload)\./.test(message.type)
-      ) {
-        const control = decodeNapControlMessage(message);
-        if (control?.type === "resource.bytes") {
-          frame.postMessage({
-            type: "resource.bytes.error",
-            id: control.id,
-            error: "blocked-by-policy",
-            message: "Resource transfer is unavailable",
-          }, "*");
-        } else if (control?.type === "upload.upload") {
-          frame.postMessage({
-            type: "upload.upload.result",
-            id: control.id,
-            error: "Upload transfer is unavailable",
-          }, "*");
         }
         return;
       }
