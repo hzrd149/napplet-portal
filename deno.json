@@ -30,6 +30,7 @@
     "@kehto/services": "npm:@kehto/services@0.18.1",
     "@kehto/shell": "npm:@kehto/shell@0.19.1",
     "@libs/qrcode": "jsr:@libs/qrcode@3.1.0",
+    "@noble/hashes/utils": "npm:@noble/hashes@2.2.0/utils.js",
     "@napplet/core": "npm:@napplet/core@0.31.0",
     "@napplet/nap": "npm:@napplet/nap@0.31.0",
     "@playwright/test": "npm:@playwright/test@1.62.1",

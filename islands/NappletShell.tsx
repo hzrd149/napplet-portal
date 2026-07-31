@@ -49,6 +49,7 @@ import {
   type IntentNavigationMessage,
   isReservedIntentLaunchPath,
 } from "../runtime/transport.ts";
+import { createBrowserUuid } from "../shell/browser_uuid.ts";
 
 const debug = rootDebug.extend("shell");
 
@@ -217,7 +218,7 @@ export class MediaShellController {
       !this.#ready || !projection || projection.terminal ||
       (action === "transfer" && (this.isOwner || !projection.transferable))
     ) return false;
-    const id = crypto.randomUUID();
+    const id = createBrowserUuid();
     this.#pending.add(id);
     this.options.send({
       type: `runtime.media.${action}`,
@@ -460,7 +461,7 @@ export class PopupReservationController {
       readonly windowId: string;
     };
   }): string | null {
-    const reservationId = crypto.randomUUID();
+    const reservationId = createBrowserUuid();
     const reserveMessage = {
       type: "intent.navigation.reserve",
       reservationId,
@@ -717,7 +718,7 @@ export class CatalogCommandRegistry {
         retryable: true,
       });
     }
-    const id = crypto.randomUUID();
+    const id = createBrowserUuid();
     return new Promise((resolve) => {
       const timeout = this.#setTimer(() => {
         this.#settle(id, {
@@ -999,7 +1000,7 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
             owner: currentOwner,
           });
         } else if (currentOwner && ws?.readyState === WebSocket.OPEN) {
-          const reservationId = crypto.randomUUID();
+          const reservationId = createBrowserUuid();
           const mode: "reuse" | "stack" = navigationMode === "stack"
             ? "stack"
             : "reuse";
@@ -1493,7 +1494,7 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
       : "";
     const currentOwner = owner.current;
     if (currentOwner) {
-      const surfaceId = crypto.randomUUID();
+      const surfaceId = createBrowserUuid();
       const rootSocket = controller.current?.socket;
       if (rootSocket) surfaceSockets.current.set(surfaceId, rootSocket);
       surfaceStack.current?.replaceRoot({
