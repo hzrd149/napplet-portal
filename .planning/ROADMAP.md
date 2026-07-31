@@ -87,6 +87,7 @@ Plans:
 **Plans:** 4 plans
 
 Plans:
+
 - [ ] 07-01-PLAN.md — Derive strict verified intent declarations and a generation-bound handler registry.
 - [ ] 07-02-PLAN.md — Dispatch authenticated invocations through exact verification and private single-use launch tickets.
 - [ ] 07-03-PLAN.md — Execute identity-safe reuse, synchronous new-tab reservation, and sandboxed stack history.

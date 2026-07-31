@@ -4,16 +4,16 @@ milestone: v1.1
 milestone_name: Runtime & UX Expansion
 current_phase: 5
 current_phase_name: Resource and Blossom Transfer
-status: planning
-stopped_at: Completed 04-04-PLAN.md
-last_updated: "2026-07-31T01:45:07.889Z"
+status: executing
+stopped_at: Completed 05-01-PLAN.md
+last_updated: "2026-07-31T02:18:16.878Z"
 last_activity: 2026-07-31
 last_activity_desc: Phase 4 complete, transitioned to Phase 5
 progress:
   total_phases: 7
   completed_phases: 2
-  total_plans: 9
-  completed_plans: 9
+  total_plans: 20
+  completed_plans: 10
   percent: 29
 ---
 
@@ -24,14 +24,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-30)
 
 **Core value:** A napplet can run in a mobile browser while a server-side Deno runtime handles the heavy Nostr/runtime work.
-**Current focus:** Phase 4 — Installed Napplet Discovery
+**Current focus:** Phase 5 — Resource and Blossom Transfer
 
 ## Current Position
 
 Phase: 5 — Resource and Blossom Transfer
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-07-31 — Phase 4 complete, transitioned to Phase 5
+Plan: 1 of 4 complete
+Status: In progress
+Last activity: 2026-07-31 — Completed binary RESOURCE/UPLOAD transport seam and closed policy inspection
 
 ## Performance Metrics
 
@@ -83,6 +83,7 @@ Last activity: 2026-07-31 — Phase 4 complete, transitioned to Phase 5
 | Phase 04 P02 | 7min | 2 tasks | 5 files |
 | Phase 04 P03 | 12min | 2 tasks | 7 files |
 | Phase 04 P04 | 16min | 2 tasks | 5 files |
+| Phase 05 P01 | 14min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -141,6 +142,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase ?]: [Phase 04]: Catalog status travels independently from optional projection data so transient errors preserve last-good cards.
 - [Phase ?]: [Phase 04]: Keep the raw catalog query in the shell and derive visible entries synchronously without transport work.
 - [Phase ?]: [Phase 04]: Bind immutable install review to its source catalog generation and clear input only after accepted approval.
+- [Phase ?]: [Phase 05]: Bind binary frames to authenticated socket ownership supplied out of band; never trust owner identifiers from frame bytes.
+- [Phase ?]: [Phase 05]: Generate canonical RESOURCE and UPLOAD inspection envelopes from one immutable backend transfer policy snapshot.
 
 ### Pending Todos
 
@@ -169,6 +172,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-07-31T01:40:15.115Z
-Stopped at: Completed 04-04-PLAN.md
+Last session: 2026-07-31T02:18:16.864Z
+Stopped at: Completed 05-01-PLAN.md
 Resume file: None
