@@ -43,7 +43,7 @@ export interface CatalogProjectionEntry extends InstalledNappletEntry {
 export interface CatalogProjection {
   readonly catalogEventId: string | null;
   readonly entries: readonly CatalogProjectionEntry[];
-  readonly status?: "idle" | "refreshing" | "ready" | "error";
+  readonly status?: "idle" | "refreshing" | "ready" | "stale" | "error";
   readonly error?: string;
 }
 
@@ -198,6 +198,43 @@ export class CatalogService {
 
   retry(): void {
     this.#refresh(true);
+  }
+
+  resetAccount(): void {
+    this.#projection = EMPTY;
+    this.#notify();
+  }
+
+  markLoading(): void {
+    this.#projection = Object.freeze({
+      ...this.#projection,
+      status: "refreshing",
+      error: undefined,
+    });
+    this.#notify();
+  }
+
+  markReady(): void {
+    this.#projection = Object.freeze({
+      ...this.#projection,
+      status: "ready",
+      error: undefined,
+    });
+    this.#notify();
+  }
+
+  markStale(): void {
+    this.#projection = Object.freeze({ ...this.#projection, status: "stale" });
+    this.#notify();
+  }
+
+  markError(message: string): void {
+    this.#projection = Object.freeze({
+      ...this.#projection,
+      status: "error",
+      error: message,
+    });
+    this.#notify();
   }
 
   #refresh(force = false): void {
@@ -401,7 +438,7 @@ export class CatalogService {
       this.#mutate(id, async (entries) => {
         if (
           sourceCatalogEventId !== undefined &&
-          this.#currentCatalogEvent()?.id !== sourceCatalogEventId
+          (this.#currentCatalogEvent()?.id ?? null) !== sourceCatalogEventId
         ) throw new Error("catalog changed");
         const verified = await this.options.resolveVerifiedArtifact(
           coordinate,

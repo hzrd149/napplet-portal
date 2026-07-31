@@ -4,7 +4,10 @@ import type { RelaySubscribeMessage } from "@napplet/nap/relay";
 import type { BehaviorSubject } from "npm:rxjs@7.8.2";
 import { debug as rootDebug, shortId } from "../debug.ts";
 import { AccountRuntime, type IdentitySnapshot } from "./accounts.ts";
-import { resolveVerifiedArtifact } from "./artifacts.ts";
+import {
+  PortalArtifactResolver,
+  resolveVerifiedArtifact,
+} from "./artifacts.ts";
 import { BlossomCache } from "./blossom_cache.ts";
 import { ConnectionRegistry } from "./connections.ts";
 import { createEventRuntime, type EventRuntime } from "./event_runtime.ts";
@@ -193,6 +196,63 @@ interface PortalRuntimeOptions {
   readonly eventRuntime?: EventRuntime;
 }
 
+export interface ProductionCatalogResolverOptions {
+  readonly eventRuntime: EventRuntime;
+  readonly blossomServers: () => readonly string[];
+  readonly fetchBytes?: (url: string) => Promise<Uint8Array>;
+  readonly supportedDomains?: readonly string[];
+}
+
+export function createProductionCatalogResolver(
+  options: ProductionCatalogResolverOptions,
+) {
+  return async (
+    coordinate: string,
+    manifestEventId: string | undefined,
+    relays: readonly string[],
+  ) => {
+    const match = /^35129:([0-9a-f]{64}):([^:\s]+)$/.exec(coordinate);
+    if (!match) throw new Error("invalid named manifest coordinate");
+    const event = await options.eventRuntime.loadManifest(
+      coordinate,
+      relays,
+      manifestEventId,
+    );
+    if (!event) throw new Error("manifest event unavailable");
+    const dTags = event.tags.filter((tag) => tag[0] === "d");
+    if (
+      event.kind !== 35129 || event.pubkey !== match[1] ||
+      dTags.length !== 1 || dTags[0].length !== 2 || dTags[0][1] !== match[2] ||
+      (manifestEventId !== undefined && event.id !== manifestEventId)
+    ) throw new Error("manifest identity mismatch");
+    const resolver = new PortalArtifactResolver({
+      coordinate,
+      manifestEventId,
+      relays,
+      blossomServers: options.blossomServers(),
+      resolveManifest: () => Promise.resolve(event),
+      fetchBytes: options.fetchBytes,
+      supportedDomains: options.supportedDomains,
+    });
+    const resolved = await resolver.resolve();
+    if (resolved.state !== "ready") throw new Error("manifest unavailable");
+    return Object.freeze({
+      manifestEventId: event.id,
+      title: event.tags.find((tag) => tag[0] === "title")?.[1] ??
+        resolved.identity.dTag,
+      version: String(event.created_at),
+      capabilities: Object.freeze([...resolved.resolved.manifest.requires]),
+      launch: Object.freeze({
+        dTag: resolved.identity.dTag,
+        aggregateHash: resolved.identity.aggregateHash,
+        srcdoc: injectNappletNamespacePrelude(resolved.srcdoc, {
+          domains: [...resolved.grantedDomains],
+        }),
+      }),
+    });
+  };
+}
+
 export function createPortalRuntime(
   { fixture, settings, eventRuntime = createEventRuntime() }:
     PortalRuntimeOptions,
@@ -206,6 +266,12 @@ export function createPortalRuntime(
   const relay = new TracerRelayAdapter(fixture.events.initial);
   const events = new RuntimeEvents();
   const blossomCache = new BlossomCache();
+  const productionCatalogResolver = settings
+    ? createProductionCatalogResolver({
+      eventRuntime,
+      blossomServers: () => settings.settings.blossomServers,
+    })
+    : undefined;
   let destroyed = false;
   let catalog: CatalogService | undefined;
 
@@ -249,6 +315,13 @@ export function createPortalRuntime(
       coordinate: string,
       manifestEventId: string,
     ) => {
+      if (productionCatalogResolver && /^35129:/.test(coordinate)) {
+        return await productionCatalogResolver(
+          coordinate,
+          manifestEventId,
+          settings!.settings.relays,
+        );
+      }
       if (
         coordinate !== fixture.coordinate ||
         manifestEventId !== fixture.manifestEvent.id
@@ -274,6 +347,15 @@ export function createPortalRuntime(
           }),
         }),
       };
+    },
+    resolveCatalogPreview: (
+      coordinate: string,
+      relays: readonly string[],
+    ) => {
+      if (!productionCatalogResolver) {
+        throw new Error("production catalog resolver unavailable");
+      }
+      return productionCatalogResolver(coordinate, undefined, relays);
     },
     openWindow(connectionId: string, windowId: string, source: object) {
       debug(
