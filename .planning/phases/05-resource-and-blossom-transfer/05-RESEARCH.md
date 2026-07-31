@@ -2,7 +2,7 @@
 
 **Researched:** 2026-07-31
 **Domain:** Backend-mediated NAP-RESOURCE/NAP-UPLOAD, Blossom transfers, and SSRF-safe bounded fetching
-**Confidence:** HIGH for pinned contracts and repository integration; MEDIUM for the new Blossom SDK until its legitimacy checkpoint is accepted
+**Confidence:** HIGH for pinned contracts and repository integration; MEDIUM for Blossom SDK legitimacy, explicitly accepted for exact 5.0.0 unattended use
 
 <user_constraints>
 ## User Constraints (from CONTEXT.md)
@@ -59,7 +59,7 @@ Phase 5 should add three process-owned components: a strict resource policy/fetc
 
 The existing WebSocket seam cannot carry those byte contracts unchanged. The iframe uses structured clone, but `NappletShell` serializes the message through JSON; `JSON.stringify(new Blob(...))` and `JSON.stringify(new ArrayBuffer(...))` do not preserve bytes, and server results are also JSON serialized. Add a small binary wire codec at the island/server boundary while keeping the iframe-facing pinned envelopes canonical. Do not base64-expand large payloads into the existing 256,000-character JSON command allowance. [VERIFIED: codebase grep and Web platform behavior]
 
-Use `blossom-client-sdk@5.0.0` behind a portal adapter, but gate installation for human verification: the legitimacy seam reports `SUS` due to roughly 320 weekly downloads and missing npm repository metadata. Its published source exposes `uploadBlob`, `multiServerUpload`, `createUploadAuth`, `parseBlossomURI`, `AbortSignal`, timeout, preflight, per-server callbacks, and a result `Map`; it does not define the portal's required “required versus optional cache” settlement. The adapter must therefore classify configured upstreams and the discovered loopback cache, drive required transfers first, validate returned descriptors, then attempt optional local copying and project sanitized per-server outcomes into the pinned result/status fields. [VERIFIED: npm registry and official package source]
+Use exact `blossom-client-sdk@5.0.0` behind a thin portal adapter. The legitimacy seam reports `SUS` due to roughly 320 weekly downloads and missing npm repository metadata, but the user explicitly authorized this pin after review of the npm tarball, published source/API, absence of install scripts, and expected author lineage. Record the residual supply-chain risk rather than adding a human checkpoint. The adapter classifies configured upstreams and the discovered loopback cache, drives required transfers first, validates returned descriptors, then attempts optional local copying and projects the strongest canonical settlement evidence described below. [VERIFIED: npm registry and published source; USER-AUTHORIZED RISK]
 
 **Primary recommendation:** Implement canonical NAP envelopes at the iframe edges, a bounded binary WebSocket transport internally, and separate resource/upload services with one shared destination-policy validator and per-window abort registry. [VERIFIED: pinned package typings and codebase grep]
 
@@ -113,7 +113,6 @@ Use `blossom-client-sdk@5.0.0` behind a portal adapter, but gate installation fo
 **Installation:**
 
 ```bash
-# checkpoint:human-verify blossom-client-sdk before this edit
 deno add npm:blossom-client-sdk@5.0.0
 ```
 
@@ -121,7 +120,7 @@ deno add npm:blossom-client-sdk@5.0.0
 
 | Package | Registry | Age | Downloads | Source Repo | Verdict | Disposition |
 |---------|----------|-----|-----------|-------------|---------|-------------|
-| `blossom-client-sdk` | npm | ~2 years; v5 ~3 months | ~320/week | npm metadata says none; package author/docs point to `hzrd149/blossom-client-sdk` | SUS | Flagged — planner must add `checkpoint:human-verify` before install. [VERIFIED: npm registry and package-legitimacy seam] |
+| `blossom-client-sdk` | npm | ~2 years; v5 ~3 months | ~320/week | npm metadata says none; package author/docs point to `hzrd149/blossom-client-sdk` | SUS | Exact 5.0.0 pin authorized non-interactively after tarball/source/API/install-script review; isolate behind a thin adapter and preserve the residual risk. [VERIFIED: package-legitimacy seam; USER-AUTHORIZED RISK] |
 | `@napplet/core` | npm | current package line published 2026-07-28 | ~1,352/week | `github.com/sandwichfarm/napplet` | SUS (`too-new`) | Already pinned/installed; retain locked dependency. [VERIFIED: npm registry and package-legitimacy seam] |
 | `@napplet/nap` | npm | current package line published 2026-07-28 | ~1,503/week | `github.com/sandwichfarm/napplet` | SUS (`too-new`) | Already pinned/installed; retain locked dependency. [VERIFIED: npm registry and package-legitimacy seam] |
 
@@ -153,7 +152,7 @@ Canonical resource error codes are `invalid-request`, `not-found`, `blocked-by-p
 | `upload.status { id, uploadId }` | `upload.status.result { id, status?, error? }` | Scope `uploadId` to the verified napplet/window/account; never allow cross-tenant probing. [VERIFIED: pinned package typings; project security constraints] |
 | server push | `upload.status.changed { status }` | No correlation ID; only push statuses owned by that window. [VERIFIED: pinned package typings] |
 
-`UploadResult` has no per-server settlement property. Preserve canonical compatibility by using `url` for the primary accepted required server, `fallbackUrls` for other accepted servers, `status: "complete"` only when the configured required policy passes, and a stable sanitized `error` summary for failed/cancelled results. Keep detailed per-server settlement in process state and expose it through status error text only if the product requires it; adding arbitrary fields would violate closed codec expectations unless verified as tolerated. [VERIFIED: pinned package typings; project closed-codec pattern]
+`UploadResult` has no partial state or per-server settlement property. Preserve canonical compatibility by using `url` for the primary accepted required server, ordered `fallbackUrls` for other accepted required servers, `ok: true`/`status: "complete"` only when every required server passes, and `ok: false`/`status: "failed"` with deterministic sanitized ordinal outcomes in the allowed `error` string for partial required settlement (for example `required[0]=accepted;required[1]=network-error`). Keep full structured settlement and the optional-local-copy outcome in bounded backend diagnostics. Optional-local success cannot be represented canonically in 0.31.0 without inventing a field; this irreducible UPL-03 mismatch is asserted in Phase 5 codec tests and scheduled for Phase 9 contract-parity review. [VERIFIED: exact pinned typings and shim source]
 
 ## Architecture Patterns
 
@@ -328,29 +327,21 @@ const signal = AbortSignal.any([
 
 **Deprecated/outdated:** Do not copy the sibling CLI's bespoke upload implementation into production; use it only as behavioral evidence for descriptor verification, because UPL-02 locks the ecosystem SDK. [VERIFIED: project constraints and codebase grep]
 
-## Assumptions Log
+## Resolved Assumptions
 
 | # | Claim | Section | Risk if Wrong |
 |---|-------|---------|---------------|
-| A1 | Proposed 5 MiB/8 URL/2 concurrent/10s/30s/3 redirect budgets are appropriate for mobile Phase 5. | Conservative Default Budgets | Too low rejects intended media; too high increases memory/network abuse. Confirm during planning. |
-| A2 | A maintained MIME-sniff package may be preferable to a narrow first-party signature table. | Don't Hand-Roll | Adding another dependency triggers legitimacy review; an overbroad implementation could misclassify active content. |
-| A3 | Deno ordinary fetch cannot pin the actual connection to a pre-resolved validated address. | Pitfall 3 | A hidden supported connector would enable stronger application-layer anti-rebinding. Verify during implementation spike. |
+| A1 — RESOLVED | Use 5 MiB/8 URL/2 concurrent/10s/30s/3 redirect defaults, centralized and tested against advertised enforcement. | Conservative Default Budgets | User delegated conservative safe defaults. |
+| A2 — RESOLVED | Use a narrow first-party passive signature table for PNG, JPEG, GIF, WebP, AVIF, plain text, JSON, and PDF; reject active/unknown types. | Don't Hand-Roll | Avoids another unreviewed dependency. |
+| A3 — RESOLVED | Ordinary Deno fetch cannot prove address pinning; disable production network use in 05-01, revalidate every hop/all answers in 05-02, and retain network egress as defense in depth. | Pitfall 3 | Residual rebinding risk is explicit and revisited in Phase 9. |
 
-## Open Questions
+## Resolved Questions
 
-1. **How many configured Blossom servers are “required”?**
-   - What we know: all per-server outcomes must be explicit; optional local copying cannot affect required success. [VERIFIED: locked context]
-   - What's unclear: whether every configured non-loopback server is required, any one is sufficient, or a threshold applies.
-   - Recommendation: default to every configured non-loopback server required, matching the project's existing OUTBOX all-required semantics, and lock this in the plan before coding. [ASSUMED]
+1. **RESOLVED — Required servers:** Every configured non-loopback Blossom server is required, matching existing OUTBOX all-required semantics. Optional exact-loopback copying starts only after every required server accepts. [USER-AUTHORIZED DEFAULT]
 
-2. **How should per-server detail fit a pinned result with no settlement field?**
-   - What we know: `UploadResult` only has `url`, `fallbackUrls`, metadata, and a string `error`; `UploadStatus` extends it. [VERIFIED: pinned package typings]
-   - What's unclear: whether closed codecs tolerate an extension field.
-   - Recommendation: keep canonical fields only unless a pinned codec test proves extensions accepted; use deterministic status/error summaries and backend logs/telemetry for detailed internal settlement. [VERIFIED: project closed-codec pattern]
+2. **RESOLVED — Per-server representation:** Add no fields. Successful required servers use `url` and ordered `fallbackUrls`; partial/failed statuses use deterministic sanitized ordinal outcomes in canonical `error`; full required and optional-local settlement remains backend diagnostics. Optional-local success has no 0.31.0 wire representation, so Phase 5 proves the omission and Phase 9 rechecks contract parity. [VERIFIED: exact pinned typings/shim]
 
-3. **Which MIME types must Phase 5 support?**
-   - What we know: backend sniffing/allowlists are locked, but no list is specified. [VERIFIED: locked context]
-   - Recommendation: start with a conservative static media allowlist (PNG, JPEG, GIF, WebP, AVIF, plain text, JSON, PDF) and reject HTML/SVG/script as generic RESOURCE unless a later requirement explicitly needs active content. [ASSUMED]
+3. **RESOLVED — MIME set:** Support PNG, JPEG, GIF, WebP, AVIF, plain text, JSON, and PDF by observed bytes; reject HTML, SVG, script, unknown, and conflicting types. [USER-AUTHORIZED DEFAULT]
 
 ## Environment Availability
 
@@ -360,10 +351,10 @@ const signal = AbortSignal.any([
 | npm | registry/package audit | ✓ | 10.9.8 | Deno npm resolver after pinning [VERIFIED: local environment] |
 | `@napplet/core` | contracts | ✓ | 0.31.0 | none; locked [VERIFIED: node_modules] |
 | `@napplet/nap` | envelopes/shims | ✓ | 0.31.0 | none; locked [VERIFIED: node_modules] |
-| `blossom-client-sdk` | upload/BUD helpers | ✗ | registry 5.0.0 | planner install after human legitimacy checkpoint [VERIFIED: node_modules and npm registry] |
+| `blossom-client-sdk` | upload/BUD helpers | ✗ | registry 5.0.0 | executor adds exact authorized pin behind adapter and records lock resolution [VERIFIED: npm registry; USER-AUTHORIZED RISK] |
 | Local Blossom server | cache integration tests | runtime discovery only; not required for unit tests | default probe `127.0.0.1:24242` | deterministic fake fetch/server [VERIFIED: codebase grep] |
 
-**Missing dependencies with no fallback:** none for planning; SDK installation is gated, not technically unavailable. [VERIFIED: environment audit]
+**Missing dependencies with no fallback:** none for planning; exact SDK installation is authorized for unattended execution. [VERIFIED: environment audit; USER-AUTHORIZED RISK]
 
 **Missing dependencies with fallback:** live Blossom service; deterministic fake transports cover automated tests. [VERIFIED: established test pattern]
 
@@ -417,12 +408,12 @@ Suggested quick commands are individual files such as `deno test -A tests/resour
 
 ### Tertiary (LOW confidence)
 
-- None; unresolved policy choices are explicitly tagged `[ASSUMED]` above.
+- None; planning resolved the former policy questions with the user's authorized conservative defaults. The only retained limitation is the explicit 0.31.0 optional-local settlement representation mismatch.
 
 ## Metadata
 
 **Confidence breakdown:**
-- Standard stack: MEDIUM — locked Napplet packages and Deno are verified; new SDK API/source is verified but legitimacy seam requires human acceptance.
+- Standard stack: MEDIUM — locked Napplet packages and Deno are verified; the SDK API/source is verified and its remaining legitimacy risk is explicitly accepted for exact 5.0.0 unattended use.
 - Architecture: HIGH — derived from exact pinned envelopes and current repository transport/lifecycle.
 - Pitfalls: HIGH — directly demonstrated by source/contract mismatch and authoritative SSRF guidance.
 
