@@ -27,6 +27,15 @@ const PROFILE_FIELDS = [
   "lud16",
   "website",
 ] as const;
+const REPORT_REASONS = new Set([
+  "nudity",
+  "malware",
+  "profanity",
+  "illegal",
+  "spam",
+  "impersonation",
+  "other",
+]);
 
 export interface CommonPublishPort {
   publish(id: string, template: EventTemplate): Promise<
@@ -59,18 +68,31 @@ export class CommonService {
     try {
       switch (message.type) {
         case "common.encodeNip19":
-          return encode(message.input);
+          return encodePublicNip19(message.input);
         case "common.decodeNip19":
           return decode(message.value);
         case "common.getProfile":
           return this.#profile(message.target, owner);
         case "common.follows":
           return this.#follows(owner);
+        case "common.follow":
+          return await this.#contacts(message, true);
+        case "common.unfollow":
+          return await this.#contacts(message, false);
+        case "common.react":
+          return await this.#react(message);
+        case "common.report":
+          return await this.#report(message);
         default:
           return { ok: false, error: "invalid-request" };
       }
-    } catch {
-      return { ok: false, error: "invalid-request" };
+    } catch (error) {
+      return {
+        ok: false,
+        error: error instanceof CommonDenied
+          ? "not-authorized"
+          : "invalid-request",
+      };
     }
   }
 
@@ -148,9 +170,132 @@ export class CommonService {
     loads.add(cleanup);
     this.#loads.set(owner, loads);
   }
+
+  async #contacts(
+    message: Record<string, unknown>,
+    follow: boolean,
+  ): Promise<Record<string, unknown>> {
+    if (
+      !Array.isArray(message.pubkeys) || message.pubkeys.length < 1 ||
+      message.pubkeys.length > 64
+    ) throw new Error("invalid");
+    const targets = message.pubkeys.map(decodeNpub);
+    const identity = this.#activeIdentity();
+    const current = this.#options.eventRuntime.eventStore.getReplaceable(
+      3,
+      identity.pubkey,
+    );
+    const targetSet = new Set(targets);
+    const tags = (current?.tags ?? []).filter((tag) =>
+      tag[0] !== "p" || (follow || !targetSet.has(tag[1] ?? ""))
+    ).map((tag) => [...tag]);
+    if (follow) {
+      const existing = new Set(
+        tags.filter((tag) => tag[0] === "p").map((tag) => tag[1]),
+      );
+      for (const target of [...targetSet].sort()) {
+        if (!existing.has(target)) tags.push(["p", target]);
+      }
+    }
+    return await this.#publish(message.id, {
+      kind: 3,
+      created_at: Math.floor(Date.now() / 1000),
+      content: current?.content ?? "",
+      tags,
+    }, identity.pubkey);
+  }
+
+  async #react(
+    message: Record<string, unknown>,
+  ): Promise<Record<string, unknown>> {
+    if (
+      !HEX.test(String(message.targetEventId ?? "")) ||
+      typeof message.reaction !== "string" || message.reaction.length < 1 ||
+      message.reaction.length > 64
+    ) throw new Error("invalid");
+    if (message.customEmojiHref !== undefined) {
+      if (
+        typeof message.customEmojiHref !== "string" ||
+        message.customEmojiHref.length > 2048 ||
+        new URL(message.customEmojiHref).protocol !== "https:"
+      ) throw new Error("invalid");
+    }
+    const identity = this.#activeIdentity();
+    const targetId = String(message.targetEventId);
+    const target = this.#options.eventRuntime.eventStore.getEvent(targetId);
+    const tags: string[][] = [["e", targetId]];
+    if (target) tags.push(["p", target.pubkey]);
+    if (message.customEmojiHref) {
+      tags.push(["emoji", message.reaction, String(message.customEmojiHref)]);
+    }
+    return await this.#publish(message.id, {
+      kind: 7,
+      created_at: Math.floor(Date.now() / 1000),
+      content: message.reaction,
+      tags,
+    }, identity.pubkey);
+  }
+
+  async #report(
+    message: Record<string, unknown>,
+  ): Promise<Record<string, unknown>> {
+    if (
+      !message.target || typeof message.target !== "object" ||
+      !REPORT_REASONS.has(String(message.reason)) ||
+      typeof message.text !== "string" || message.text.length > 1000
+    ) throw new Error("invalid");
+    const target = message.target as Record<string, unknown>;
+    const reason = String(message.reason);
+    let tag: string[];
+    if (target.type === "event" && HEX.test(String(target.id ?? ""))) {
+      tag = ["e", String(target.id), String(target.relay ?? ""), reason];
+    } else if (target.type === "pubkey") {
+      tag = [
+        "p",
+        decodePublicKey(target.pubkey),
+        String(target.relay ?? ""),
+        reason,
+      ];
+    } else throw new Error("invalid");
+    const identity = this.#activeIdentity();
+    return await this.#publish(message.id, {
+      kind: 1984,
+      created_at: Math.floor(Date.now() / 1000),
+      content: message.text,
+      tags: [tag],
+    }, identity.pubkey);
+  }
+
+  #activeIdentity(): { pubkey: string } {
+    const identity = this.#options.identity();
+    if (identity.status !== "active" || !identity.pubkey) {
+      throw new CommonDenied();
+    }
+    return { pubkey: identity.pubkey };
+  }
+
+  async #publish(
+    id: unknown,
+    template: EventTemplate,
+    expectedPubkey: string,
+  ): Promise<Record<string, unknown>> {
+    if (typeof id !== "string" || !this.#options.publisher) {
+      return { ok: false, error: "publication-failed" };
+    }
+    const current = this.#options.identity();
+    if (current.status !== "active" || current.pubkey !== expectedPubkey) {
+      return { ok: false, error: "not-authorized" };
+    }
+    const result = await this.#options.publisher.publish(id, template);
+    if (!result.ok) return { ok: false, error: "publication-failed" };
+    this.#options.eventRuntime.eventStore.add(result.event);
+    return { ok: true, eventId: result.event.id, event: result.event };
+  }
 }
 
-function encode(value: unknown): Record<string, unknown> {
+class CommonDenied extends Error {}
+
+export function encodePublicNip19(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== "object") throw new Error("invalid");
   const input = value as CommonNip19EncodeInput;
   let encoded: string;
@@ -240,4 +385,19 @@ function profileTarget(value: unknown): { pubkey: string; relays: string[] } {
     return { pubkey: decoded.data.pubkey, relays: decoded.data.relays ?? [] };
   }
   throw new Error("invalid");
+}
+
+function decodeNpub(value: unknown): string {
+  if (typeof value !== "string" || value.length > 4096) {
+    throw new Error("invalid");
+  }
+  const decoded = nip19.decode(value);
+  if (decoded.type !== "npub") throw new Error("invalid");
+  return decoded.data;
+}
+
+function decodePublicKey(value: unknown): string {
+  return typeof value === "string" && HEX.test(value)
+    ? value
+    : decodeNpub(value);
 }

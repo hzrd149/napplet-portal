@@ -1,6 +1,6 @@
 import type { UploadRequest } from "@napplet/core";
 import type { StorageRequestMessage } from "@napplet/nap/storage";
-import type { CommonService } from "./common.ts";
+import { type CommonService, encodePublicNip19 } from "./common.ts";
 import type { BlossomTransferService } from "./blossom_transfer.ts";
 import type { ResourceBatchItem, ResourceService } from "./resource_service.ts";
 import { ResourceServiceError } from "./resource_service.ts";
@@ -335,13 +335,14 @@ export class NapDispatcher {
       this.#transfer.clearOwner?.(key);
       this.#knownOwners.delete(key);
     }
+    this.#common?.cancel(windowId);
   }
 
   destroy(): void {
     if (this.#destroyed) return;
     this.#destroyed = true;
     for (const operation of this.#active.values()) operation.controller.abort();
-    this.#common?.cancel(windowId);
+    this.#common?.destroy();
     for (const key of this.#knownOwners.keys()) {
       this.#transfer.clearOwner?.(key);
     }
@@ -387,18 +388,32 @@ export class NapDispatcher {
       return;
     }
     if (message.type.startsWith("common.")) {
-      if (!this.#common) send({ ok: false, error: "unavailable" });
-      else send(await this.#common.execute(message, context.windowId));
+      if (!this.#common && message.type === "common.encodeNip19") {
+        try {
+          send(encodePublicNip19(message.input));
+        } catch {
+          send({ ok: false, error: "invalid-request" });
+        }
+      } else if (!this.#common) send({ ok: false, error: "unavailable" });
+      else {
+        send(
+          await this.#common.execute(
+            message as Record<string, unknown>,
+            context.windowId,
+          ),
+        );
+      }
       return;
     }
-    if (!this.#storage || !validStorageMessage(message)) {
+    const storageMessage = message as StorageRequestMessage;
+    if (!this.#storage || !validStorageMessage(storageMessage)) {
       send({
         error: "invalid-request",
         ...(message.type === "storage.get" ? { value: null } : {}),
       });
       return;
     }
-    const scope = message.scope ?? "shared";
+    const scope = storageMessage.scope ?? "shared";
     const identity: StorageNamespaceIdentity = Object.freeze({
       accountPubkey: context.accountPubkey,
       coordinate: context.coordinate,
@@ -409,13 +424,17 @@ export class NapDispatcher {
       instanceId: scope === "instance" ? context.instanceId : "",
     });
     try {
-      if (message.type === "storage.set") {
-        await this.#storage.set(identity, message.key, message.value);
+      if (storageMessage.type === "storage.set") {
+        await this.#storage.set(
+          identity,
+          storageMessage.key,
+          storageMessage.value,
+        );
         send({});
-      } else if (message.type === "storage.get") {
-        send({ value: await this.#storage.get(identity, message.key) });
-      } else if (message.type === "storage.remove") {
-        await this.#storage.remove(identity, message.key);
+      } else if (storageMessage.type === "storage.get") {
+        send({ value: await this.#storage.get(identity, storageMessage.key) });
+      } else if (storageMessage.type === "storage.remove") {
+        await this.#storage.remove(identity, storageMessage.key);
         send({});
       } else if (message.type === "storage.keys") {
         send({ keys: [...await this.#storage.keys(identity)].sort() });
