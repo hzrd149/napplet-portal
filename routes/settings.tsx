@@ -106,7 +106,6 @@ function SettingsDocument(props: SettingsPageProps) {
     <>
       <Head>
         <title>Runtime settings - Napplet Portal</title>
-        <meta name="theme-color" content="#F8FAFC" />
       </Head>
       <RuntimeSettingsPage {...props} />
     </>

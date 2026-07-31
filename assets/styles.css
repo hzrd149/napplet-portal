@@ -61,7 +61,7 @@ textarea {
   width: 100%;
   height: 100%;
   border: 0;
-  background: #f8fafc;
+  background: var(--shell-bg);
 }
 
 .settings-page {
@@ -87,9 +87,9 @@ textarea {
   min-width: 0;
   margin: 0;
   padding: 16px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--shell-border);
   border-radius: 12px;
-  background: #fff;
+  background: var(--shell-surface);
 }
 
 .settings-form legend {
@@ -110,22 +110,24 @@ textarea {
   min-width: 0;
   padding: 10px 12px;
   overflow-x: auto;
-  border: 1px solid #94a3b8;
+  border: 1px solid var(--shell-border-strong);
   border-radius: 8px;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 16px;
+  color: var(--shell-text);
+  background: var(--shell-surface-raised);
   resize: vertical;
 }
 
 .settings-field small,
 .auth-relay-row small {
-  color: #475569;
+  color: var(--shell-muted);
   font-weight: 400;
 }
 
 .field-error,
 .settings-error-summary {
-  color: #9a3412;
+  color: var(--shell-error-text);
 }
 
 .settings-error-summary,
@@ -137,17 +139,17 @@ textarea {
 }
 
 .settings-error-summary {
-  background: #fff7ed;
+  background: var(--shell-error-bg);
 }
 
 .settings-success {
-  color: #166534;
-  background: #f0fdf4;
+  color: var(--shell-success-text);
+  background: var(--shell-success-bg);
 }
 
 .cache-health {
-  border: 1px solid #cbd5e1;
-  background: #fff;
+  border: 1px solid var(--shell-border);
+  background: var(--shell-surface);
 }
 
 .cache-health p {
@@ -160,7 +162,7 @@ textarea {
   gap: 4px 12px;
   align-items: center;
   padding-block: 8px;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--shell-border);
 }
 
 .auth-relay-url {
@@ -192,8 +194,8 @@ textarea {
   padding: 10px 18px;
   border: 0;
   border-radius: 8px;
-  color: #fff;
-  background: #7c3aed;
+  color: var(--shell-accent-ink);
+  background: var(--shell-accent);
   font-weight: 600;
 }
 
@@ -856,7 +858,8 @@ svg {
   inset: 0;
   overflow-y: auto;
   padding: 24px 16px;
-  background: #f8fafc;
+  color: var(--shell-text);
+  background: var(--shell-bg);
 }
 
 .sign-in-panel {
@@ -864,14 +867,14 @@ svg {
   max-width: 32rem;
   margin: 0 auto;
   padding: 24px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--shell-border);
   border-radius: 12px;
-  background: #fff;
+  background: var(--shell-surface);
 }
 
 .sign-in-panel > p {
   margin: 0 0 24px;
-  color: #475569;
+  color: var(--shell-muted);
 }
 
 .sign-in-panel label {
@@ -886,10 +889,10 @@ svg {
   height: 44px;
   padding: 8px;
   overflow-x: auto;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--shell-border-strong);
   border-radius: 8px;
-  color: #0f172a;
-  background: #fff;
+  color: var(--shell-text);
+  background: var(--shell-surface-raised);
 }
 
 .qr-code {
@@ -898,9 +901,9 @@ svg {
   width: 160px;
   height: 160px;
   margin: 0 auto 24px;
-  border: 8px solid #fff;
-  color: #0f172a;
-  box-shadow: 0 0 0 1px #cbd5e1;
+  border: 8px solid var(--shell-surface-raised);
+  color: var(--shell-text);
+  box-shadow: 0 0 0 1px var(--shell-border);
 }
 
 .qr-code img {
@@ -931,13 +934,13 @@ svg {
   width: 100%;
   margin-top: 16px;
   padding: 8px 16px;
-  border: 1px solid #7c3aed;
+  border: 1px solid var(--shell-accent);
   border-radius: 8px;
-  color: #fff;
+  color: var(--shell-accent-ink);
   font-weight: 600;
   text-align: center;
   text-decoration: none;
-  background: #7c3aed;
+  background: var(--shell-accent);
 }
 
 .primary-button[aria-disabled="true"] {
@@ -947,7 +950,7 @@ svg {
 
 .sign-in-panel details {
   margin-top: 16px;
-  border-top: 1px solid #cbd5e1;
+  border-top: 1px solid var(--shell-border);
   padding-top: 16px;
 }
 
@@ -964,14 +967,14 @@ svg {
   margin-left: 8px;
   padding: 2px 8px;
   border-radius: 999px;
-  color: #9a3412;
+  color: var(--shell-error-text);
   font-size: 14px;
   font-weight: 400;
-  background: #fff7ed;
+  background: var(--shell-error-bg);
 }
 
 .form-error {
-  color: #9a3412;
+  color: var(--shell-error-text);
 }
 
 .shell-notice {

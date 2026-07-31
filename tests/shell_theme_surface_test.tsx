@@ -30,9 +30,15 @@ function contrast(foreground: string, background: string): number {
 
 function assertTokenized(selectors: readonly string[]): void {
   for (const selector of selectors) {
-    const start = styles.indexOf(selector);
-    assert(start >= 0, `${selector} must be styled`);
-    const block = styles.slice(start, styles.indexOf("}", start));
+    const blocks: string[] = [];
+    let start = styles.indexOf(selector);
+    while (start >= 0) {
+      const open = styles.indexOf("{", start);
+      blocks.push(styles.slice(start, styles.indexOf("}", open)));
+      start = styles.indexOf(selector, open + 1);
+    }
+    assert(blocks.length > 0, `${selector} must be styled`);
+    const block = blocks.join("\n");
     assert(
       block.includes("var(--"),
       `${selector} must consume semantic tokens`,

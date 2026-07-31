@@ -7,7 +7,6 @@ export default define.page(function SignIn() {
     <>
       <Head>
         <title>Sign in - Napplet Portal</title>
-        <meta name="theme-color" content="#F8FAFC" />
       </Head>
       <SignInFlow />
     </>
