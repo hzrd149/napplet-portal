@@ -69,22 +69,31 @@ Deno.test("authoritative media shell tracer gates snapshots and stale ownership"
 
 Deno.test("authoritative media shell tracer reports hidden owner truth once", () => {
   const sent: Record<string, unknown>[] = [];
+  const posted: Record<string, unknown>[] = [];
   const shell = new MediaShellController({
     send: (message) => sent.push(message),
-    post: () => undefined,
+    post: (message) => posted.push(message),
     stopLocal: () => undefined,
   });
   shell.connect(A);
   shell.snapshot(2, projection(8));
   shell.hidden("paused");
   shell.hidden("paused");
-  assert(sent.length === 1, "hidden owner reports exactly once");
-  assert(sent[0].generation === 8, "generation remains unchanged");
+  assert(sent.length === 0, "shell does not invent a hidden playback state");
   assert(
-    JSON.stringify(sent[0].message) ===
-      '{"type":"media.state","sessionId":"session-1","status":"paused"}',
-    "hidden report remains canonical",
+    JSON.stringify(posted) ===
+      '[{"type":"media.command","sessionId":"session-1","action":"pause"}]',
+    "hidden owner receives one canonical pause command",
   );
+  assert(
+    shell.forward({
+      type: "media.state",
+      sessionId: "session-1",
+      status: "paused",
+    }),
+    "napplet acknowledgement is forwarded with the trusted generation",
+  );
+  assert(sent[0].generation === 8, "generation remains unchanged");
   shell.snapshot(2, projection(8, A, "paused"));
   assert(shell.projection?.owner === A, "truthful state preserves ownership");
 });

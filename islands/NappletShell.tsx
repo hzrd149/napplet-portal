@@ -183,7 +183,9 @@ export class MediaShellController {
     this.#epoch = accountEpoch;
     this.#projection = projection;
     this.#ready = true;
-    if (!willOwn) this.#retryRequired = false;
+    if (!willOwn || projection?.status === "playing") {
+      this.#retryRequired = false;
+    }
     if (projection?.status !== "playing") this.#hiddenReported = false;
     this.options.changed?.();
     return true;
@@ -233,14 +235,25 @@ export class MediaShellController {
     return true;
   }
   hidden(status: "paused" | "stopped" = "paused"): void {
-    this.options.stopLocal();
     if (!this.isOwner || this.#hiddenReported || !this.#projection) return;
     this.#hiddenReported = true;
-    this.forward({
-      type: "media.state",
+    this.options.post({
+      type: "media.command",
       sessionId: this.#projection.sessionId,
-      status,
+      action: status === "stopped" ? "stop" : "pause",
     });
+  }
+
+  retry(): boolean {
+    if (!this.isOwner || !this.#projection) return false;
+    this.#retryRequired = true;
+    this.options.post({
+      type: "media.command",
+      sessionId: this.#projection.sessionId,
+      action: "play",
+    });
+    this.options.changed?.();
+    return true;
   }
   async play(enact: () => Promise<void>): Promise<boolean> {
     if (!this.isOwner || !this.#projection) return false;
@@ -817,12 +830,13 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
   const surfaceStack = useRef<SurfaceStackController | null>(null);
   const [, renderMedia] = useState(0);
   const stopLocalMedia = () => {
-    const frame = iframe.current;
-    frame?.contentDocument?.querySelectorAll("audio,video").forEach(
-      (element) => {
-        (element as HTMLMediaElement).pause();
-      },
-    );
+    const sessionId = media.current?.projection?.sessionId;
+    if (!sessionId) return;
+    iframe.current?.contentWindow?.postMessage({
+      type: "media.command",
+      sessionId,
+      action: "stop",
+    }, "*");
   };
   const media = useRef<MediaShellController | null>(null);
   if (!media.current) {
@@ -1701,12 +1715,7 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
           retryRequired={media.current?.retryRequired ?? false}
           onTransfer={() => media.current?.request("transfer")}
           onStop={() => media.current?.request("stop")}
-          onRetry={() => {
-            const element = iframe.current?.contentDocument?.querySelector(
-              "audio,video",
-            ) as HTMLMediaElement | null;
-            if (element) void media.current?.play(() => element.play());
-          }}
+          onRetry={() => media.current?.retry()}
         />
         <PrimaryNavigation
           view={view}
