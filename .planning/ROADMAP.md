@@ -84,6 +84,14 @@ Plans:
 **Goal:** Napplets can discover and invoke trusted archetype handlers using shell-controlled navigation behavior.
 **Requirements:** INT-01, INT-02, INT-03
 
+**Plans:** 4 plans
+
+Plans:
+- [ ] 07-01-PLAN.md — Derive strict verified intent declarations and a generation-bound handler registry.
+- [ ] 07-02-PLAN.md — Dispatch authenticated invocations through exact verification and private single-use launch tickets.
+- [ ] 07-03-PLAN.md — Execute identity-safe reuse, synchronous new-tab reservation, and sandboxed stack history.
+- [ ] 07-04-PLAN.md — Wire and prove the complete intent flow over the production runtime transport.
+
 **Success Criteria:**
 
 1. Available handlers derive only from installed verified manifest contracts.
