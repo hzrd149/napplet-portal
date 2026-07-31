@@ -246,6 +246,7 @@ app.use(staticFiles());
 app.use(async (ctx) =>
   applyBrowserSecurityHeaders(await ctx.next(), {
     allowSameOriginFrame: new URL(ctx.req.url).pathname === "/settings",
+    requestUrl: ctx.req.url,
   })
 );
 app.use((ctx) => {

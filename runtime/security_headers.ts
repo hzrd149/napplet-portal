@@ -9,7 +9,7 @@ export const BROWSER_SECURITY_POLICY = Object.freeze({
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: blob:",
     "font-src 'self'",
-    "connect-src 'self' ws: wss:",
+    "connect-src 'self'",
     "frame-src 'self' blob:",
     "worker-src 'none'",
     "media-src 'none'",
@@ -36,18 +36,31 @@ export const BROWSER_SECURITY_POLICY = Object.freeze({
 
 interface BrowserSecurityHeaderOptions {
   readonly allowSameOriginFrame?: boolean;
+  readonly requestUrl?: string;
+}
+
+export function browserContentSecurityPolicy(requestUrl?: string): string {
+  if (!requestUrl) return BROWSER_SECURITY_POLICY.contentSecurityPolicy;
+  const portal = new URL(requestUrl);
+  const websocketProtocol = portal.protocol === "https:" ? "wss:" : "ws:";
+  const websocketSource = `${websocketProtocol}//${portal.host}`;
+  return BROWSER_SECURITY_POLICY.contentSecurityPolicy.replace(
+    "connect-src 'self'",
+    `connect-src 'self' ${websocketSource}`,
+  );
 }
 
 export function applyBrowserSecurityHeaders(
   response: Response,
   options: BrowserSecurityHeaderOptions = {},
 ): Response {
+  const basePolicy = browserContentSecurityPolicy(options.requestUrl);
   const contentSecurityPolicy = options.allowSameOriginFrame
-    ? BROWSER_SECURITY_POLICY.contentSecurityPolicy.replace(
+    ? basePolicy.replace(
       "frame-ancestors 'none'",
       "frame-ancestors 'self'",
     )
-    : BROWSER_SECURITY_POLICY.contentSecurityPolicy;
+    : basePolicy;
   response.headers.set(
     "Content-Security-Policy",
     contentSecurityPolicy,

@@ -5,6 +5,7 @@ import {
 import {
   applyBrowserSecurityHeaders,
   BROWSER_SECURITY_POLICY,
+  browserContentSecurityPolicy,
 } from "../runtime/security_headers.ts";
 import { isCurrentTransferRecipient } from "../runtime/portal_runtime.ts";
 
@@ -194,4 +195,38 @@ Deno.test("mandatory browser boundary matrix is closed", async () => {
       "foreign or stale recipient must receive zero data",
     );
   }
+});
+
+Deno.test("sandbox networking is limited to the portal WebSocket origin", () => {
+  const httpPolicy = browserContentSecurityPolicy(
+    "http://portal.example:8000/napplet",
+  );
+  assert(
+    httpPolicy.includes("connect-src 'self' ws://portal.example:8000"),
+    "HTTP portal must authorize only its matching WebSocket origin",
+  );
+  const httpConnectSources = httpPolicy
+    .split("; ")
+    .find((directive) => directive.startsWith("connect-src "))
+    ?.split(" ").slice(1) ?? [];
+  assert(
+    !httpConnectSources.includes("ws:"),
+    "scheme-wide ws access must be denied",
+  );
+  assert(
+    !httpConnectSources.includes("wss:"),
+    "scheme-wide wss access must be denied",
+  );
+  assert(
+    !httpPolicy.includes("attacker.example"),
+    "attacker WebSocket origin must not be authorized",
+  );
+
+  const httpsPolicy = browserContentSecurityPolicy(
+    "https://portal.example/napplet",
+  );
+  assert(
+    httpsPolicy.includes("connect-src 'self' wss://portal.example"),
+    "HTTPS portal must authorize only its matching secure WebSocket origin",
+  );
 });
