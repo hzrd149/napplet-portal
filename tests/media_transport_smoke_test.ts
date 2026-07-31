@@ -14,7 +14,12 @@ class Client {
   constructor(readonly socket: InstanceType<typeof ClientWebSocket>) {
     socket.addEventListener("message", (event) => {
       if (typeof event.data !== "string") return;
-      this.frames.push(JSON.parse(event.data));
+      const frame = JSON.parse(event.data) as Record<string, unknown>;
+      Object.defineProperty(frame, "sequence", {
+        value: ++receiveSequence,
+        enumerable: false,
+      });
+      this.frames.push(frame);
       this.#wake?.();
       this.#wake = null;
     });
@@ -41,7 +46,30 @@ class Client {
       }`,
     );
   }
+  remove(predicate: (frame: Record<string, unknown>) => boolean) {
+    this.frames.splice(
+      0,
+      this.frames.length,
+      ...this.frames.filter((frame) => !predicate(frame)),
+    );
+  }
+  async none(
+    predicate: (frame: Record<string, unknown>) => boolean,
+    duration = 150,
+  ) {
+    const deadline = Date.now() + duration;
+    while (Date.now() < deadline) {
+      if (this.frames.some(predicate)) return false;
+      await Promise.race([
+        new Promise<void>((resolve) => this.#wake = resolve),
+        new Promise<void>((resolve) => setTimeout(resolve, 25)),
+      ]);
+    }
+    return !this.frames.some(predicate);
+  }
 }
+
+let receiveSequence = 0;
 
 async function connect(
   url: string,
@@ -139,6 +167,15 @@ Deno.test({
     let err = "";
     try {
       await waitForHttp(`${origin}/`, child);
+      const foreign = await connect(
+        `${origin.replace("http", "ws")}/api/runtime`,
+        origin,
+      );
+      clients.push(foreign.client);
+      assert(
+        foreign.snapshot.session === null,
+        "client outside the active account starts with no projection",
+      );
       const signIn = await fetch(`${origin}/api/signin/nsec`, {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -203,6 +240,9 @@ Deno.test({
         (frame.message as Record<string, unknown>)?.type ===
           "media.session.create.result"
       );
+      const autoplayGrant = await a.client.next((frame) =>
+        frame.type === "runtime.media.grant"
+      );
       const initialA = await a.client.next((frame) =>
         frame.type === "runtime.media.snapshot" && frame.session !== null
       );
@@ -211,8 +251,19 @@ Deno.test({
       );
       const initial = initialA.session as Record<string, unknown>;
       assert(
+        initial.status === "stopped" &&
+          autoplayGrant.generation === initial.generation,
+        "autoplay is an enactment grant, never optimistic playing truth",
+      );
+      assert(
         JSON.stringify(initialA.session) === JSON.stringify(initialB.session),
         "eligible clients receive identical projections",
+      );
+      assert(
+        await foreign.client.none((frame) =>
+          frame.type === "runtime.media.snapshot" && frame.session !== null
+        ),
+        "client outside the active account receives no media projection",
       );
       a.client.send({
         type: "runtime.forward",
@@ -234,19 +285,35 @@ Deno.test({
         sessionId: "session-smoke",
         generation: initial.generation,
       });
-      const stopIndex = a.client.frames.length;
-      await a.client.next((frame) =>
+      const stop = await a.client.next((frame) =>
         frame.type === "runtime.event" &&
         (frame.message as Record<string, unknown>)?.type === "media.command"
       );
       const grant = await b.client.next((frame) =>
         frame.type === "runtime.media.grant"
       );
+      const firstTransferResult = await b.client.next((frame) =>
+        frame.type === "runtime.media.result" && frame.id === "transfer-1"
+      );
       assert(
-        Number(grant.generation) === Number(initial.generation) + 1,
+        firstTransferResult.ok === true &&
+          Number(grant.generation) === Number(initial.generation) + 1,
         "transfer increments generation once",
       );
-      assert(stopIndex >= 0, "prior owner stop is observed before grant");
+      assert(
+        Number(stop.sequence) < Number(grant.sequence),
+        "prior owner stop is received before the new-owner grant",
+      );
+      await a.client.next((frame) =>
+        frame.type === "runtime.media.snapshot" &&
+        (frame.session as Record<string, unknown>)?.generation ===
+          grant.generation
+      );
+      await b.client.next((frame) =>
+        frame.type === "runtime.media.snapshot" &&
+        (frame.session as Record<string, unknown>)?.generation ===
+          grant.generation
+      );
       b.client.send({
         type: "runtime.media.transfer",
         id: "transfer-1",
@@ -257,6 +324,21 @@ Deno.test({
         frame.type === "runtime.media.result" && frame.id === "transfer-1"
       );
       assert(duplicate.ok === true, "duplicate request settles idempotently");
+      assert(
+        duplicate.generation === firstTransferResult.generation,
+        "duplicate result retains the original correlation outcome",
+      );
+      assert(
+        await a.client.none((frame) =>
+          frame.type === "runtime.event" &&
+          (frame.message as Record<string, unknown>)?.type === "media.command"
+        ) && await b.client.none((frame) =>
+          frame.type === "runtime.media.grant"
+        ),
+        "duplicate transfer creates no second stop or grant effect",
+      );
+      a.client.remove((frame) => frame.type === "runtime.media.snapshot");
+      b.client.remove((frame) => frame.type === "runtime.media.snapshot");
       a.client.send({
         type: "runtime.forward",
         ...ownerA,
@@ -267,11 +349,56 @@ Deno.test({
           status: "playing",
         },
       });
-      await new Promise((resolve) => setTimeout(resolve, 30));
+      assert(
+        await a.client.none((frame) =>
+          frame.type === "runtime.media.snapshot" &&
+          (frame.session as Record<string, unknown>)?.status === "playing"
+        ) && await b.client.none((frame) =>
+          frame.type === "runtime.media.snapshot" &&
+          (frame.session as Record<string, unknown>)?.status === "playing"
+        ),
+        "delayed old-generation owner report produces no projection",
+      );
+
+      const race = async (
+        first: typeof a,
+        second: typeof a,
+        generation: unknown,
+        id: string,
+      ) => {
+        first.client.send({
+          type: "runtime.media.transfer",
+          id: `${id}-first`,
+          sessionId: "session-smoke",
+          generation,
+        });
+        second.client.send({
+          type: "runtime.media.transfer",
+          id: `${id}-second`,
+          sessionId: "session-smoke",
+          generation,
+        });
+        const firstResult = await first.client.next((frame) =>
+          frame.type === "runtime.media.result" && frame.id === `${id}-first`
+        );
+        const secondResult = await second.client.next((frame) =>
+          frame.type === "runtime.media.result" && frame.id === `${id}-second`
+        );
+        assert(
+          firstResult.ok === true && secondResult.ok === false,
+          `${id} commits exactly the first arrival`,
+        );
+        return await first.client.next((frame) =>
+          frame.type === "runtime.media.grant" &&
+          frame.generation === firstResult.generation
+        );
+      };
+      const grantA = await race(a, b, grant.generation, "race-a-b");
+      const grantB = await race(b, a, grantA.generation, "race-b-a");
       b.client.send({
         type: "runtime.forward",
         ...ownerB,
-        generation: grant.generation,
+        generation: grantB.generation,
         message: {
           type: "media.state",
           sessionId: "session-smoke",
@@ -284,7 +411,7 @@ Deno.test({
       );
       assert(
         (paused.session as Record<string, unknown>).generation ===
-          grant.generation,
+          grantB.generation,
         "hidden-style report preserves owner generation",
       );
       b.client.socket.close();
@@ -318,6 +445,19 @@ Deno.test({
       assert(
         (terminal.session as Record<string, unknown>).owner === null,
         "origin expiry terminalizes without reclaim",
+      );
+      resumed.client.send({
+        type: "runtime.media.stop",
+        id: "post-expiry-stop",
+        sessionId: "session-smoke",
+        generation: (terminal.session as Record<string, unknown>).generation,
+      });
+      const expiredCommand = await resumed.client.next((frame) =>
+        frame.type === "runtime.media.result" && frame.id === "post-expiry-stop"
+      );
+      assert(
+        expiredCommand.ok === false,
+        "post-expiry media command is rejected",
       );
     } catch (error) {
       failure = error;
