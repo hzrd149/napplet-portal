@@ -133,11 +133,17 @@ export class ConnectionRegistry {
     return true;
   }
 
-  createWindow(connectionId: string): { readonly windowId: string } {
+  createWindow(
+    connectionId: string,
+    requestedWindowId?: string,
+  ): { readonly windowId: string } {
     if (!this.#connections.has(connectionId)) {
       throw new Error("unknown connection");
     }
-    const windowId = this.#createId();
+    if (requestedWindowId && this.#windows.has(requestedWindowId)) {
+      throw new Error("window namespace already owned");
+    }
+    const windowId = requestedWindowId ?? this.#createId();
     this.register(connectionId, windowId);
     debug(
       "created window connection=%s window=%s",

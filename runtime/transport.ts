@@ -211,7 +211,7 @@ export function decodeIntentNavigationMessage(
     ]) && boundedId(message.invocationId) &&
     boundedId(message.targetWindowId) &&
     boundedId(message.ticket) && typeof message.launchPath === "string" &&
-    message.launchPath.startsWith("/napplet?") &&
+    message.launchPath.startsWith("/intent/reserved#") &&
     Number.isSafeInteger(message.generation) && Number(message.generation) >= 0
   ) return message as unknown as IntentNavigationMessage;
   if (

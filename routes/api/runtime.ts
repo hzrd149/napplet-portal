@@ -91,9 +91,16 @@ export const handler = define.handlers({
     const runtime = ctx.state.runtime;
     const signer = ctx.state.signer;
     const requestedToken = new URL(ctx.req.url).searchParams.get("reconnect");
+    const requestedWindowId = new URL(ctx.req.url).searchParams.get("window");
     if (requestedToken && requestedToken.length > 256) {
       debug("rejected reconnect token length=%d", requestedToken.length);
       return new Response("Invalid reconnect token", { status: 400 });
+    }
+    if (
+      requestedWindowId &&
+      (!/^[0-9a-f-]{36}$/.test(requestedWindowId) || requestedToken)
+    ) {
+      return new Response("Invalid target window", { status: 400 });
     }
     // Bare mode: the session owns reconnect identity and per-socket teardown,
     // so events are wired here rather than handed to Fresh's managed handlers.
@@ -105,7 +112,10 @@ export const handler = define.handlers({
     );
     let session = sessions.get(connection.connectionId);
     if (!session) {
-      const { windowId } = connections.createWindow(connection.connectionId);
+      const { windowId } = connections.createWindow(
+        connection.connectionId,
+        requestedWindowId ?? undefined,
+      );
       const source = {};
       session = {
         windowId,
@@ -389,7 +399,13 @@ export const handler = define.handlers({
           return;
         }
         if (intentNavigation?.type === "intent.ticket.claim") {
-          bridge.claimIntentTicket(intentNavigation);
+          const claimed = bridge.claimIntentTicket(intentNavigation);
+          socket.send(JSON.stringify({
+            type: "runtime.intent.ticket",
+            reservationId: intentNavigation.reservationId,
+            ok: claimed !== null,
+            ...(claimed ? { claim: claimed } : {}),
+          }));
           return;
         }
         const intentCommand = decodeIntentCommand(napMessage);

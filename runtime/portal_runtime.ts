@@ -371,7 +371,7 @@ export function createPortalRuntime(
     events,
     relay,
     eventRuntime,
-    configureCatalog(service: CatalogService): void {
+    configureCatalog(service: CatalogService): IntentService {
       intents?.destroy();
       catalog = service;
       intents = new IntentService(service, {
@@ -382,6 +382,7 @@ export function createPortalRuntime(
           );
         },
       });
+      return intents;
     },
     configureTransfers(service: NapDispatcher): void {
       dispatcher = service;

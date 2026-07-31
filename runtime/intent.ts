@@ -64,6 +64,11 @@ interface LaunchTicket {
   readonly targetWindowId: string;
   readonly generation: number;
   readonly expiresAt: number;
+  readonly launch: {
+    readonly dTag: string;
+    readonly aggregateHash: string;
+    readonly srcdoc: string;
+  };
 }
 
 interface AuthorityCandidate {
@@ -221,6 +226,7 @@ export class IntentService {
         targetWindowId,
         generation: selection.generation,
         expiresAt: this.#options.now() + this.#options.timeoutMs,
+        launch: launched.value.launch,
       }),
     );
     this.#options.sendNavigation(
@@ -230,7 +236,12 @@ export class IntentService {
         invocationId: reservation.invocationId,
         targetWindowId,
         ticket,
-        launchPath: `/napplet?ticket=${encodeURIComponent(ticket)}`,
+        launchPath: `/intent/reserved#${new URLSearchParams({
+          reservationId: reservation.reservationId,
+          ticket,
+          targetWindowId,
+          generation: String(selection.generation),
+        })}`,
         generation: selection.generation,
       }),
       owner,
@@ -248,7 +259,6 @@ export class IntentService {
       ticket.reservationId !== claim.reservationId ||
       ticket.targetWindowId !== claim.targetWindowId ||
       ticket.generation !== claim.generation ||
-      owner.connectionId !== ticket.caller.connectionId ||
       owner.windowId !== ticket.targetWindowId ||
       this.#options.account() !== ticket.accountPubkey ||
       !this.isCurrent(ticket.generation) ||
@@ -263,6 +273,11 @@ export class IntentService {
       payload: ticket.payload,
       handler: ticket.candidate.dTag,
       manifestEventId: ticket.candidate.manifestEventId,
+      identity: Object.freeze({
+        dTag: ticket.launch.dTag,
+        aggregateHash: ticket.launch.aggregateHash,
+      }),
+      srcdoc: ticket.launch.srcdoc,
     });
   }
 

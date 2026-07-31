@@ -140,7 +140,7 @@ const catalogService = new CatalogService({
     }));
   },
 });
-processRuntime.configureCatalog(catalogService);
+export const intentService = processRuntime.configureCatalog(catalogService);
 const resourceService = new ResourceService({ localCacheUrl: localBlossom });
 const blossomTransfer = new BlossomTransferService({
   uploader: new BlossomTransferAdapter({
