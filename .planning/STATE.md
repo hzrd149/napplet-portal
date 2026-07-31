@@ -5,15 +5,15 @@ milestone_name: Runtime & UX Expansion
 current_phase: 4
 current_phase_name: Installed Napplet Discovery
 status: executing
-stopped_at: Completed 04-01-PLAN.md
-last_updated: "2026-07-31T01:16:44.809Z"
+stopped_at: Completed 04-02-PLAN.md
+last_updated: "2026-07-31T01:23:56.098Z"
 last_activity: 2026-07-31
 last_activity_desc: Completed Phase 4 Plan 01 backend catalog authority
 progress:
   total_phases: 7
   completed_phases: 1
   total_plans: 9
-  completed_plans: 6
+  completed_plans: 7
   percent: 14
 ---
 
@@ -29,8 +29,8 @@ See: .planning/PROJECT.md (updated 2026-07-30)
 ## Current Position
 
 Phase: 4 — Installed Napplet Discovery
-Plan: 1 of 4 complete
-Status: In progress
+Plan: 2 of 4 complete
+Status: Ready to execute
 Last activity: 2026-07-31 — Completed Phase 4 Plan 01 backend catalog authority
 
 ## Performance Metrics
@@ -79,6 +79,7 @@ Last activity: 2026-07-31 — Completed Phase 4 Plan 01 backend catalog authorit
 | Phase 03 P04 | 6min | 3 tasks | 6 files |
 | Phase 03 P05 | 3min | 2 tasks | 6 files |
 | Phase 04 P01 | 14min | 2 tasks | 4 files |
+| Phase 04 P02 | 7min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -130,6 +131,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase ?]: [Phase 03]: The canonical square SVG is the sole favicon; the stale Fresh ICO fallback is removed.
 - [Phase ?]: [Phase 04]: Accepted membership projects immediately while four-worker exact-key enrichment remains generation-checked.
 - [Phase ?]: [Phase 04]: Install approval is source-catalog-bound and launch releases bytes only for the latest exact accepted triple.
+- [Phase ?]: [Phase 04]: Load preview manifests by coordinate, but require exact accepted event IDs for approval and launch verification.
+- [Phase ?]: [Phase 04]: One generation-guarded owner replaces catalog subscriptions on account, settings, and reconnect signals while preserving last-good truth on transient errors.
 
 ### Pending Todos
 
@@ -158,6 +161,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-07-31T01:16:44.797Z
-Stopped at: Completed 04-01-PLAN.md
+Last session: 2026-07-31T01:23:56.086Z
+Stopped at: Completed 04-02-PLAN.md
 Resume file: None
