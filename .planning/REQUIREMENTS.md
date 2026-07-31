@@ -51,7 +51,7 @@
 
 ### Quality and Security
 
-- [ ] **QLT-01**: Every added NAP domain is checked against the pinned production packages with contract and dispatcher tests; sibling repositories remain reference-only.
+- [x] **QLT-01**: Every added NAP domain is checked against the pinned production packages with contract and dispatcher tests; sibling repositories remain reference-only.
 - [ ] **QLT-02**: Napplet-controlled input cannot bypass sandboxing, capability checks, URL/resource policy, storage isolation, signer boundaries, or catalog launch authority.
 - [ ] **QLT-03**: Automated tests cover normal, empty, partial, denied, stale, reconnect, and failure behavior for each new runtime seam, and `deno task check` passes.
 - [ ] **QLT-04**: Mobile-browser UAT verifies navigation, themes, connection recovery, stacked/new-tab intent behavior, and cross-tab media ownership on supported real devices.
@@ -87,7 +87,8 @@
 | STO-01, STO-02, STO-03 | Phase 6 | Pending |
 | INT-01, INT-02, INT-03 | Phase 7 | Complete |
 | MED-01, MED-02, MED-03, MED-04 | Phase 8 | Pending |
-| QLT-01, QLT-02, QLT-03, QLT-04 | Phase 9 | Pending |
+| QLT-01 | Phase 9 | Complete |
+| QLT-02, QLT-03, QLT-04 | Phase 9 | Pending |
 
 **Coverage:**
 
