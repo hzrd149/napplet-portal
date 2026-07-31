@@ -5,7 +5,7 @@ export const BROWSER_SECURITY_POLICY = Object.freeze({
     "object-src 'none'",
     "frame-ancestors 'none'",
     "form-action 'none'",
-    "script-src 'self' 'unsafe-inline'",
+    "script-src 'self' 'sha256-6LnFsWJcjPnwz0LHARVaKU7rY2XZo0ToRHaMKKBdNG8='",
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: blob:",
     "font-src 'self'",

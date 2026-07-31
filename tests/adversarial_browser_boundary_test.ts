@@ -8,6 +8,7 @@ import {
   browserContentSecurityPolicy,
 } from "../runtime/security_headers.ts";
 import { isCurrentTransferRecipient } from "../runtime/portal_runtime.ts";
+import { THEME_BOOTSTRAP_SCRIPT } from "../shell/theme.ts";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -228,5 +229,26 @@ Deno.test("sandbox networking is limited to the portal WebSocket origin", () => 
   assert(
     httpsPolicy.includes("connect-src 'self' wss://portal.example"),
     "HTTPS portal must authorize only its matching secure WebSocket origin",
+  );
+});
+
+Deno.test("host scripts require same-origin files or the fixed theme hash", async () => {
+  const policy = BROWSER_SECURITY_POLICY.contentSecurityPolicy;
+  const scriptDirective =
+    policy.split("; ").find((directive) =>
+      directive.startsWith("script-src ")
+    ) ?? "";
+  assert(
+    !scriptDirective.includes("'unsafe-inline'"),
+    "host-wide CSP must reject arbitrary inline script execution",
+  );
+  const digest = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(THEME_BOOTSTRAP_SCRIPT),
+  );
+  const hash = btoa(String.fromCharCode(...new Uint8Array(digest)));
+  assert(
+    policy.includes(`script-src 'self' 'sha256-${hash}'`),
+    "CSP must authorize only the byte-stable first-paint theme bootstrap",
   );
 });
