@@ -90,6 +90,24 @@ export class RelayPolicy {
     return resolveAuthPermission(relay, this.snapshot);
   }
 
+  previewReads(
+    hints: readonly string[],
+    configuredReads: readonly string[],
+    limit = 8,
+  ): readonly string[] {
+    const blocked = canonicalSet(this.snapshot.blocked);
+    const result: string[] = [];
+    const cap = Math.max(0, Math.min(8, Math.floor(limit)));
+    for (const relay of [...hints, ...configuredReads]) {
+      const canonical = canonicalRelay(relay);
+      if (
+        canonical && !blocked.has(canonical) && !result.includes(canonical)
+      ) result.push(canonical);
+      if (result.length === cap) break;
+    }
+    return Object.freeze(result);
+  }
+
   filterMap<T extends Record<string, NostrFilter | readonly NostrFilter[]>>(
     source: Observable<T>,
   ): Observable<T> {
