@@ -52,15 +52,20 @@ Deno.test("runtime config is immutable, normalized, deduplicated, and bind-aware
   assertEquals(warnings.length, 1, "invalid endpoint should warn");
 });
 
-Deno.test("unsafe local artifacts are explicit, loopback-only, and noisy", () => {
+Deno.test("unsafe local artifacts are explicit and noisy on configured binds", () => {
   const warnings: string[] = [];
   const config = loadRuntimeConfig({
-    PORTAL_BIND: "127.0.0.1",
+    PORTAL_BIND: "100.77.91.59",
     NAPPLET_UNSAFE_SKIP_VERIFICATION: "true",
     NAPPLET_UNSAFE_LOCAL_ARTIFACT_PATH: "/tmp/local-napplet.html",
   }, (warning) => warnings.push(warning));
 
   assertEquals(config.unsafeSkipVerification, true, "unsafe mode is explicit");
+  assertEquals(
+    config.bind,
+    "100.77.91.59",
+    "unsafe mode must retain the configured private bind",
+  );
   assertEquals(
     config.unsafeLocalArtifactPath,
     "/tmp/local-napplet.html",
@@ -72,18 +77,26 @@ Deno.test("unsafe local artifacts are explicit, loopback-only, and noisy", () =>
     true,
     "warning must be unmistakable",
   );
+});
 
-  for (const bind of ["0.0.0.0", "192.168.1.20", "localhost"]) {
-    assertThrows(
-      () =>
-        loadRuntimeConfig({
-          PORTAL_BIND: bind,
-          NAPPLET_UNSAFE_SKIP_VERIFICATION: "true",
-          NAPPLET_UNSAFE_LOCAL_ARTIFACT_PATH: "/tmp/local-napplet.html",
-        }),
-      `unsafe mode must reject non-loopback bind ${bind}`,
-    );
-  }
+Deno.test("normal mode stays verified and warning-free on configured binds", () => {
+  const warnings: string[] = [];
+  const config = loadRuntimeConfig({
+    PORTAL_BIND: "100.77.91.59",
+  }, (warning) => warnings.push(warning));
+
+  assertEquals(config.bind, "100.77.91.59", "private bind must be retained");
+  assertEquals(
+    config.unsafeSkipVerification,
+    false,
+    "normal mode must remain verified",
+  );
+  assertEquals(
+    config.unsafeLocalArtifactPath,
+    undefined,
+    "normal mode must own no unsafe artifact path",
+  );
+  assertEquals(warnings, [], "normal mode must emit no unsafe warning");
 });
 
 Deno.test("unsafe local artifact configuration fails closed", () => {

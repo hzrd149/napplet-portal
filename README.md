@@ -101,17 +101,17 @@ invalid schemes are rejected with a sanitized warning while other valid entries
 continue. Manifest-provided Blossom hints are merged with the configured list,
 and every returned blob is verified rather than trusted.
 
-For local testing during a Blossom outage, set
+For local or private-network testing during a Blossom outage, set
 `NAPPLET_UNSAFE_SKIP_VERIFICATION=true`, set
-`NAPPLET_UNSAFE_LOCAL_ARTIFACT_PATH` to an explicit UTF-8 HTML file, and leave
-`PORTAL_BIND` on a numeric loopback address such as `127.0.0.1` or `::1`.
-Startup fails if unsafe mode has no local byte source or uses a non-loopback
-bind. The portal displays a persistent unsafe-mode banner, the runtime labels
-the artifact `unsafe-local`, and the local bytes receive a fresh SHA-256
-identity; they are never represented as verified. The normal size and HTML input
-boundaries still apply, and WebSocket origin, iframe sandbox, signer,
-capability, storage, URL, and message authority remain unchanged. Never enable
-this mode for production, LAN, or public access.
+`NAPPLET_UNSAFE_LOCAL_ARTIFACT_PATH` to an explicit UTF-8 HTML file, and set
+`PORTAL_BIND` to the host address used for the test, such as `100.77.91.59` for
+mobile access over a trusted private network. Startup fails if unsafe mode has
+no local byte source. The portal displays a persistent unsafe-mode banner, the
+runtime labels the artifact `unsafe-local`, and the local bytes receive a fresh
+SHA-256 identity; they are never represented as verified. The normal size and
+HTML input boundaries still apply, and WebSocket origin, iframe sandbox,
+signer, capability, storage, URL, and message authority remain unchanged.
+Never enable this mode on an untrusted or publicly exposed interface.
 
 No credentials belong in endpoint URLs. Environment files are gitignored, but
 operators should still apply host-level secret controls. `.env.example` is
@@ -119,7 +119,7 @@ committed and must keep placeholder values only.
 
 ## Security and sensitive state
 
-- Outside the explicitly unsafe loopback-only local testing mode, napplet HTML
+- Outside the explicitly enabled unsafe local testing mode, napplet HTML
   executes only after its manifest signature, aggregate, and every referenced
   blob pass verification. The iframe uses exactly `sandbox="allow-scripts"`,
   leaving it at an opaque origin.

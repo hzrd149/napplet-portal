@@ -109,7 +109,7 @@ Deno.test("bind resolver rejects URL and host-port values", () => {
   assert(warnings.length === 2, "rejected binds must warn exactly once each");
 });
 
-Deno.test("production bind bootstrap rejects unsafe mode on a public bind", async () => {
+Deno.test("production bind bootstrap accepts unsafe mode on a configured private bind", async () => {
   const output = await new Deno.Command(Deno.execPath(), {
     args: [
       "run",
@@ -117,21 +117,26 @@ Deno.test("production bind bootstrap rejects unsafe mode on a public bind", asyn
       "runtime/bind.ts",
     ],
     env: {
-      PORTAL_BIND: "0.0.0.0",
+      PORTAL_BIND: "100.77.91.59",
       NAPPLET_UNSAFE_SKIP_VERIFICATION: "true",
       NAPPLET_UNSAFE_LOCAL_ARTIFACT_PATH: "/private/operator/napplet.html",
     },
     stdout: "piped",
     stderr: "piped",
   }).output();
+  const stdout = new TextDecoder().decode(output.stdout);
   const stderr = new TextDecoder().decode(output.stderr);
-  assert(!output.success, "production startup must fail before serving");
+  assert(output.success, "production bind bootstrap must accept unsafe mode");
   assert(
-    stderr.includes("loopback"),
-    "startup rejection must explain the loopback requirement",
+    stdout.trim() === "100.77.91.59",
+    "bootstrap must preserve the configured private bind",
+  );
+  assert(
+    stderr.includes("UNSAFE") && stderr.includes("verification is disabled"),
+    "bootstrap must keep the unsafe startup warning",
   );
   assert(
     !stderr.includes("/private/operator/napplet.html"),
-    "startup rejection must not disclose the local artifact path",
+    "startup warning must not disclose the local artifact path",
   );
 });

@@ -76,15 +76,6 @@ export function loadBindAddress(
   }, warn).bind;
 }
 
-function isLoopbackBind(value: string): boolean {
-  if (value === "::1") return true;
-  const octets = value.split(".").map(Number);
-  return octets.length === 4 && octets[0] === 127 &&
-    octets.every((octet) =>
-      Number.isInteger(octet) && octet >= 0 && octet <= 255
-    );
-}
-
 function unsafeFlag(value: string | undefined): boolean {
   const normalized = value?.trim().toLowerCase();
   if (!normalized || normalized === "false") return false;
@@ -130,18 +121,13 @@ export function loadRuntimeConfig(
   const unsafeLocalArtifactPath =
     environment.NAPPLET_UNSAFE_LOCAL_ARTIFACT_PATH?.trim() || undefined;
   if (unsafeSkipVerification) {
-    if (!bind || !isLoopbackBind(bind)) {
-      throw new Error(
-        "Unsafe local artifact mode requires a validated loopback PORTAL_BIND",
-      );
-    }
     if (!unsafeLocalArtifactPath) {
       throw new Error(
         "Unsafe local artifact mode requires NAPPLET_UNSAFE_LOCAL_ARTIFACT_PATH",
       );
     }
     warn(
-      "UNSAFE local artifact mode enabled: napplet verification is disabled for loopback testing",
+      "UNSAFE local artifact mode enabled: napplet verification is disabled for local testing",
     );
   } else if (unsafeLocalArtifactPath) {
     warn(
