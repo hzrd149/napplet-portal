@@ -5,6 +5,7 @@ import { RelayPool } from "applesauce-relay";
 import type { Filter } from "nostr-tools";
 import {
   combineLatest,
+  finalize,
   firstValueFrom,
   type Observable,
   type Subscription,
@@ -45,6 +46,30 @@ export class EventRuntime {
       upstream,
       { bufferTime: 0 },
     );
+  }
+
+  refreshReplaceable(
+    kind: 0 | 3,
+    pubkey: string,
+    relays: readonly string[],
+    timeoutMs = 5_000,
+  ): () => void {
+    if (this.destroyed) return () => undefined;
+    const eligible = this.#policy
+      ? this.#policy.read({ inboxes: relays, outboxes: [] })
+      : relays;
+    let timer: number | undefined;
+    const subscription = this.#request([...eligible], [{
+      kinds: [kind],
+      authors: [pubkey],
+    }]).pipe(
+      finalize(() => timer !== undefined && clearTimeout(timer)),
+    ).subscribe({
+      next: (event) => this.eventStore.add(event),
+      error: () => undefined,
+    });
+    timer = setTimeout(() => subscription.unsubscribe(), timeoutMs);
+    return () => subscription.unsubscribe();
   }
 
   loadManifest(

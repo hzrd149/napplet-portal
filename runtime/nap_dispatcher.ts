@@ -1,7 +1,6 @@
 import type { UploadRequest } from "@napplet/core";
-import type { CommonNip19EncodeInput } from "@napplet/core";
 import type { StorageRequestMessage } from "@napplet/nap/storage";
-import { nip19 } from "nostr-tools";
+import type { CommonService } from "./common.ts";
 import type { BlossomTransferService } from "./blossom_transfer.ts";
 import type { ResourceBatchItem, ResourceService } from "./resource_service.ts";
 import { ResourceServiceError } from "./resource_service.ts";
@@ -28,13 +27,12 @@ export interface WindowCapabilityContext {
   readonly instanceId: string;
 }
 
-type CommonEncodeMessage = {
-  readonly type: "common.encodeNip19";
+type CommonMessage = Record<string, unknown> & {
+  readonly type: `common.${string}`;
   readonly id: string;
-  readonly input: CommonNip19EncodeInput;
 };
 
-type CommonStorageMessage = CommonEncodeMessage | StorageRequestMessage;
+type CommonStorageMessage = CommonMessage | StorageRequestMessage;
 
 export type DispatcherMessage =
   | CommonStorageMessage
@@ -97,6 +95,7 @@ interface NapDispatcherOptions {
     readonly localBlossom?: string;
   };
   readonly storage?: StoragePort;
+  readonly common?: CommonService;
   readonly isCurrent?: (context: WindowCapabilityContext) => boolean;
   readonly send: (
     owner: NapOwner,
@@ -135,6 +134,7 @@ export class NapDispatcher {
   readonly #settings: NapDispatcherOptions["settings"];
   readonly #send: NapDispatcherOptions["send"];
   readonly #storage?: StoragePort;
+  readonly #common?: CommonService;
   #isCurrent?: NapDispatcherOptions["isCurrent"];
   readonly #active = new Map<string, ActiveOperation>();
   readonly #windowGenerations = new Map<string, number>();
@@ -148,6 +148,7 @@ export class NapDispatcher {
     this.#settings = options.settings;
     this.#send = options.send;
     this.#storage = options.storage;
+    this.#common = options.common;
     this.#isCurrent = options.isCurrent;
   }
 
@@ -340,6 +341,7 @@ export class NapDispatcher {
     if (this.#destroyed) return;
     this.#destroyed = true;
     for (const operation of this.#active.values()) operation.controller.abort();
+    this.#common?.cancel(windowId);
     for (const key of this.#knownOwners.keys()) {
       this.#transfer.clearOwner?.(key);
     }
@@ -384,18 +386,9 @@ export class NapDispatcher {
       });
       return;
     }
-    if (message.type === "common.encodeNip19") {
-      if (!exactKeys(message, ["type", "id", "input"])) {
-        send({ ok: false, error: "invalid-request" });
-        return;
-      }
-      try {
-        const encoded = encodeNip19(message.input);
-        if (typeof encoded !== "string") throw new Error("unsupported input");
-        send({ ok: true, value: encoded, nip19Type: message.input.type });
-      } catch {
-        send({ ok: false, error: "invalid-request" });
-      }
+    if (message.type.startsWith("common.")) {
+      if (!this.#common) send({ ok: false, error: "unavailable" });
+      else send(await this.#common.execute(message, context.windowId));
       return;
     }
     if (!this.#storage || !validStorageMessage(message)) {
@@ -476,26 +469,4 @@ function validStorageMessage(message: StorageRequestMessage): boolean {
     ? ["type", "id", "key", ...(scope ? ["scope"] : [])]
     : ["type", "id", ...(scope ? ["scope"] : [])];
   return exactKeys(message, keys);
-}
-
-function encodeNip19(input: CommonNip19EncodeInput): string {
-  switch (input.type) {
-    case "npub":
-      return nip19.npubEncode(input.hex);
-    case "note":
-      return nip19.noteEncode(input.hex);
-    case "nprofile":
-      return nip19.nprofileEncode(input);
-    case "nevent":
-      return nip19.neventEncode({
-        id: input.eventId,
-        relays: input.relays,
-        author: input.author,
-        kind: input.kind,
-      });
-    case "naddr":
-      return nip19.naddrEncode(input);
-    case "nrelay":
-      throw new Error("unsupported public NIP-19 form");
-  }
 }

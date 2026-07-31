@@ -1,4 +1,4 @@
-import { nip19 } from "nostr-tools";
+import { finalizeEvent, getPublicKey, nip19 } from "nostr-tools";
 import { of } from "npm:rxjs@7.8.2";
 import { EventRuntime } from "../runtime/event_runtime.ts";
 import { CommonService } from "../runtime/common.ts";
@@ -7,7 +7,8 @@ function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
 }
 
-const pubkey = "1".repeat(64);
+const secret = new Uint8Array(32).fill(1);
+const pubkey = getPublicKey(secret);
 const eventId = "2".repeat(64);
 
 Deno.test("NIP-19 supports exactly the six public canonical forms", async () => {
@@ -26,39 +27,82 @@ Deno.test("NIP-19 supports exactly the six public canonical forms", async () => 
     { type: "nrelay", relay: "wss://relay.example/" },
   ] as const;
   for (const input of inputs) {
-    const encoded = await common.execute({ type: "common.encodeNip19", id: input.type, input });
-    assert(encoded.ok && typeof encoded.value === "string", `${input.type} encodes`);
-    const decoded = await common.execute({ type: "common.decodeNip19", id: input.type, value: encoded.value });
-    assert(decoded.ok && decoded.nip19Type === input.type, `${input.type} round trips`);
+    const encoded = await common.execute({
+      type: "common.encodeNip19",
+      id: input.type,
+      input,
+    });
+    assert(
+      encoded.ok && typeof encoded.value === "string",
+      `${input.type} encodes`,
+    );
+    const decoded = await common.execute({
+      type: "common.decodeNip19",
+      id: input.type,
+      value: encoded.value,
+    });
+    assert(
+      decoded.ok && decoded.nip19Type === input.type,
+      `${input.type} round trips`,
+    );
   }
-  const secret = await common.execute({ type: "common.decodeNip19", id: "secret", value: nip19.nsecEncode(new Uint8Array(32).fill(7)) });
+  const secret = await common.execute({
+    type: "common.decodeNip19",
+    id: "secret",
+    value: nip19.nsecEncode(new Uint8Array(32).fill(7)),
+  });
   assert(!secret.ok && secret.error === "invalid-request", "nsec is rejected");
   common.destroy();
   runtime.destroy();
 });
 
 Deno.test("profile and follows return cached truth before bounded refresh", async () => {
-  const profile = {
-    id: "3".repeat(64), pubkey, kind: 0, created_at: 1,
-    tags: [], content: JSON.stringify({ name: "Ada", secret: "drop" }), sig: "4".repeat(128),
-  };
-  const contacts = {
-    id: "5".repeat(64), pubkey, kind: 3, created_at: 1,
-    tags: [["p", "b".repeat(64)], ["p", "a".repeat(64)], ["p", "b".repeat(64)]], content: "", sig: "6".repeat(128),
-  };
-  const runtime = new EventRuntime({ request: () => of(profile, contacts) });
+  const profile = finalizeEvent({
+    kind: 0,
+    created_at: 1,
+    tags: [],
+    content: JSON.stringify({ name: "Ada", secret: "drop" }),
+  }, secret);
+  const contacts = finalizeEvent({
+    kind: 3,
+    created_at: 1,
+    tags: [["p", "b".repeat(64)], ["p", "a".repeat(64)], ["p", "b".repeat(64)]],
+    content: "",
+  }, secret);
+  const runtime = new EventRuntime({ request: () => of() });
   const common = new CommonService({
     eventRuntime: runtime,
     identity: () => ({ accountId: "a", pubkey, status: "active" }),
     relays: () => ["wss://relay.example/"],
   });
-  const first = await common.execute({ type: "common.getProfile", id: "p1", target: pubkey });
-  assert(first.ok && first.profile === null, "first profile is partial and empty");
+  const first = await common.execute({
+    type: "common.getProfile",
+    id: "p1",
+    target: pubkey,
+  });
+  assert(
+    first.ok && first.profile === null,
+    "first profile is partial and empty",
+  );
+  runtime.eventStore.add(profile);
+  runtime.eventStore.add(contacts);
   await new Promise((resolve) => setTimeout(resolve, 0));
-  const second = await common.execute({ type: "common.getProfile", id: "p2", target: nip19.npubEncode(pubkey) });
-  assert(second.profile?.name === "Ada" && !("secret" in second.profile), "later profile is sanitized cached truth");
+  const second = await common.execute({
+    type: "common.getProfile",
+    id: "p2",
+    target: nip19.npubEncode(pubkey),
+  });
+  const projected = second.profile as Record<string, unknown>;
+  assert(
+    projected?.name === "Ada" && !("secret" in projected),
+    "later profile is sanitized cached truth",
+  );
   const follows = await common.execute({ type: "common.follows", id: "f" });
-  assert(JSON.stringify(follows.pubkeys) === JSON.stringify(["a".repeat(64), "b".repeat(64)]), "follows are deterministic");
+  assert(
+    JSON.stringify(follows.pubkeys) ===
+      JSON.stringify(["a".repeat(64), "b".repeat(64)]),
+    "follows are deterministic",
+  );
   common.destroy();
   runtime.destroy();
 });
