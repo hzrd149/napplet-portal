@@ -13,9 +13,11 @@ export const STORAGE_QUOTA = Object.freeze({
 const encoder = new TextEncoder();
 
 export class StorageServiceError extends Error {
-  readonly code: "quota-exceeded" | "storage-unavailable";
+  readonly code: "not-authorized" | "quota-exceeded" | "storage-unavailable";
 
-  constructor(code: "quota-exceeded" | "storage-unavailable") {
+  constructor(
+    code: "not-authorized" | "quota-exceeded" | "storage-unavailable",
+  ) {
     super(code);
     this.code = code;
   }
@@ -84,28 +86,45 @@ export class StorageService {
     identity: StorageNamespaceIdentity,
     key: string,
     value: string,
+    isCurrent: () => boolean = () => true,
   ): Promise<void> {
     if (
       encoder.encode(key).byteLength > STORAGE_QUOTA.keyBytes ||
       encoder.encode(value).byteLength > STORAGE_QUOTA.valueBytes
     ) return Promise.reject(new StorageServiceError("quota-exceeded"));
-    return this.#mutate(identity, (entries) => {
-      entries[key] = value;
-    }, identity);
+    return this.#mutate(
+      identity,
+      (entries) => {
+        entries[key] = value;
+      },
+      identity,
+      isCurrent,
+    );
   }
 
-  remove(identity: StorageNamespaceIdentity, key: string): Promise<void> {
-    return this.#mutate(identity, (entries) => {
-      delete entries[key];
-    }, identity);
+  remove(
+    identity: StorageNamespaceIdentity,
+    key: string,
+    isCurrent: () => boolean = () => true,
+  ): Promise<void> {
+    return this.#mutate(
+      identity,
+      (entries) => {
+        delete entries[key];
+      },
+      identity,
+      isCurrent,
+    );
   }
 
   #mutate(
     identity: StorageNamespaceIdentity,
     mutation: (entries: Record<string, string>) => void,
     quotaIdentity: StorageNamespaceIdentity,
+    isCurrent: () => boolean,
   ): Promise<void> {
     const operation = this.#mutationTail.then(async () => {
+      if (!isCurrent()) throw new StorageServiceError("not-authorized");
       const namespaces: Record<string, Record<string, string>> = Object.create(
         null,
       );

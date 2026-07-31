@@ -94,8 +94,13 @@ interface StoragePort {
     identity: StorageNamespaceIdentity,
     key: string,
     value: string,
+    isCurrent?: () => boolean,
   ): void | Promise<void>;
-  remove(identity: StorageNamespaceIdentity, key: string): void | Promise<void>;
+  remove(
+    identity: StorageNamespaceIdentity,
+    key: string,
+    isCurrent?: () => boolean,
+  ): void | Promise<void>;
   keys(
     identity: StorageNamespaceIdentity,
   ): readonly string[] | Promise<readonly string[]>;
@@ -482,30 +487,38 @@ export class NapDispatcher {
       scope,
       instanceId: scope === "instance" ? context.instanceId : "",
     });
+    const isCurrent = () =>
+      !this.#destroyed && !this.#revokedWindows.has(context.windowId) &&
+      this.#isCurrent?.(context) === true;
     try {
       if (storageMessage.type === "storage.set") {
         await this.#storage.set(
           identity,
           storageMessage.key,
           storageMessage.value,
+          isCurrent,
         );
-        send({});
+        if (isCurrent()) send({});
       } else if (storageMessage.type === "storage.get") {
-        send({ value: await this.#storage.get(identity, storageMessage.key) });
+        const value = await this.#storage.get(identity, storageMessage.key);
+        if (isCurrent()) send({ value });
       } else if (storageMessage.type === "storage.remove") {
-        await this.#storage.remove(identity, storageMessage.key);
-        send({});
+        await this.#storage.remove(identity, storageMessage.key, isCurrent);
+        if (isCurrent()) send({});
       } else if (message.type === "storage.keys") {
-        send({ keys: [...await this.#storage.keys(identity)].sort() });
+        const keys = [...await this.#storage.keys(identity)].sort();
+        if (isCurrent()) send({ keys });
       }
     } catch (error) {
-      send({
-        error: error instanceof StorageServiceError
-          ? error.code
-          : "storage-unavailable",
-        ...(message.type === "storage.get" ? { value: null } : {}),
-        ...(message.type === "storage.keys" ? { keys: [] } : {}),
-      });
+      if (isCurrent()) {
+        send({
+          error: error instanceof StorageServiceError
+            ? error.code
+            : "storage-unavailable",
+          ...(message.type === "storage.get" ? { value: null } : {}),
+          ...(message.type === "storage.keys" ? { keys: [] } : {}),
+        });
+      }
     }
   }
 
