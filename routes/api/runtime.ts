@@ -6,7 +6,7 @@ import type {
   RelaySubscribeMessage,
 } from "@napplet/nap/relay";
 import { ConnectionRegistry } from "../../runtime/connections.ts";
-import { createPortalRuntime } from "../../runtime/portal_runtime.ts";
+import type { createPortalRuntime } from "../../runtime/portal_runtime.ts";
 import {
   decodeCatalogCommand,
   decodeClientMessage,
@@ -51,21 +51,25 @@ export function handleFixedResourceFrame(
   });
 }
 
-export const runtime = createPortalRuntime({ fixture });
+type PortalRuntime = ReturnType<typeof createPortalRuntime>;
 const sessions = new Map<
   string,
   {
     readonly windowId: string;
     readonly source: object;
-    readonly bridge: ReturnType<typeof runtime.openWindow>;
+    readonly runtime: PortalRuntime;
+    readonly bridge: ReturnType<PortalRuntime["openWindow"]>;
   }
 >();
 const connections = new ConnectionRegistry({
   destroyWindow: (windowId) => {
+    let ownerRuntime: PortalRuntime | undefined;
     for (const [connectionId, session] of sessions) {
-      if (session.windowId === windowId) sessions.delete(connectionId);
+      if (session.windowId !== windowId) continue;
+      ownerRuntime = session.runtime;
+      sessions.delete(connectionId);
     }
-    runtime.destroyWindow(windowId);
+    ownerRuntime?.destroyWindow(windowId);
   },
 });
 
@@ -120,6 +124,7 @@ export const handler = define.handlers({
       session = {
         windowId,
         source,
+        runtime,
         bridge: runtime.openWindow(
           connection.connectionId,
           windowId,

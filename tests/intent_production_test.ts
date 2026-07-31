@@ -24,6 +24,11 @@ Deno.test("production intent tracer uses one process-owned exact service", async
     "production must retain one process-owned intent service",
   );
   assert(
+    main.includes("settings: runtimeSettings") &&
+      !endpoint.includes("export const runtime = createPortalRuntime"),
+    "production runtime must be composed with resolver settings in main",
+  );
+  assert(
     endpoint.includes("bridge.reserveIntent"),
     "reserve must reach runtime",
   );

@@ -3,7 +3,10 @@ import { RelayPool } from "applesauce-relay";
 import { AccountStore } from "./runtime/account_store.ts";
 import { type IdentitySnapshot, PortalAccounts } from "./runtime/accounts.ts";
 import { loadRuntimeConfig, type RuntimeConfig } from "./runtime/config.ts";
-import { runtime as portalRuntime } from "./routes/api/runtime.ts";
+import { createPortalRuntime } from "./runtime/portal_runtime.ts";
+import fixture from "./tests/fixtures/supplied_napplet_contract.json" with {
+  type: "json",
+};
 import { SignerConnectionService } from "./runtime/signer_service.ts";
 import { type State } from "./utils.ts";
 import { debug as rootDebug } from "./debug.ts";
@@ -39,11 +42,14 @@ debug(
   runtimeConfig.blossomServers.length,
   runtimeConfig.reconnectGraceMs,
 );
-export const processRuntime = portalRuntime;
 export const runtimeSettings = await RuntimeSettingsService.create(
   new SettingsStore(".data/settings.json"),
   runtimeConfig,
 );
+export const processRuntime = createPortalRuntime({
+  fixture,
+  settings: runtimeSettings,
+});
 let cacheHealthState: CacheHealthState = {
   relay: runtimeSettings.settings.localRelay ? "checking" : "degraded",
   blossom: "checking",
@@ -238,7 +244,7 @@ export const app = new App<State>();
 app.use(staticFiles());
 app.use((ctx) => {
   ctx.state.config = runtimeConfig;
-  ctx.state.runtime = portalRuntime;
+  ctx.state.runtime = processRuntime;
   ctx.state.signer = signerService;
   ctx.state.settings = runtimeSettings;
   ctx.state.cacheHealth = cacheHealthState;
