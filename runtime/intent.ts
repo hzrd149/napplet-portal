@@ -9,14 +9,59 @@ import type {
   IntentChangedMessage,
   IntentHandlersMessage,
   IntentInvokeMessage,
+  IntentInvokeResultMessage,
 } from "@napplet/nap/intent";
 import type { CatalogService } from "./catalog.ts";
+import type {
+  IntentNavigationMessage,
+  IntentNavigationMode,
+  MessageOwner,
+} from "./transport.ts";
 
 export type IntentCommand =
   | IntentInvokeMessage
   | IntentAvailableMessage
   | IntentHandlersMessage;
 export type IntentNotification = IntentChangedMessage;
+export type IntentReply = IntentInvokeResultMessage;
+
+interface IntentServiceOptions {
+  readonly account?: () => string | null;
+  readonly sendNavigation?: (message: IntentNavigationMessage) => void;
+  readonly createId?: () => string;
+  readonly now?: () => number;
+  readonly setTimeout?: (callback: () => void, delay: number) => number;
+  readonly clearTimeout?: (id: number) => void;
+  readonly timeoutMs?: number;
+  readonly maxPending?: number;
+}
+
+interface PendingInvocation {
+  readonly owner: MessageOwner;
+  readonly reservationId: string;
+  readonly invocationId: string;
+  readonly command: IntentInvokeMessage;
+  readonly reply: (message: IntentReply) => void;
+  readonly generation: number;
+  readonly candidate: AuthorityCandidate;
+  readonly targetWindowId: string;
+  readonly timer: number;
+  ticket: string | null;
+  terminal: boolean;
+}
+
+interface LaunchTicket {
+  readonly reservationId: string;
+  readonly invocationId: string;
+  readonly accountPubkey: string;
+  readonly caller: MessageOwner;
+  readonly candidate: AuthorityCandidate;
+  readonly convention?: string;
+  readonly payload?: unknown;
+  readonly targetWindowId: string;
+  readonly generation: number;
+  readonly expiresAt: number;
+}
 
 interface AuthorityCandidate {
   readonly accountPubkey: string;
@@ -49,16 +94,216 @@ export class IntentService {
   #registry = new Map<string, readonly AuthorityCandidate[]>();
   #lastGood = new Map<string, IntentAvailability>();
   #generation = 0;
+  readonly #options: Required<IntentServiceOptions>;
+  readonly #pending = new Map<string, PendingInvocation>();
+  readonly #tickets = new Map<string, LaunchTicket>();
 
-  constructor(catalog: CatalogService) {
+  constructor(catalog: CatalogService, options: IntentServiceOptions = {}) {
     this.#catalog = catalog;
+    this.#options = {
+      account: options.account ??
+        (() => catalog.authoritySnapshot().accountPubkey),
+      sendNavigation: options.sendNavigation ?? (() => {}),
+      createId: options.createId ?? (() => crypto.randomUUID()),
+      now: options.now ?? Date.now,
+      setTimeout: options.setTimeout ??
+        ((callback, delay) => setTimeout(callback, delay)),
+      clearTimeout: options.clearTimeout ?? clearTimeout,
+      timeoutMs: options.timeoutMs ?? 10_000,
+      maxPending: options.maxPending ?? 32,
+    };
     this.#unsubscribe = catalog.subscribe(() => this.#rebuild());
     this.#rebuild();
   }
 
   destroy(): void {
+    for (const pending of [...this.#pending.values()]) {
+      this.#settle(pending, "failed");
+    }
     this.#unsubscribe();
     this.#listeners.clear();
+  }
+
+  async reserve(
+    owner: MessageOwner,
+    reservation: Extract<
+      IntentNavigationMessage,
+      { type: "intent.navigation.reserve" }
+    >,
+    command: IntentInvokeMessage,
+    reply: (message: IntentReply) => void,
+  ): Promise<void> {
+    if (
+      reservation.callerWindowId !== owner.windowId ||
+      this.#pending.has(reservation.reservationId) ||
+      this.#pending.size >= this.#options.maxPending
+    ) {
+      reply(
+        resultMessage(
+          command,
+          failure(
+            command.request.archetype,
+            command.request.action ?? "open",
+            "denied",
+          ),
+        ),
+      );
+      return;
+    }
+    const selection = this.select(command.request);
+    if (!selection.ok) {
+      reply(resultMessage(command, selection.result));
+      return;
+    }
+    const account = this.#options.account();
+    if (
+      !account || account !== selection.candidate.accountPubkey ||
+      !policyAllows(reservation.mode, command)
+    ) {
+      reply(
+        resultMessage(
+          command,
+          failure(
+            command.request.archetype,
+            command.request.action ?? "open",
+            "denied",
+          ),
+        ),
+      );
+      return;
+    }
+    const targetWindowId = this.#options.createId();
+    const timer = this.#options.setTimeout(() => {
+      const pending = this.#pending.get(reservation.reservationId);
+      if (pending) this.#settle(pending, "failed");
+    }, this.#options.timeoutMs);
+    const pending: PendingInvocation = {
+      owner,
+      reservationId: reservation.reservationId,
+      invocationId: reservation.invocationId,
+      command,
+      reply,
+      generation: selection.generation,
+      candidate: selection.candidate,
+      targetWindowId,
+      timer,
+      ticket: null,
+      terminal: false,
+    };
+    this.#pending.set(reservation.reservationId, pending);
+    const launched = await this.#catalog.launch(
+      selection.candidate.catalogEventId,
+      selection.candidate.coordinate,
+      selection.candidate.manifestEventId,
+    );
+    if (
+      !launched.ok || !this.isCurrent(selection.generation) ||
+      this.#options.account() !== account || pending.terminal
+    ) {
+      this.#settle(pending, "failed");
+      return;
+    }
+    const ticket = this.#options.createId();
+    pending.ticket = ticket;
+    this.#tickets.set(
+      ticket,
+      Object.freeze({
+        reservationId: reservation.reservationId,
+        invocationId: reservation.invocationId,
+        accountPubkey: account,
+        caller: owner,
+        candidate: selection.candidate,
+        convention: selection.request.convention,
+        payload: selection.request.payload,
+        targetWindowId,
+        generation: selection.generation,
+        expiresAt: this.#options.now() + this.#options.timeoutMs,
+      }),
+    );
+    this.#options.sendNavigation(Object.freeze({
+      type: "intent.navigation.authorized",
+      reservationId: reservation.reservationId,
+      invocationId: reservation.invocationId,
+      targetWindowId,
+      ticket,
+      launchPath: `/napplet?ticket=${encodeURIComponent(ticket)}`,
+      generation: selection.generation,
+    }));
+  }
+
+  claim(
+    owner: MessageOwner,
+    claim: Extract<IntentNavigationMessage, { type: "intent.ticket.claim" }>,
+  ): Readonly<Record<string, unknown>> | null {
+    const ticket = this.#tickets.get(claim.ticket);
+    const pending = this.#pending.get(claim.reservationId);
+    if (
+      !ticket || !pending || pending.terminal ||
+      ticket.reservationId !== claim.reservationId ||
+      ticket.targetWindowId !== claim.targetWindowId ||
+      ticket.generation !== claim.generation ||
+      owner.connectionId !== ticket.caller.connectionId ||
+      this.#options.account() !== ticket.accountPubkey ||
+      !this.isCurrent(ticket.generation) ||
+      this.#options.now() > ticket.expiresAt
+    ) return null;
+    this.#tickets.delete(claim.ticket);
+    return Object.freeze({
+      invocationId: ticket.invocationId,
+      archetype: ticket.candidate.archetype,
+      action: pending.command.request.action ?? "open",
+      convention: ticket.convention,
+      payload: ticket.payload,
+      handler: ticket.candidate.dTag,
+      manifestEventId: ticket.candidate.manifestEventId,
+    });
+  }
+
+  acknowledge(
+    owner: MessageOwner,
+    ack: Extract<IntentNavigationMessage, { type: "intent.navigation.ack" }>,
+  ): boolean {
+    const pending = this.#pending.get(ack.reservationId);
+    if (
+      !pending || pending.terminal ||
+      pending.invocationId !== ack.invocationId ||
+      pending.owner.connectionId !== owner.connectionId ||
+      pending.owner.windowId !== owner.windowId
+    ) return false;
+    this.#settle(pending, ack.state === "committed" ? "handled" : "failed");
+    return true;
+  }
+
+  abortWindow(windowId: string): void {
+    for (const pending of [...this.#pending.values()]) {
+      if (
+        pending.owner.windowId === windowId ||
+        pending.targetWindowId === windowId
+      ) {
+        this.#settle(pending, "failed");
+      }
+    }
+  }
+
+  #settle(pending: PendingInvocation, outcome: "handled" | "failed"): void {
+    if (pending.terminal) return;
+    pending.terminal = true;
+    this.#pending.delete(pending.reservationId);
+    if (pending.ticket) this.#tickets.delete(pending.ticket);
+    this.#options.clearTimeout(pending.timer);
+    const request = pending.command.request;
+    const result = outcome === "handled"
+      ? Object.freeze({
+        ok: true,
+        archetype: request.archetype,
+        action: request.action ?? "open",
+        handled: true,
+        handler: pending.candidate.dTag,
+        windowId: pending.targetWindowId,
+        ...(request.convention ? { convention: request.convention } : {}),
+      })
+      : failure(request.archetype, request.action ?? "open", "failed");
+    pending.reply(resultMessage(pending.command, result));
   }
 
   subscribe(listener: (message: IntentNotification) => void): () => void {
@@ -249,4 +494,25 @@ function failure(
   error: "unavailable" | "denied" | "failed",
 ): IntentResult {
   return Object.freeze({ ok: false, archetype, action, handled: false, error });
+}
+
+function resultMessage(
+  command: IntentInvokeMessage,
+  result: IntentResult,
+): IntentInvokeResultMessage {
+  return Object.freeze({
+    type: "intent.invoke.result",
+    id: command.id,
+    result,
+  });
+}
+
+function policyAllows(
+  mode: IntentNavigationMode,
+  command: IntentInvokeMessage,
+): boolean {
+  const behavior = command.request.behavior;
+  if (mode === "new-tab") return behavior?.newWindow === true;
+  if (mode === "reuse") return behavior?.reuse !== false;
+  return behavior?.newWindow !== true;
 }

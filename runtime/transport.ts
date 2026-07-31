@@ -4,6 +4,11 @@ import type {
   UploadInfo,
   UploadRequest,
 } from "@napplet/core";
+import type {
+  IntentAvailableMessage,
+  IntentHandlersMessage,
+  IntentInvokeMessage,
+} from "@napplet/nap/intent";
 import { MAX_BINARY_PAYLOAD_BYTES } from "./binary_transport.ts";
 
 export const TRANSFER_POLICY = Object.freeze({
@@ -114,6 +119,211 @@ function exactKeys(value: Record<string, unknown>, keys: readonly string[]) {
 
 function boundedId(value: unknown): value is string {
   return typeof value === "string" && value.length > 0 && value.length <= 128;
+}
+
+export type IntentCommand =
+  | IntentInvokeMessage
+  | IntentAvailableMessage
+  | IntentHandlersMessage;
+
+export type IntentNavigationMode = "reuse" | "new-tab" | "stack";
+export type IntentNavigationMessage =
+  | {
+    readonly type: "intent.navigation.reserve";
+    readonly reservationId: string;
+    readonly invocationId: string;
+    readonly callerWindowId: string;
+    readonly mode: IntentNavigationMode;
+  }
+  | {
+    readonly type: "intent.navigation.authorized";
+    readonly reservationId: string;
+    readonly invocationId: string;
+    readonly targetWindowId: string;
+    readonly ticket: string;
+    readonly launchPath: string;
+    readonly generation: number;
+  }
+  | {
+    readonly type: "intent.navigation.ack";
+    readonly reservationId: string;
+    readonly invocationId: string;
+    readonly state: "committed" | "blocked" | "closed" | "failed";
+  }
+  | {
+    readonly type: "intent.ticket.claim";
+    readonly reservationId: string;
+    readonly ticket: string;
+    readonly targetWindowId: string;
+    readonly generation: number;
+  };
+
+const INTENT_SLUG = /^[a-z][a-z0-9-]{0,127}$/;
+
+export function decodeIntentCommand(value: unknown): IntentCommand | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const message = value as Record<string, unknown>;
+  if (!boundedId(message.id)) return null;
+  if (
+    message.type === "intent.handlers" && exactKeys(message, ["type", "id"])
+  ) return message as unknown as IntentHandlersMessage;
+  if (
+    message.type === "intent.available" &&
+    exactKeys(message, ["type", "id", "archetype"]) &&
+    typeof message.archetype === "string" && INTENT_SLUG.test(message.archetype)
+  ) return message as unknown as IntentAvailableMessage;
+  if (
+    message.type === "intent.invoke" &&
+    exactKeys(message, ["type", "id", "request"]) &&
+    decodeIntentRequest(message.request)
+  ) return message as unknown as IntentInvokeMessage;
+  return null;
+}
+
+export function decodeIntentNavigationMessage(
+  value: unknown,
+): IntentNavigationMessage | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const message = value as Record<string, unknown>;
+  if (!boundedId(message.reservationId)) return null;
+  if (
+    message.type === "intent.navigation.reserve" &&
+    exactKeys(message, [
+      "type",
+      "reservationId",
+      "invocationId",
+      "callerWindowId",
+      "mode",
+    ]) && boundedId(message.invocationId) &&
+    boundedId(message.callerWindowId) &&
+    ["reuse", "new-tab", "stack"].includes(String(message.mode))
+  ) return message as unknown as IntentNavigationMessage;
+  if (
+    message.type === "intent.navigation.authorized" &&
+    exactKeys(message, [
+      "type",
+      "reservationId",
+      "invocationId",
+      "targetWindowId",
+      "ticket",
+      "launchPath",
+      "generation",
+    ]) && boundedId(message.invocationId) &&
+    boundedId(message.targetWindowId) &&
+    boundedId(message.ticket) && typeof message.launchPath === "string" &&
+    message.launchPath.startsWith("/napplet?") &&
+    Number.isSafeInteger(message.generation) && Number(message.generation) >= 0
+  ) return message as unknown as IntentNavigationMessage;
+  if (
+    message.type === "intent.navigation.ack" &&
+    exactKeys(message, [
+      "type",
+      "reservationId",
+      "invocationId",
+      "state",
+    ]) && boundedId(message.invocationId) &&
+    ["committed", "blocked", "closed", "failed"].includes(String(message.state))
+  ) return message as unknown as IntentNavigationMessage;
+  if (
+    message.type === "intent.ticket.claim" &&
+    exactKeys(message, [
+      "type",
+      "reservationId",
+      "ticket",
+      "targetWindowId",
+      "generation",
+    ]) && boundedId(message.ticket) && boundedId(message.targetWindowId) &&
+    Number.isSafeInteger(message.generation) && Number(message.generation) >= 0
+  ) return message as unknown as IntentNavigationMessage;
+  return null;
+}
+
+function decodeIntentRequest(value: unknown): boolean {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const request = value as Record<string, unknown>;
+  const allowed = [
+    "archetype",
+    "action",
+    "payload",
+    "convention",
+    "handler",
+    "behavior",
+  ];
+  if (Object.keys(request).some((key) => !allowed.includes(key))) return false;
+  if (
+    typeof request.archetype !== "string" ||
+    !INTENT_SLUG.test(request.archetype)
+  ) {
+    return false;
+  }
+  if (
+    request.action !== undefined &&
+    (typeof request.action !== "string" || !INTENT_SLUG.test(request.action))
+  ) return false;
+  if (
+    request.convention !== undefined &&
+    (typeof request.convention !== "string" || request.convention.length > 512)
+  ) return false;
+  if (
+    request.handler !== undefined &&
+    (typeof request.handler !== "string" || request.handler.length > 128)
+  ) return false;
+  if (request.behavior !== undefined) {
+    if (
+      !request.behavior || typeof request.behavior !== "object" ||
+      Array.isArray(request.behavior)
+    ) return false;
+    const behavior = request.behavior as Record<string, unknown>;
+    if (
+      Object.keys(behavior).some((key) =>
+        !["focus", "newWindow", "reuse"].includes(key)
+      ) ||
+      Object.values(behavior).some((field) => typeof field !== "boolean")
+    ) return false;
+  }
+  return request.payload === undefined ||
+    isStrictIntentPayload(request.payload);
+}
+
+export function isStrictIntentPayload(value: unknown): boolean {
+  try {
+    const seen = new Set<object>();
+    let keys = 0;
+    const visit = (candidate: unknown, depth: number): boolean => {
+      if (
+        candidate === null || typeof candidate === "string" ||
+        typeof candidate === "boolean"
+      ) return true;
+      if (typeof candidate === "number") return Number.isFinite(candidate);
+      if (typeof candidate !== "object" || depth > 16 || seen.has(candidate)) {
+        return false;
+      }
+      const object = candidate as object;
+      seen.add(object);
+      if (Array.isArray(candidate)) {
+        if (candidate.length > 1024) return false;
+        const valid = candidate.every((entry) => visit(entry, depth + 1));
+        seen.delete(object);
+        return valid;
+      }
+      if (Object.getPrototypeOf(candidate) !== Object.prototype) return false;
+      const names = Object.keys(candidate as Record<string, unknown>);
+      keys += names.length;
+      if (keys > 4096 || names.length !== Reflect.ownKeys(candidate).length) {
+        return false;
+      }
+      const valid = names.every((name) =>
+        name.length <= 256 &&
+        visit((candidate as Record<string, unknown>)[name], depth + 1)
+      );
+      seen.delete(object);
+      return valid;
+    };
+    return visit(value, 0) &&
+      new TextEncoder().encode(JSON.stringify(value)).length <= 65_536;
+  } catch {
+    return false;
+  }
 }
 
 export type NapControlMessage =
@@ -293,6 +503,12 @@ export function decodeClientMessage(
       /^(resource|upload)\./.test(message.type) &&
       !decodeNapControlMessage(message)
     ) return { ok: false, error: "invalid transfer message" };
+    if (
+      /^intent\./.test(message.type) && !decodeIntentCommand(message) &&
+      !decodeIntentNavigationMessage(message)
+    ) {
+      return { ok: false, error: "invalid intent message" };
+    }
     return { ok: true, value: value as unknown as RuntimeForwardMessage };
   } catch {
     return { ok: false, error: "invalid JSON" };
