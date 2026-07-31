@@ -10,7 +10,7 @@ Milestone v1.1 expands the proven backend runtime into a resilient mobile napple
 - [x] **Phase 4: Installed Napplet Discovery** — Install, synchronize, search, and launch trusted napplets from the home catalog. (completed 2026-07-31)
 - [x] **Phase 5: Resource and Blossom Transfer** — Add bounded resource resolution and explicit multi-server uploads. (completed 2026-07-31)
 - [ ] **Phase 6: Common Data and Durable Storage** — Expose stream-oriented common Nostr helpers and isolated persistent napplet state.
-- [ ] **Phase 7: Intent Navigation** — Route declared intents to trusted installed handlers across shell surfaces.
+- [x] **Phase 7: Intent Navigation** — Route declared intents to trusted installed handlers across shell surfaces.
 - [ ] **Phase 8: Cross-Tab Media Sessions** — Coordinate one ownership-aware media session across mobile browser tabs.
 - [ ] **Phase 9: Runtime Expansion Hardening** — Verify contract parity, security boundaries, failure behavior, and real-device flows end to end.
 
@@ -84,14 +84,14 @@ Plans:
 **Goal:** Napplets can discover and invoke trusted archetype handlers using shell-controlled navigation behavior.
 **Requirements:** INT-01, INT-02, INT-03
 
-**Plans:** 1/4 plans executed
+**Plans:** 4/4 plans executed
 
 Plans:
 
 - [x] 07-01-PLAN.md — Derive strict verified intent declarations and a generation-bound handler registry.
-- [ ] 07-02-PLAN.md — Dispatch authenticated invocations through exact verification and private single-use launch tickets.
-- [ ] 07-03-PLAN.md — Execute identity-safe reuse, synchronous new-tab reservation, and sandboxed stack history.
-- [ ] 07-04-PLAN.md — Wire and prove the complete intent flow over the production runtime transport.
+- [x] 07-02-PLAN.md — Dispatch authenticated invocations through exact verification and private single-use launch tickets.
+- [x] 07-03-PLAN.md — Execute identity-safe reuse, synchronous new-tab reservation, and sandboxed stack history.
+- [x] 07-04-PLAN.md — Wire and prove the complete intent flow over the production runtime transport.
 
 **Success Criteria:**
 

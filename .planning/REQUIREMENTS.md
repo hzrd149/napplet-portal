@@ -33,7 +33,7 @@
 
 - [x] **INT-01**: Napplet can inspect available intent handlers derived from installed, verified manifest contracts.
 - [x] **INT-02**: Napplet can invoke a supported archetype/action and receive a canonical handled, unavailable, denied, or failed result.
-- [ ] **INT-03**: Shell policy can focus or reuse the current handler, open a new browser tab, or stack a new iframe while preserving sandbox and history behavior.
+- [x] **INT-03**: Shell policy can focus or reuse the current handler, open a new browser tab, or stack a new iframe while preserving sandbox and history behavior.
 - [ ] **MED-01**: Napplet can create and control an ownership-aware NAP-MEDIA session through the backend runtime.
 - [ ] **MED-02**: Only one browser tab owns playback for the active media session, and starting playback elsewhere stops or transfers the competing owner deterministically.
 - [ ] **MED-03**: Every connected tab receives current media state, can request transfer to itself, and can stop the active session from the shell navigation.
@@ -85,7 +85,7 @@
 | UPL-01, UPL-02, UPL-03 | Phase 5 | Complete |
 | COM-01, COM-02 | Phase 6 | Pending |
 | STO-01, STO-02, STO-03 | Phase 6 | Pending |
-| INT-01, INT-02, INT-03 | Phase 7 | Pending |
+| INT-01, INT-02, INT-03 | Phase 7 | Complete |
 | MED-01, MED-02, MED-03, MED-04 | Phase 8 | Pending |
 | QLT-01, QLT-02, QLT-03, QLT-04 | Phase 9 | Pending |
 

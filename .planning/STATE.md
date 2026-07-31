@@ -2,19 +2,19 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Runtime & UX Expansion
-current_phase: 5
-current_phase_name: Resource and Blossom Transfer
+current_phase: 7
+current_phase_name: Intent Navigation
 status: verifying
-stopped_at: Completed 06-03-PLAN.md
-last_updated: "2026-07-31T03:47:21.263Z"
+stopped_at: Completed 07-04-PLAN.md
+last_updated: "2026-07-31T04:31:51.505Z"
 last_activity: 2026-07-31
-last_activity_desc: Completed Phase 5 RESOURCE and Blossom transfer runtime integration
+last_activity_desc: Completed Phase 7 production intent navigation integration
 progress:
   total_phases: 7
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 32
-  completed_plans: 16
-  percent: 50
+  completed_plans: 20
+  percent: 63
 ---
 
 # Project State
@@ -24,14 +24,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-30)
 
 **Core value:** A napplet can run in a mobile browser while a server-side Deno runtime handles the heavy Nostr/runtime work.
-**Current focus:** Phase 5 — Resource and Blossom Transfer
+**Current focus:** Phase 7 — Intent Navigation
 
 ## Current Position
 
-Phase: 5 — Resource and Blossom Transfer
+Phase: 7 — Intent Navigation
 Plan: 4 of 4 complete
 Status: Phase complete — ready for verification
-Last activity: 2026-07-31 — Completed Phase 5 RESOURCE and Blossom transfer runtime integration
+Last activity: 2026-07-31 — Completed Phase 7 production intent navigation integration
 
 ## Performance Metrics
 
@@ -89,6 +89,7 @@ Last activity: 2026-07-31 — Completed Phase 5 RESOURCE and Blossom transfer ru
 | Phase 06 P01 | 16min | 1 tasks | 7 files |
 | Phase 06 P02 | 5min | 2 tasks | 7 files |
 | Phase 06 P03 | 10min | 3 tasks | 8 files |
+| Phase 07 P04 | 14min | 3 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -159,6 +160,9 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase ?]: [Phase 06]: Count UTF-8 key plus value bytes across shared and every instance namespace for the 512 KiB account/exact-manifest budget.
 - [Phase ?]: [Phase 06]: Return shared EventStore truth before bounded COMMON profile/contact refresh work.
 - [Phase ?]: [Phase 06]: Route COMMON mutations through PortalAccounts and one required-relay OutboxAdapter.
+- [Phase ?]: Expose the IntentService created from the production CatalogService as the single process-owned intent authority.
+- [Phase ?]: Bind fresh target WebSockets to backend-issued targetWindowIds and release verified launch bytes only after an exact single-use claim.
+- [Phase ?]: Erase ticket fragments after opener severing and retain the exact allow-scripts-only iframe sandbox.
 
 ### Pending Todos
 
@@ -187,6 +191,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-07-31T03:47:21.247Z
-Stopped at: Completed 06-03-PLAN.md
+Last session: 2026-07-31T04:31:51.490Z
+Stopped at: Completed 07-04-PLAN.md
 Resume file: None

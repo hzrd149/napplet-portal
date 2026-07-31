@@ -2,9 +2,9 @@
 schema_version: 1
 open_count: 4
 waived_count: 0
-fixed_count: 10
-total_count: 14
-last_updated: 2026-07-31T03:28:43.721Z
+fixed_count: 11
+total_count: 15
+last_updated: 2026-07-31T04:32:34.104Z
 ---
 
 # Broken Windows Ledger
@@ -29,6 +29,7 @@ last_updated: 2026-07-31T03:28:43.721Z
 | 12 | 05 | deviation | islands/NappletShell.tsx |  | Preserved canonical caller correlation IDs by selecting the fixed tracer only by URL | fixed |  | 2026-07-31T02:18:16.185Z | 2026-07-31T02:19:04.919Z |
 | 13 | 06 | deviation | islands/NappletShell.tsx |  | Verified capability handoff added to complete the production iframe bridge | open |  | 2026-07-31T03:28:43.610Z |  |
 | 14 | 06 | deviation | main.ts |  | In-memory tracer storage port wired pending Plan 06-03 durability | open |  | 2026-07-31T03:28:43.721Z |  |
+| 15 | 07 | deviation | islands/IntentReservation.tsx |  | Used globalThis.opener to satisfy Deno no-window lint while preserving opener-first ordering | fixed |  | 2026-07-31T04:32:20.762Z | 2026-07-31T04:32:34.104Z |
 
 ````json
 [
@@ -199,6 +200,18 @@ last_updated: 2026-07-31T03:28:43.721Z
     "reason": "",
     "recorded_at": "2026-07-31T03:28:43.721Z",
     "resolved_at": null
+  },
+  {
+    "id": 15,
+    "kind": "deviation",
+    "phase": "07",
+    "file": "islands/IntentReservation.tsx",
+    "line": null,
+    "description": "Used globalThis.opener to satisfy Deno no-window lint while preserving opener-first ordering",
+    "status": "fixed",
+    "reason": "",
+    "recorded_at": "2026-07-31T04:32:20.762Z",
+    "resolved_at": "2026-07-31T04:32:34.104Z"
   }
 ]
 ````
