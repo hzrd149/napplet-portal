@@ -9,6 +9,7 @@ import type {
 } from "@napplet/nap/intent";
 import type { BehaviorSubject } from "npm:rxjs@7.8.2";
 import { debug as rootDebug, shortId } from "../debug.ts";
+import { MediaSessionCoordinator } from "./media_sessions.ts";
 import { AccountRuntime, type IdentitySnapshot } from "./accounts.ts";
 import {
   PortalArtifactResolver,
@@ -368,10 +369,19 @@ export function createPortalRuntime(
       bytes?: readonly Uint8Array[],
     ) => void
   >();
+  const media = new MediaSessionCoordinator({
+    deliver: (recipient, message) => {
+      const send = transferSends.get(recipient.windowId);
+      if (!send) return false;
+      send(message as unknown as Record<string, unknown>);
+      return true;
+    },
+  });
 
   return {
     events,
     relay,
+    media,
     eventRuntime,
     configureCatalog(service: CatalogService): IntentService {
       intents?.destroy();
@@ -513,6 +523,10 @@ export function createPortalRuntime(
       );
       connections.register(connectionId, windowId, source);
       if (sendTransfer) transferSends.set(windowId, sendTransfer);
+      const activeMediaAccount = accounts.active?.pubkey;
+      if (activeMediaAccount) {
+        media.connect(activeMediaAccount, { connectionId, windowId });
+      }
       let initialized = false;
       let verifiedNapplet: string | undefined;
       let authority: WindowCapabilityContext | undefined;
@@ -545,6 +559,14 @@ export function createPortalRuntime(
         return true;
       };
       return {
+        media(message: unknown) {
+          const accountId = accounts.active?.pubkey;
+          if (!accountId) {
+            return { accepted: false, reason: "no-active-account" } as const;
+          }
+          media.connect(accountId, { connectionId, windowId });
+          return media.receive(accountId, { connectionId, windowId }, message);
+        },
         intentQuery(command: IntentCommand) {
           if (!intents) return;
           if (command.type === "intent.available") {

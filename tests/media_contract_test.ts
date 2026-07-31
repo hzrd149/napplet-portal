@@ -49,7 +49,9 @@ Deno.test("all eight pinned media envelopes validate exact keys and values", () 
     { type: "media.command", sessionId: "s", action: "seek", value: 2 },
     { type: "media.controls", sessionId: "s", controls: ["play", "stop"] },
   ];
-  for (const message of valid) assert(decodeMediaMessage(message).ok, message.type);
+  for (const message of valid) {
+    assert(decodeMediaMessage(message).ok, message.type);
+  }
   assert(
     !decodeMediaMessage({
       type: "media.command",

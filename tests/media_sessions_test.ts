@@ -1,3 +1,4 @@
+import type { MediaActorRef } from "../runtime/media_reducer.ts";
 import { MediaSessionCoordinator } from "../runtime/media_sessions.ts";
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -7,7 +8,7 @@ function assert(condition: unknown, message: string): asserts condition {
 const origin = Object.freeze({ connectionId: "c1", windowId: "w1" });
 
 Deno.test("media create tracer crosses coordinator and delivery", () => {
-  const delivered: Array<{ recipient: typeof origin; message: unknown }> = [];
+  const delivered: Array<{ recipient: MediaActorRef; message: unknown }> = [];
   const coordinator = new MediaSessionCoordinator({
     createId: () => "server-session",
     deliver: (recipient, message) => {
