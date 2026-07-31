@@ -8,6 +8,7 @@ import {
 } from "../components/HomeView.tsx";
 import {
   createIframeBridge,
+  createVerifiedIdentityPublisher,
   type FrameIdentityRegistry,
   NappletFrame,
   type VerifiedNappletIdentity,
@@ -22,6 +23,8 @@ import {
   connectionCopy,
 } from "../components/ConnectionConstellation.tsx";
 import { ConnectionSheet } from "../components/ConnectionSheet.tsx";
+import { HomeHeader } from "../components/HomeHeader.tsx";
+import { AccountSheet } from "../components/AccountSheet.tsx";
 import { debug as rootDebug, shortId } from "../debug.ts";
 import {
   ConnectionController,
@@ -78,7 +81,8 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
   const controller = useRef<ConnectionController | null>(null);
   const iframe = useRef<HTMLIFrameElement | null>(null);
   const owner = useRef<{ connectionId: string; windowId: string } | null>(null);
-  const signOutDialog = useRef<HTMLDialogElement | null>(null);
+  const [accountSheetOpen, setAccountSheetOpen] = useState(false);
+  const [signedOutNotice, setSignedOutNotice] = useState(false);
   const hasMountedNapplet = useRef(false);
   const registered = useRef<
     {
@@ -133,6 +137,14 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
           message,
         }));
       },
+    }), []);
+
+  const publishIdentity = useMemo(() =>
+    createVerifiedIdentityPublisher({
+      source: () => iframe.current?.contentWindow ?? null,
+      registered: () => registered.current,
+      post: (message) =>
+        iframe.current?.contentWindow?.postMessage(message, "*"),
     }), []);
 
   useEffect(() => {
@@ -231,6 +243,36 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
       return;
     }
     if (message.type === "runtime.event" && message.message) {
+      const currentOwner = owner.current;
+      if (
+        message.connectionId !== currentOwner?.connectionId ||
+        message.windowId !== currentOwner.windowId
+      ) return;
+      const eventMessage = message.message as Record<string, unknown>;
+      if (eventMessage.type === "identity.changed") {
+        const projected = eventMessage.identity as
+          | Record<string, unknown>
+          | undefined;
+        const pubkey = typeof projected?.pubkey === "string"
+          ? projected.pubkey
+          : "";
+        const source = iframe.current?.contentWindow;
+        if (source) {
+          publishIdentity(source, {
+            type: "identity.changed",
+            identity: { pubkey },
+          });
+        }
+        setProfile(
+          pubkey
+            ? {
+              pubkey,
+              status: projected?.status === "offline" ? "offline" : "active",
+            }
+            : null,
+        );
+        return;
+      }
       debug("post runtime event to iframe");
       iframe.current?.contentWindow?.postMessage(message.message, "*");
       return;
@@ -315,8 +357,9 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
     debug("signout requested");
     controller.current?.send({ type: "runtime.signout" });
     setProfile(null);
-    signOutDialog.current?.close();
-    navigate("home");
+    setAccountSheetOpen(false);
+    setSignedOutNotice(true);
+    setTimeout(() => setSignedOutNotice(false), 2_000);
   }
 
   function openCatalogEntry(entry: CatalogViewEntry): void {
@@ -401,6 +444,10 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
             onOpen={openCatalogEntry}
             onCommand={sendCatalogCommand}
           />
+          <HomeHeader
+            profile={profile}
+            onOpenAccount={() => setAccountSheetOpen(true)}
+          />
           {runtimeError && <p class="form-error" role="alert">{runtimeError}
           </p>}
         </div>
@@ -430,9 +477,9 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
         </div>
         <div
           class={`napplet-stack ${
-            signedIn && view === "napplet" ? "" : "shell-view-hidden"
+            view === "napplet" ? "" : "shell-view-hidden"
           }`}
-          inert={!signedIn || view !== "napplet"}
+          inert={view !== "napplet"}
         >
           {notice && (
             <ShellNotice
@@ -444,7 +491,7 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
             srcdoc={srcdoc}
             identity={identity}
             title="Security Lab napplet"
-            hidden={!signedIn || view !== "napplet"}
+            hidden={view !== "napplet"}
             registry={registry}
             onFrame={(frame) => iframe.current = frame}
           />
@@ -461,6 +508,7 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
         connection={connection}
         onNavigate={navigate}
         onConnection={() => setConnectionSheetOpen(true)}
+        onAccount={() => setAccountSheetOpen(true)}
       />
       <ConnectionSheet
         state={connection}
@@ -471,25 +519,26 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
           controller.current?.retryNow();
         }}
       />
-      <dialog
-        ref={signOutDialog}
-        class="signout-dialog"
-        aria-labelledby="signout-title"
-      >
-        <h2 id="signout-title">Sign out</h2>
-        <p>
-          Sign out of this account? Public data will keep updating, but signing
-          actions will stop.
+      <AccountSheet
+        open={accountSheetOpen}
+        profile={profile}
+        backendConnected={connection.phase === "ready"}
+        onClose={() => setAccountSheetOpen(false)}
+        onSignOut={signOut}
+        onOpenSettings={() => {
+          setAccountSheetOpen(false);
+          navigate("settings");
+        }}
+      />
+      {signedOutNotice && (
+        <p
+          class="signout-toast"
+          role="status"
+          title="Public data will keep updating"
+        >
+          Signed out
         </p>
-        <div class="dialog-actions">
-          <button type="button" onClick={() => signOutDialog.current?.close()}>
-            Keep account
-          </button>
-          <button type="button" class="destructive-button" onClick={signOut}>
-            Sign out
-          </button>
-        </div>
-      </dialog>
+      )}
     </section>
   );
 }
@@ -518,19 +567,20 @@ function PrimaryNavigation({
   connection,
   onNavigate,
   onConnection,
+  onAccount,
 }: {
   view: View;
   signedIn: boolean;
   connection: ConnectionSnapshot;
   onNavigate: (view: View) => void;
   onConnection: () => void;
+  onAccount: () => void;
 }) {
   return (
     <nav aria-label="Primary" class="bottom-nav">
       <button
         type="button"
         aria-current={signedIn && view === "home" ? "page" : undefined}
-        disabled={!signedIn}
         onClick={() => onNavigate("home")}
       >
         <HomeIcon />
@@ -549,12 +599,11 @@ function PrimaryNavigation({
       </button>
       <button
         type="button"
-        aria-current={signedIn && view === "profile" ? "page" : undefined}
+        aria-current={undefined}
         aria-label="Open account"
-        disabled={!signedIn}
-        onClick={() => onNavigate("profile")}
+        onClick={onAccount}
       >
-        <UserIcon />
+        <AccountIcon />
         <span>Account</span>
       </button>
     </nav>
@@ -567,4 +616,8 @@ function HomeIcon() {
       <path d="m3 11 9-8 9 8v10h-6v-6H9v6H3z" />
     </svg>
   );
+}
+
+function AccountIcon() {
+  return <UserIcon />;
 }
