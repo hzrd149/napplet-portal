@@ -231,7 +231,7 @@ button:disabled {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 4px;
   padding: 4px;
-  border: 1px solid #64748b;
+  border: 1px solid var(--shell-border-strong);
   border-radius: 12px;
 }
 
@@ -259,13 +259,13 @@ button:disabled {
 }
 
 .theme-options input:checked + span {
-  color: #111318;
-  background: #f59e0b;
+  color: var(--shell-accent-ink);
+  background: var(--shell-accent);
   font-weight: 700;
 }
 
 .theme-options input:focus-visible + span {
-  outline: 2px solid #7c3aed;
+  outline: 2px solid var(--shell-accent);
   outline-offset: 2px;
 }
 
@@ -278,7 +278,7 @@ svg {
 }
 
 :focus-visible {
-  outline: 2px solid #7c3aed;
+  outline: 2px solid var(--shell-accent);
   outline-offset: 2px;
 }
 
@@ -299,8 +299,8 @@ svg {
   inset: 0;
   display: grid;
   place-items: center;
-  color: #d97706;
-  background: #111318;
+  color: var(--shell-accent);
+  background: var(--shell-bg);
 }
 
 .connection-constellation {
@@ -380,8 +380,8 @@ svg {
   justify-content: center;
   border: 1px solid currentColor;
   border-radius: 999px;
-  color: #f8fafc;
-  background: #1f232b;
+  color: var(--shell-text);
+  background: var(--shell-surface);
   text-decoration: none;
 }
 
@@ -391,16 +391,16 @@ svg {
   inset: 0;
   display: flex;
   align-items: flex-end;
-  background: rgb(15 23 42 / 45%);
+  background: var(--shell-overlay);
 }
 
 .connection-sheet {
   width: 100%;
   padding: 22px 18px calc(18px + env(safe-area-inset-bottom));
-  border-top: 1px solid #d97706;
+  border-top: 1px solid var(--shell-border-strong);
   border-radius: 18px 18px 0 0;
-  color: #f8fafc;
-  background: #111318;
+  color: var(--shell-text);
+  background: var(--shell-surface);
 }
 
 .connection-sheet h2,
@@ -416,15 +416,15 @@ svg {
 
 .connection-sheet button {
   padding-inline: 18px;
-  border: 1px solid #d97706;
+  border: 1px solid var(--shell-border-strong);
   border-radius: 999px;
   color: inherit;
   background: transparent;
 }
 
 .connection-sheet .primary-button {
-  color: #111318;
-  background: #f59e0b;
+  color: var(--shell-accent-ink);
+  background: var(--shell-accent);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -502,7 +502,7 @@ svg {
   width: 100%;
   height: 100%;
   border: 0;
-  background: #fff;
+  background: var(--shell-surface);
 }
 
 .napplet-stack {
@@ -787,9 +787,9 @@ svg {
   align-items: center;
   gap: 16px;
   padding: 16px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--shell-border);
   border-radius: 12px;
-  background: #fff;
+  background: var(--shell-surface);
 }
 
 .profile-avatar {
@@ -803,8 +803,8 @@ svg {
 .profile-avatar-fallback {
   display: grid;
   place-items: center;
-  color: #475569;
-  background: #f8fafc;
+  color: var(--shell-muted);
+  background: var(--shell-bg);
 }
 
 .profile-copy {
@@ -820,7 +820,7 @@ svg {
 .pubkey {
   overflow: hidden;
   margin: 4px 0 0;
-  color: #475569;
+  color: var(--shell-muted);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 14px !important;
   text-overflow: ellipsis;
@@ -829,25 +829,25 @@ svg {
 
 .signer-status {
   padding: 16px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--shell-border);
   border-radius: 12px;
-  background: #fff;
+  background: var(--shell-surface);
 }
 
 .signer-status p {
   margin: 8px 0 0;
-  color: #475569;
+  color: var(--shell-muted);
   font-size: 14px;
 }
 
 .destructive-button {
   align-self: flex-start;
   padding: 8px 16px;
-  border: 1px solid #dc2626;
+  border: 1px solid var(--shell-error-text);
   border-radius: 8px;
-  color: #dc2626;
+  color: var(--shell-error-text);
   font-weight: 600;
-  background: #fff;
+  background: var(--shell-surface);
 }
 
 .sign-in-view {
@@ -919,11 +919,11 @@ svg {
 .dialog-actions button,
 .shell-notice button {
   padding: 8px 16px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--shell-border);
   border-radius: 8px;
-  color: #0f172a;
+  color: var(--shell-text);
   font-weight: 600;
-  background: #fff;
+  background: var(--shell-surface-raised);
 }
 
 .primary-button {
@@ -981,8 +981,8 @@ svg {
   gap: 8px;
   min-height: 48px;
   padding: 0 8px 0 16px;
-  color: #9a3412;
-  background: #fff7ed;
+  color: var(--shell-error-text);
+  background: var(--shell-error-bg);
 }
 
 .shell-notice span {
@@ -1002,8 +1002,8 @@ svg {
   display: grid;
   place-items: center;
   margin: 0;
-  color: #475569;
-  background: #fff;
+  color: var(--shell-muted);
+  background: var(--shell-surface);
 }
 
 .bottom-nav {
@@ -1011,8 +1011,8 @@ svg {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   padding-bottom: env(safe-area-inset-bottom);
-  border-top: 1px solid #d49a29;
-  background: #17140f;
+  border-top: 1px solid var(--shell-border-strong);
+  background: var(--shell-surface);
 }
 
 .bottom-nav button {
@@ -1024,7 +1024,7 @@ svg {
   min-width: 44px;
   min-height: 44px;
   border: 0;
-  color: #f4eddf;
+  color: var(--shell-text);
   background: transparent;
   font-size: 14px;
   font-weight: 600;
@@ -1166,21 +1166,21 @@ svg {
 }
 
 .bottom-nav button[aria-current="page"] {
-  color: #7c3aed;
+  color: var(--shell-accent);
   font-weight: 600;
 }
 
 .signout-dialog {
   width: min(calc(100% - 32px), 28rem);
   padding: 24px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--shell-border);
   border-radius: 12px;
-  color: #0f172a;
-  background: #fff;
+  color: var(--shell-text);
+  background: var(--shell-surface-raised);
 }
 
 .signout-dialog::backdrop {
-  background: rgb(15 23 42 / 50%);
+  background: var(--shell-overlay);
 }
 
 .dialog-actions {
