@@ -377,6 +377,7 @@ export function createPortalRuntime(
       return true;
     },
   });
+  let mediaAccountEpoch = 0;
 
   return {
     events,
@@ -425,8 +426,18 @@ export function createPortalRuntime(
     get activeAccount() {
       return accounts.active;
     },
-    signIn: (pubkey: string) => accounts.signIn(pubkey),
+    signIn: (pubkey: string) => {
+      const previous = accounts.active?.pubkey;
+      if (previous !== pubkey) {
+        if (previous) media.changeAccount(previous);
+        mediaAccountEpoch++;
+      }
+      return accounts.signIn(pubkey);
+    },
     signOut: () => {
+      const previous = accounts.active?.pubkey;
+      if (previous) media.changeAccount(previous);
+      mediaAccountEpoch++;
       for (const windowId of transferSends.keys()) {
         dispatcher?.abortWindow(windowId);
       }
@@ -559,13 +570,60 @@ export function createPortalRuntime(
         return true;
       };
       return {
-        media(message: unknown) {
+        media(message: unknown, generation?: number) {
           const accountId = accounts.active?.pubkey;
           if (!accountId) {
             return { accepted: false, reason: "no-active-account" } as const;
           }
           media.connect(accountId, { connectionId, windowId });
-          return media.receive(accountId, { connectionId, windowId }, message);
+          return media.receive(accountId, { connectionId, windowId }, message, {
+            generation,
+          });
+        },
+        mediaSnapshot() {
+          const accountId = accounts.active?.pubkey;
+          if (!accountId) {
+            return { accountEpoch: mediaAccountEpoch, session: null } as const;
+          }
+          media.connect(accountId, { connectionId, windowId });
+          const current = media.current(accountId);
+          if (!current) {
+            return { accountEpoch: mediaAccountEpoch, session: null } as const;
+          }
+          const { accountId: _accountId, type: _type, ...session } = current;
+          return { accountEpoch: mediaAccountEpoch, session } as const;
+        },
+        mediaTransfer(
+          sessionId: string,
+          generation: number,
+          requestId: string,
+        ) {
+          const accountId = accounts.active?.pubkey;
+          if (!accountId) {
+            return { accepted: false, reason: "no-active-account" };
+          }
+          media.connect(accountId, { connectionId, windowId });
+          return media.transfer(
+            accountId,
+            { connectionId, windowId },
+            sessionId,
+            generation,
+            requestId,
+          );
+        },
+        mediaStop(sessionId: string, generation: number, requestId: string) {
+          const accountId = accounts.active?.pubkey;
+          if (!accountId) {
+            return { accepted: false, reason: "no-active-account" };
+          }
+          media.connect(accountId, { connectionId, windowId });
+          return media.stop(
+            accountId,
+            { connectionId, windowId },
+            sessionId,
+            generation,
+            requestId,
+          );
         },
         intentQuery(command: IntentCommand) {
           if (!intents) return;

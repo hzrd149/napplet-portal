@@ -49,6 +49,13 @@ export class MediaSessionCoordinator {
   get state(): MediaAuthorityState {
     return this.#state;
   }
+  current(accountId: string): MediaProjection | null {
+    const sessionId = this.#state.activeByAccount.get(accountId);
+    const session = sessionId
+      ? this.#state.sessions.get(`${accountId}:${sessionId}`)
+      : undefined;
+    return projection(session) ?? null;
+  }
   connect(accountId: string, actor: MediaActorRef): void {
     let group = this.#eligible.get(accountId);
     if (!group) this.#eligible.set(accountId, group = new Map());

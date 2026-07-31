@@ -78,7 +78,31 @@ export interface MessageOwner {
 
 export interface RuntimeForwardMessage extends MessageOwner {
   readonly type: "runtime.forward";
+  readonly generation?: number;
   readonly message: NappletMessage;
+}
+
+export type PortalMediaCommand =
+  | {
+    readonly type: "runtime.media.transfer";
+    readonly id: string;
+    readonly sessionId: string;
+    readonly generation: number;
+  }
+  | {
+    readonly type: "runtime.media.stop";
+    readonly id: string;
+    readonly sessionId: string;
+    readonly generation: number;
+  };
+
+export interface PortalMediaResult {
+  readonly type: "runtime.media.result";
+  readonly id: string;
+  readonly ok: boolean;
+  readonly sessionId?: string;
+  readonly generation?: number;
+  readonly error?: string;
 }
 
 export type CatalogCommand =
@@ -119,6 +143,21 @@ function exactKeys(value: Record<string, unknown>, keys: readonly string[]) {
 
 function boundedId(value: unknown): value is string {
   return typeof value === "string" && value.length > 0 && value.length <= 128;
+}
+
+export function decodePortalMediaCommand(
+  value: unknown,
+): PortalMediaCommand | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const message = value as Record<string, unknown>;
+  if (
+    (message.type !== "runtime.media.transfer" &&
+      message.type !== "runtime.media.stop") ||
+    !exactKeys(message, ["type", "id", "sessionId", "generation"]) ||
+    !boundedId(message.id) || !boundedId(message.sessionId) ||
+    !Number.isSafeInteger(message.generation) || Number(message.generation) < 0
+  ) return null;
+  return message as unknown as PortalMediaCommand;
 }
 
 export type IntentCommand =
@@ -525,6 +564,13 @@ export function decodeClientMessage(
     ) {
       return { ok: false, error: "invalid or foreign runtime message" };
     }
+    if (message.type.startsWith("runtime.media.")) {
+      return { ok: false, error: "portal media message cannot be forwarded" };
+    }
+    if (
+      value.generation !== undefined &&
+      (!Number.isSafeInteger(value.generation) || Number(value.generation) < 0)
+    ) return { ok: false, error: "invalid media generation" };
     if (
       /^(resource|upload)\./.test(message.type) &&
       !decodeNapControlMessage(message)

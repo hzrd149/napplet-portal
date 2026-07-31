@@ -13,6 +13,7 @@ import {
   decodeIntentCommand,
   decodeIntentNavigationMessage,
   decodeNapControlMessage,
+  decodePortalMediaCommand,
   type IntentNavigationMessage,
 } from "../../runtime/transport.ts";
 import {
@@ -175,6 +176,17 @@ export const handler = define.handlers({
           windowId,
           source,
           (message, payloads) => {
+            if (String(message.type).startsWith("runtime.media.")) {
+              connections.send(
+                connection.connectionId,
+                JSON.stringify(
+                  message.type === "runtime.media.snapshot"
+                    ? { ...message, accountId: undefined }
+                    : message,
+                ),
+              );
+              return;
+            }
             if (
               !connections.send(
                 connection.connectionId,
@@ -216,6 +228,7 @@ export const handler = define.handlers({
       );
     }
     const { windowId, bridge } = session;
+    let mediaReady = false;
     const sendCatalog = async () => {
       try {
         const catalog = await bridge.catalog();
@@ -262,6 +275,13 @@ export const handler = define.handlers({
         windowId,
         resumed: connection.resumed,
       }));
+      const snapshot = bridge.mediaSnapshot();
+      socket.send(JSON.stringify({
+        type: "runtime.media.snapshot",
+        accountEpoch: snapshot.accountEpoch,
+        session: snapshot.session,
+      }));
+      mediaReady = true;
       void sendCatalog();
     });
     socket.addEventListener("close", () => {
@@ -394,6 +414,45 @@ export const handler = define.handlers({
           return;
         }
 
+        const mediaControl = decodePortalMediaCommand(message);
+        if (String(message.type).startsWith("runtime.media.")) {
+          if (!mediaReady || !mediaControl) {
+            socket.send(JSON.stringify({
+              type: "runtime.media.result",
+              id: typeof message.id === "string" ? message.id : "invalid",
+              ok: false,
+              error: mediaReady ? "invalid-control" : "snapshot-pending",
+            }));
+            return;
+          }
+          const outcome = mediaControl.type === "runtime.media.transfer"
+            ? bridge.mediaTransfer(
+              mediaControl.sessionId,
+              mediaControl.generation,
+              mediaControl.id,
+            )
+            : bridge.mediaStop(
+              mediaControl.sessionId,
+              mediaControl.generation,
+              mediaControl.id,
+            );
+          socket.send(JSON.stringify({
+            type: "runtime.media.result",
+            id: mediaControl.id,
+            ok: outcome.accepted,
+            ...(outcome.session
+              ? {
+                sessionId: outcome.session.sessionId,
+                generation: outcome.session.generation,
+              }
+              : {}),
+            ...(!outcome.accepted
+              ? { error: outcome.reason ?? "rejected" }
+              : {}),
+          }));
+          return;
+        }
+
         const catalogCommand = decodeCatalogCommand(message);
         if (catalogCommand) {
           const result = await bridge.catalogCommand(catalogCommand);
@@ -431,6 +490,10 @@ export const handler = define.handlers({
           shortId(windowId),
           napMessage.type,
         );
+        if (napMessage.type.startsWith("media.")) {
+          bridge.media(napMessage, decoded.value.generation);
+          return;
+        }
         const transfer = decodeNapControlMessage(napMessage);
         if (transfer) {
           await bridge.dispatchTransfer(transfer);
