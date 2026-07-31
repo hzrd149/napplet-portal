@@ -74,6 +74,19 @@ Deno.test("browser boundary tracer denies a forged frame and closes response pol
       BROWSER_SECURITY_POLICY.permissionsPolicy,
     "closed Permissions-Policy must be present",
   );
+  const settingsResponse = applyBrowserSecurityHeaders(new Response("ok"), {
+    allowSameOriginFrame: true,
+  });
+  assert(
+    settingsResponse.headers.get("content-security-policy")?.includes(
+      "frame-ancestors 'self'",
+    ),
+    "the first-party settings frame must permit only the portal origin",
+  );
+  assert(
+    settingsResponse.headers.get("x-frame-options") === "SAMEORIGIN",
+    "the first-party settings frame must reject foreign ancestors",
+  );
 });
 
 Deno.test("mandatory browser boundary matrix is closed", async () => {

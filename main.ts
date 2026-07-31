@@ -243,7 +243,11 @@ export function startupSummary(
 export const app = new App<State>();
 
 app.use(staticFiles());
-app.use(async (ctx) => applyBrowserSecurityHeaders(await ctx.next()));
+app.use(async (ctx) =>
+  applyBrowserSecurityHeaders(await ctx.next(), {
+    allowSameOriginFrame: new URL(ctx.req.url).pathname === "/settings",
+  })
+);
 app.use((ctx) => {
   ctx.state.config = runtimeConfig;
   ctx.state.runtime = processRuntime;

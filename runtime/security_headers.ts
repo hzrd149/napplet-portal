@@ -34,10 +34,23 @@ export const BROWSER_SECURITY_POLICY = Object.freeze({
   ].join(", "),
 });
 
-export function applyBrowserSecurityHeaders(response: Response): Response {
+interface BrowserSecurityHeaderOptions {
+  readonly allowSameOriginFrame?: boolean;
+}
+
+export function applyBrowserSecurityHeaders(
+  response: Response,
+  options: BrowserSecurityHeaderOptions = {},
+): Response {
+  const contentSecurityPolicy = options.allowSameOriginFrame
+    ? BROWSER_SECURITY_POLICY.contentSecurityPolicy.replace(
+      "frame-ancestors 'none'",
+      "frame-ancestors 'self'",
+    )
+    : BROWSER_SECURITY_POLICY.contentSecurityPolicy;
   response.headers.set(
     "Content-Security-Policy",
-    BROWSER_SECURITY_POLICY.contentSecurityPolicy,
+    contentSecurityPolicy,
   );
   response.headers.set(
     "Permissions-Policy",
@@ -45,6 +58,9 @@ export function applyBrowserSecurityHeaders(response: Response): Response {
   );
   response.headers.set("Referrer-Policy", "no-referrer");
   response.headers.set("X-Content-Type-Options", "nosniff");
-  response.headers.set("X-Frame-Options", "DENY");
+  response.headers.set(
+    "X-Frame-Options",
+    options.allowSameOriginFrame ? "SAMEORIGIN" : "DENY",
+  );
   return response;
 }
