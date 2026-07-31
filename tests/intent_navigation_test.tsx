@@ -171,16 +171,16 @@ Deno.test("new-tab blocked and stale authorization fail closed", () => {
 
 Deno.test("reservation route severs opener before runtime or ticket claim", async () => {
   const route = await Deno.readTextFile("routes/intent/reserved.tsx");
-  const bootstrap = await Deno.readTextFile("islands/IntentReservation.tsx");
-  const sever = bootstrap.indexOf("globalThis.opener = null");
+  const bootstrap = await Deno.readTextFile("static/intent-reserved.js");
+  const sever = bootstrap.indexOf("window.opener = null");
   assert(sever >= 0, "reservation page must sever opener");
   assert(
     sever < bootstrap.indexOf("new WebSocket"),
     "page must not open transport before severing opener",
   );
   assert(
-    route.includes("<IntentReservation />"),
-    "Fresh island bootstrap required",
+    route.includes('<script src="/intent-reserved.js"></script>'),
+    "external severing script must be the first executable resource",
   );
-  assert(!route.includes("dangerouslySetInnerHTML"), "route must remain inert");
+  assert(!route.includes("define.page"), "shared app shell must be bypassed");
 });

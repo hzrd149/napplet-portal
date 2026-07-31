@@ -101,16 +101,16 @@ Deno.test("signed archetype declarations reach verified intent authority", async
 
 Deno.test("reservation opener is severed before transport and CSP stays external", async () => {
   const route = await Deno.readTextFile("routes/intent/reserved.tsx");
-  const island = await Deno.readTextFile("islands/IntentReservation.tsx");
+  const island = await Deno.readTextFile("static/intent-reserved.js");
   const frame = await Deno.readTextFile("components/NappletFrame.tsx");
   assert(
-    island.indexOf("globalThis.opener = null") <
+    island.indexOf("window.opener = null") <
       island.indexOf("new WebSocket"),
     "opener must be severed before transport",
   );
   assert(
-    route.includes("<IntentReservation />"),
-    "bootstrap uses generated island",
+    route.includes('<script src="/intent-reserved.js"></script>'),
+    "bootstrap uses a parser-blocking external script",
   );
   assert(
     !route.includes("dangerouslySetInnerHTML"),
@@ -121,11 +121,23 @@ Deno.test("reservation opener is severed before transport and CSP stays external
 });
 
 Deno.test("reservation CSP rejects malformed and replay-prone bootstrap state", async () => {
-  const island = await Deno.readTextFile("islands/IntentReservation.tsx");
+  const island = await Deno.readTextFile("static/intent-reserved.js");
   assert(island.includes("history.replaceState"), "fragment must be erased");
   assert(island.includes("Number.isSafeInteger"), "generation must be bounded");
   assert(
     island.includes("socket.close()"),
     "failed claims must close transport",
   );
+});
+
+Deno.test("reservation response installs restrictive route CSP", async () => {
+  const { reservationResponse } = await import("../routes/intent/reserved.tsx");
+  const response = reservationResponse();
+  const csp = response.headers.get("content-security-policy") ?? "";
+  assert(csp.includes("default-src 'none'"), "default policy must deny");
+  assert(
+    csp.includes("script-src 'self'"),
+    "only external self script allowed",
+  );
+  assert(!csp.includes("'unsafe-inline'"), "inline execution must stay denied");
 });
