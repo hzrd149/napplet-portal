@@ -5,15 +5,15 @@ milestone_name: Runtime & UX Expansion
 current_phase: 3
 current_phase_name: Mobile Shell Resilience
 status: executing
-stopped_at: Completed 03-02-PLAN.md
-last_updated: "2026-07-31T00:24:53.060Z"
+stopped_at: Completed 03-03-PLAN.md
+last_updated: "2026-07-31T00:30:19.989Z"
 last_activity: 2026-07-31
 last_activity_desc: Completed connection resilience and constellation presentation
 progress:
   total_phases: 7
   completed_phases: 0
   total_plans: 5
-  completed_plans: 2
+  completed_plans: 3
   percent: 0
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-07-30)
 ## Current Position
 
 Phase: 3 — Mobile Shell Resilience
-Plan: 2 of 5
+Plan: 3 of 5
 Status: In progress — Plan 03-01 complete
 Last activity: 2026-07-31 — Completed connection resilience and constellation presentation
 
@@ -74,6 +74,7 @@ Last activity: 2026-07-31 — Completed connection resilience and constellation 
 | Phase 02 P07 | 6min | 2 tasks | 9 files |
 | Phase 03 P01 | 12min | 2 tasks | 12 files |
 | Phase 03 P02 | 10min | 2 tasks | 9 files |
+| Phase 03 P03 | 8min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -117,6 +118,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase ?]: [Phase 03]: Account navigation is a shell-owned sheet that preserves one verified napplet frame.
 - [Phase ?]: [Phase 03]: Sign-out revokes backend authority before one canonical empty-pubkey identity.changed delivery.
 - [Phase ?]: [Phase 03]: Signer and backend transport truth remain independently projected.
+- [Phase ?]: [Phase 03]: Theme persistence is browser-local, closed to system/light/dark, and safely defaults to System.
+- [Phase ?]: [Phase 03]: One stable pre-paint script owns document theme and browser theme-color without crossing the napplet boundary.
 
 ### Pending Todos
 
@@ -145,6 +148,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-07-31T00:24:53.049Z
-Stopped at: Completed 03-02-PLAN.md
+Last session: 2026-07-31T00:30:19.977Z
+Stopped at: Completed 03-03-PLAN.md
 Resume file: None

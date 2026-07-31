@@ -41,7 +41,7 @@
 
 ### Shell and Resilience
 
-- [ ] **SHL-01**: User can select or follow system dark/light theme across server-rendered shell views and runtime states.
+- [x] **SHL-01**: User can select or follow system dark/light theme across server-rendered shell views and runtime states.
 - [ ] **SHL-02**: User sees a Napplet Portal SVG icon instead of Fresh starter branding.
 - [x] **SHL-03**: User sees sign-in/account controls in a home-page header card and a compact bottom navigation with home and current-account controls while a napplet is open.
 - [x] **CON-01**: User sees a polished cyberpunk connection sequence driven by actual pending, connected, bootstrapping, ready, retry, and failure states, with reduced-motion and accessible status support.
