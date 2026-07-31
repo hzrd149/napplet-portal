@@ -1,6 +1,7 @@
 import { assert, assertEquals, assertRejects } from "jsr:@std/assert@1";
 import {
   BlossomTransferAdapter,
+  BlossomTransferService,
   type BlossomUploadSdk,
 } from "../runtime/blossom_transfer.ts";
 
@@ -86,4 +87,145 @@ Deno.test("adapter rejects a descriptor that does not match the requested bytes"
     Error,
     "descriptor-mismatch",
   );
+});
+
+function settlementUploader(
+  outcomes: Readonly<
+    Record<
+      string,
+      "accepted" | "network-error" | "timeout" | "descriptor-mismatch"
+    >
+  >,
+) {
+  return {
+    uploadRequired(server: URL, blob: Blob) {
+      const outcome = outcomes[server.hostname];
+      if (outcome !== "accepted") return Promise.reject(new Error(outcome));
+      return Promise.resolve({
+        ...descriptor(server),
+        size: blob.size,
+        mimeType: "text/plain",
+      });
+    },
+  };
+}
+
+function assertClosedResult(result: Record<string, unknown>) {
+  const allowed = new Set([
+    "ok",
+    "uploadId",
+    "status",
+    "rail",
+    "url",
+    "fallbackUrls",
+    "sha256",
+    "size",
+    "mimeType",
+    "error",
+  ]);
+  assertEquals(Object.keys(result).filter((key) => !allowed.has(key)), []);
+  assert((result.error as string).length <= 512);
+  assert(/^[\x20-\x7e]+$/.test(result.error as string));
+}
+
+Deno.test("all required and local acceptance preserves configured URL order", async () => {
+  const service = new BlossomTransferService({
+    uploader: settlementUploader({
+      "one.example": "accepted",
+      "two.example": "accepted",
+      "127.0.0.1": "accepted",
+    }),
+  });
+  const result = await service.upload({
+    owner: "owner",
+    blob: new Blob(["hey"]),
+    requiredServers: [
+      new URL("https://one.example/"),
+      new URL("https://two.example/"),
+    ],
+    localServer: new URL("http://127.0.0.1:24242/"),
+  });
+
+  assertEquals(result.ok, true);
+  assertEquals(result.status, "complete");
+  assertEquals(result.url, `https://one.example/${HASH}`);
+  assertEquals(result.fallbackUrls, [
+    `https://two.example/${HASH}`,
+    `http://127.0.0.1:24242/${HASH}`,
+  ]);
+  assertEquals(
+    result.error,
+    "required[0]=accepted;required[1]=accepted;local=accepted",
+  );
+  assertClosedResult(result as unknown as Record<string, unknown>);
+});
+
+Deno.test("optional local failure remains explicit without changing remote success", async () => {
+  const service = new BlossomTransferService({
+    uploader: settlementUploader({
+      "one.example": "accepted",
+      "127.0.0.1": "timeout",
+    }),
+  });
+  const result = await service.upload({
+    owner: "owner",
+    blob: new Blob(["hey"]),
+    requiredServers: [SERVER],
+    localServer: new URL("http://127.0.0.1:24242/"),
+  });
+
+  assertEquals(result.ok, true);
+  assertEquals(result.status, "complete");
+  assertEquals(result.fallbackUrls, undefined);
+  assertEquals(result.error, "required[0]=accepted;local=timeout");
+  assertClosedResult(result as unknown as Record<string, unknown>);
+});
+
+Deno.test("partial required failure fails canonically and skips local", async () => {
+  const service = new BlossomTransferService({
+    uploader: settlementUploader({
+      "one.example": "accepted",
+      "two.example": "network-error",
+    }),
+  });
+  const result = await service.upload({
+    owner: "owner",
+    blob: new Blob(["hey"]),
+    requiredServers: [SERVER, new URL("https://two.example/")],
+    localServer: new URL("http://127.0.0.1:24242/"),
+  });
+
+  assertEquals(result.ok, false);
+  assertEquals(result.status, "failed");
+  assertEquals(result.url, `https://one.example/${HASH}`);
+  assertEquals(
+    result.error,
+    "required[0]=accepted;required[1]=network-error;local=not-attempted",
+  );
+  assertClosedResult(result as unknown as Record<string, unknown>);
+});
+
+Deno.test("full required failure reports every bounded ordinal outcome", async () => {
+  const service = new BlossomTransferService({
+    uploader: settlementUploader({
+      "one.example": "timeout",
+      "two.example": "descriptor-mismatch",
+    }),
+  });
+  const result = await service.upload({
+    owner: "owner",
+    blob: new Blob(["hey"]),
+    requiredServers: [SERVER, new URL("https://two.example/")],
+  });
+
+  assertEquals(result.ok, false);
+  assertEquals(result.status, "failed");
+  assertEquals(result.url, undefined);
+  assertEquals(
+    result.error,
+    "required[0]=timeout;required[1]=descriptor-mismatch;local=not-attempted",
+  );
+  assertClosedResult(result as unknown as Record<string, unknown>);
+  assertEquals(service.status("owner", result.uploadId)?.error, result.error);
+  assertEquals(service.status("another-owner", result.uploadId), undefined);
 });
