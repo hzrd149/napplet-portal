@@ -45,7 +45,7 @@ export function MediaControls(props: MediaControlsProps) {
             Transfer here
           </button>
         )}
-        {!session.terminal && session.capabilities.includes("stop") && (
+        {!session.terminal && (
           <button type="button" disabled={props.pending} onClick={props.onStop}>
             Stop playback
           </button>

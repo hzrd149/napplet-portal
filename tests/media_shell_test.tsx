@@ -204,4 +204,20 @@ Deno.test("authoritative media shell tracer renders bounded accessible controls"
     />,
   );
   assert(retry.includes("Tap to play"), "autoplay retry is explicit");
+  const withoutStopCapability = renderToString(
+    <MediaControls
+      ready
+      projection={{ ...projection(3, B), capabilities: [] }}
+      currentOwner={A}
+      pending={false}
+      retryRequired={false}
+      onTransfer={() => undefined}
+      onStop={() => undefined}
+      onRetry={() => undefined}
+    />,
+  );
+  assert(
+    withoutStopCapability.includes("Stop playback"),
+    "portal stop is independent of optional owner capabilities",
+  );
 });
