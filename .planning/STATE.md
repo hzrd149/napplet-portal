@@ -5,16 +5,16 @@ milestone_name: Runtime & UX Expansion
 current_phase: 7
 current_phase_name: Intent Navigation
 status: verifying
-stopped_at: Completed 08-01-PLAN.md
-last_updated: "2026-07-31T05:05:18.789Z"
+stopped_at: Completed 08-02-PLAN.md
+last_updated: "2026-07-31T05:13:49.532Z"
 last_activity: 2026-07-31
 last_activity_desc: Completed Phase 7 production intent navigation integration
 progress:
   total_phases: 7
   completed_phases: 5
   total_plans: 32
-  completed_plans: 21
-  percent: 66
+  completed_plans: 22
+  percent: 69
 ---
 
 # Project State
@@ -91,6 +91,7 @@ Last activity: 2026-07-31 — Completed Phase 7 production intent navigation int
 | Phase 06 P03 | 10min | 3 tasks | 8 files |
 | Phase 07 P04 | 14min | 3 tasks | 12 files |
 | Phase 08-cross-tab-media-sessions P01 | 7min | 2 tasks | 7 files |
+| Phase 08-cross-tab-media-sessions P02 | 7min | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -166,6 +167,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase ?]: Erase ticket fragments after opener severing and retain the exact allow-scripts-only iframe sandbox.
 - [Phase ?]: [Phase 08]: Keep canonical media envelopes free of portal generation and owner identity; carry both only in coordinator projections and effects.
 - [Phase ?]: [Phase 08]: Commit media authority before ordered delivery and convert current-owner delivery failure into immediate owner loss.
+- [Phase ?]: [Phase 08]: Keep portal media controls top-level and canonical MEDIA confined to runtime.forward/runtime.event.
+- [Phase ?]: [Phase 08]: Fence socket detach with attachment generations so stale closes cannot revoke resumed successors.
 
 ### Pending Todos
 
@@ -194,6 +197,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-07-31T05:05:18.773Z
-Stopped at: Completed 08-01-PLAN.md
+Last session: 2026-07-31T05:13:49.515Z
+Stopped at: Completed 08-02-PLAN.md
 Resume file: None

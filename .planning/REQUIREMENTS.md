@@ -36,7 +36,7 @@
 - [x] **INT-03**: Shell policy can focus or reuse the current handler, open a new browser tab, or stack a new iframe while preserving sandbox and history behavior.
 - [x] **MED-01**: Napplet can create and control an ownership-aware NAP-MEDIA session through the backend runtime.
 - [x] **MED-02**: Only one browser tab owns playback for the active media session, and starting playback elsewhere stops or transfers the competing owner deterministically.
-- [ ] **MED-03**: Every connected tab receives current media state, can request transfer to itself, and can stop the active session from the shell navigation.
+- [x] **MED-03**: Every connected tab receives current media state, can request transfer to itself, and can stop the active session from the shell navigation.
 - [x] **MED-04**: Closing the origin tab closes its media session, while stale or reconnected tabs cannot reclaim ownership with outdated commands.
 
 ### Shell and Resilience

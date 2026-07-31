@@ -2,9 +2,9 @@
 schema_version: 1
 open_count: 4
 waived_count: 0
-fixed_count: 11
-total_count: 15
-last_updated: 2026-07-31T04:32:34.104Z
+fixed_count: 13
+total_count: 17
+last_updated: 2026-07-31T05:14:14.644Z
 ---
 
 # Broken Windows Ledger
@@ -30,6 +30,8 @@ last_updated: 2026-07-31T04:32:34.104Z
 | 13 | 06 | deviation | islands/NappletShell.tsx |  | Verified capability handoff added to complete the production iframe bridge | open |  | 2026-07-31T03:28:43.610Z |  |
 | 14 | 06 | deviation | main.ts |  | In-memory tracer storage port wired pending Plan 06-03 durability | open |  | 2026-07-31T03:28:43.721Z |  |
 | 15 | 07 | deviation | islands/IntentReservation.tsx |  | Used globalThis.opener to satisfy Deno no-window lint while preserving opener-first ordering | fixed |  | 2026-07-31T04:32:20.762Z | 2026-07-31T04:32:34.104Z |
+| 16 | 08 | deviation | runtime/connections.ts |  | Stale attachment close fencing added for reconnect correctness | fixed |  | 2026-07-31T05:13:48.670Z | 2026-07-31T05:14:14.508Z |
+| 17 | 08 | deviation | tests/media_lifecycle_test.ts |  | Lifecycle fixture adjusted to satisfy prefer-const lint | fixed |  | 2026-07-31T05:13:48.785Z | 2026-07-31T05:14:14.644Z |
 
 ````json
 [
@@ -212,6 +214,30 @@ last_updated: 2026-07-31T04:32:34.104Z
     "reason": "",
     "recorded_at": "2026-07-31T04:32:20.762Z",
     "resolved_at": "2026-07-31T04:32:34.104Z"
+  },
+  {
+    "id": 16,
+    "kind": "deviation",
+    "phase": "08",
+    "file": "runtime/connections.ts",
+    "line": null,
+    "description": "Stale attachment close fencing added for reconnect correctness",
+    "status": "fixed",
+    "reason": "",
+    "recorded_at": "2026-07-31T05:13:48.670Z",
+    "resolved_at": "2026-07-31T05:14:14.508Z"
+  },
+  {
+    "id": 17,
+    "kind": "deviation",
+    "phase": "08",
+    "file": "tests/media_lifecycle_test.ts",
+    "line": null,
+    "description": "Lifecycle fixture adjusted to satisfy prefer-const lint",
+    "status": "fixed",
+    "reason": "",
+    "recorded_at": "2026-07-31T05:13:48.785Z",
+    "resolved_at": "2026-07-31T05:14:14.644Z"
   }
 ]
 ````
