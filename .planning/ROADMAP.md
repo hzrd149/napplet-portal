@@ -122,6 +122,14 @@ Plans:
 
 **Goal:** The full v1.1 expansion is contract-compatible, secure at every proxy boundary, and verified on mobile devices.
 **Requirements:** QLT-01, QLT-02, QLT-03, QLT-04
+**Plans:** 5 plans
+
+Plans:
+- [ ] 09-01-PLAN.md — Generate exhaustive ten-domain codec/action parity and traceability evidence.
+- [ ] 09-02-PLAN.md — Exercise and repair adversarial proxy, authority, sandbox, and header boundaries.
+- [ ] 09-03-PLAN.md — Prove deterministic lifecycle behavior and production multi-client transport.
+- [ ] 09-04-PLAN.md — Automate mobile viewport, accessibility, reconnect, intent, and media browser flows.
+- [ ] 09-05-PLAN.md — Reconcile canonical ledgers and publish honest UAT and release evidence.
 
 **Success Criteria:**
 
