@@ -298,8 +298,25 @@ export class PortalArtifactResolver {
             this.#options.blossomServers,
             manifestServers,
           );
+          debug(
+            "fetch blob sources hash=%s configured=%d manifest=%d merged=%d",
+            shortId(hash),
+            this.#options.blossomServers.length,
+            manifestServers.length,
+            servers.length,
+          );
           if (!this.#options.fetchBytes) {
-            return await this.#blossomCache.fetch(hash, servers, event.pubkey);
+            const bytes = await this.#blossomCache.fetch(
+              hash,
+              servers,
+              event.pubkey,
+            );
+            debug(
+              "fetch blob complete hash=%s bytes=%d source=blossom-cache",
+              shortId(hash),
+              bytes.byteLength,
+            );
+            return bytes;
           }
           if (servers.length === 0) {
             throw new ArtifactResolutionError(
