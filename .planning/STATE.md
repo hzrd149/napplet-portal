@@ -4,17 +4,17 @@ milestone: v1.1
 milestone_name: Runtime & UX Expansion
 current_phase: 3
 current_phase_name: Mobile Shell Resilience
-status: planning
-stopped_at: Phase 3 context gathered
-last_updated: "2026-07-30T23:35:50.586Z"
+status: executing
+stopped_at: Completed 03-01-PLAN.md
+last_updated: "2026-07-31T00:16:42.890Z"
 last_activity: 2026-07-30
 last_activity_desc: Milestone v1.1 roadmap created
 progress:
   total_phases: 7
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  total_plans: 5
+  completed_plans: 1
+  percent: 20
 ---
 
 # Project State
@@ -29,9 +29,9 @@ See: .planning/PROJECT.md (updated 2026-07-30)
 ## Current Position
 
 Phase: 3 — Mobile Shell Resilience
-Plan: —
-Status: Roadmap created — ready to discuss or plan
-Last activity: 2026-07-30 — Milestone v1.1 roadmap created
+Plan: 1 of 5
+Status: In progress — Plan 03-01 complete
+Last activity: 2026-07-31 — Completed connection resilience and constellation presentation
 
 ## Performance Metrics
 
@@ -72,6 +72,7 @@ Last activity: 2026-07-30 — Milestone v1.1 roadmap created
 | Phase 02 P05 | 4min | 1 tasks | 12 files |
 | Phase 02 P06 | 13min | 2 tasks | 10 files |
 | Phase 02 P07 | 6min | 2 tasks | 9 files |
+| Phase 03 P01 | 12min | 2 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -109,6 +110,9 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase ?]: Native catalog dialogs invalidate on replacement event identity and return focus to the invoking card.
 - [Phase ?]: Pinned @kehto/runtime 0.20.1 and @napplet/core/@napplet/nap 0.31.0 remain the sole executable contract authority.
 - [Phase ?]: Sibling source availability and marker mismatch are serialized as non-blocking diagnostic evidence.
+- [Phase ?]: Reset connection failures only after a validated runtime artifact proves readiness.
+- [Phase ?]: Keep signer identity independent from backend transport recovery.
+- [Phase ?]: Use validated PORTAL_PORT binding for isolated production transport tests.
 
 ### Pending Todos
 
@@ -137,6 +141,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-07-30T23:35:50.576Z
-Stopped at: Phase 3 context gathered
-Resume file: .planning/phases/03-mobile-shell-resilience/03-CONTEXT.md
+Last session: 2026-07-31T00:16:42.879Z
+Stopped at: Completed 03-01-PLAN.md
+Resume file: None

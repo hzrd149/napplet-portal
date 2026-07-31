@@ -44,10 +44,10 @@
 - [ ] **SHL-01**: User can select or follow system dark/light theme across server-rendered shell views and runtime states.
 - [ ] **SHL-02**: User sees a Napplet Portal SVG icon instead of Fresh starter branding.
 - [ ] **SHL-03**: User sees sign-in/account controls in a home-page header card and a compact bottom navigation with home and current-account controls while a napplet is open.
-- [ ] **CON-01**: User sees a polished cyberpunk connection sequence driven by actual pending, connected, bootstrapping, ready, retry, and failure states, with reduced-motion and accessible status support.
-- [ ] **CON-02**: User sees a compact bottom-navigation indicator reflecting the current tab's backend runtime connection state.
-- [ ] **CON-03**: A disconnected or resumed mobile tab reconnects automatically with capped exponential backoff and jitter while preserving the existing reconnect-token/grace semantics.
-- [ ] **CON-04**: Intentional closure cancels reconnect work, and offline, hidden, or repeated-failure states do not create reconnect storms.
+- [x] **CON-01**: User sees a polished cyberpunk connection sequence driven by actual pending, connected, bootstrapping, ready, retry, and failure states, with reduced-motion and accessible status support.
+- [x] **CON-02**: User sees a compact bottom-navigation indicator reflecting the current tab's backend runtime connection state.
+- [x] **CON-03**: A disconnected or resumed mobile tab reconnects automatically with capped exponential backoff and jitter while preserving the existing reconnect-token/grace semantics.
+- [x] **CON-04**: Intentional closure cancels reconnect work, and offline, hidden, or repeated-failure states do not create reconnect storms.
 
 ### Quality and Security
 
@@ -79,7 +79,7 @@
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | SHL-01, SHL-02, SHL-03 | Phase 3 | Pending |
-| CON-01, CON-02, CON-03, CON-04 | Phase 3 | Pending |
+| CON-01, CON-02, CON-03, CON-04 | Phase 3 | Complete |
 | CAT-01, CAT-02, CAT-03, CAT-04 | Phase 4 | Pending |
 | RES-01, RES-02, RES-03 | Phase 5 | Pending |
 | UPL-01, UPL-02, UPL-03 | Phase 5 | Pending |

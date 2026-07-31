@@ -2,9 +2,9 @@
 schema_version: 1
 open_count: 1
 waived_count: 0
-fixed_count: 3
-total_count: 4
-last_updated: 2026-07-30T13:24:01.859Z
+fixed_count: 5
+total_count: 6
+last_updated: 2026-07-31T00:17:08.965Z
 ---
 
 # Broken Windows Ledger
@@ -19,6 +19,8 @@ last_updated: 2026-07-30T13:24:01.859Z
 | 2 | 01 | deviation | routes/api/runtime.ts |  | Added browser-safe public account projection and server-side sign-out message | fixed |  | 2026-07-30T13:15:56.068Z | 2026-07-30T13:15:56.179Z |
 | 3 | 01 | unrun-verify | islands/NappletShell.tsx |  | Responsive 320/390/768/1440px and safe-area browser inspection deferred to Plan 01-06 final UI checkpoint | open |  | 2026-07-30T13:15:56.294Z |  |
 | 4 | 01 | deviation | runtime/outbox.ts |  | Made OUTBOX and replaced-window cleanup idempotent and replay-safe | fixed |  | 2026-07-30T13:24:01.738Z | 2026-07-30T13:24:01.859Z |
+| 5 | 03 | deviation | runtime/port.ts |  | Added validated PORTAL_PORT support for unattended production smoke | fixed |  | 2026-07-31T00:16:41.967Z | 2026-07-31T00:17:08.857Z |
+| 6 | 03 | deviation | tests/shell_architecture_test.ts |  | Aligned legacy transport assertions with controller-owned recovery | fixed |  | 2026-07-31T00:16:42.072Z | 2026-07-31T00:17:08.965Z |
 
 ````json
 [
@@ -69,6 +71,30 @@ last_updated: 2026-07-30T13:24:01.859Z
     "reason": "",
     "recorded_at": "2026-07-30T13:24:01.738Z",
     "resolved_at": "2026-07-30T13:24:01.859Z"
+  },
+  {
+    "id": 5,
+    "kind": "deviation",
+    "phase": "03",
+    "file": "runtime/port.ts",
+    "line": null,
+    "description": "Added validated PORTAL_PORT support for unattended production smoke",
+    "status": "fixed",
+    "reason": "",
+    "recorded_at": "2026-07-31T00:16:41.967Z",
+    "resolved_at": "2026-07-31T00:17:08.857Z"
+  },
+  {
+    "id": 6,
+    "kind": "deviation",
+    "phase": "03",
+    "file": "tests/shell_architecture_test.ts",
+    "line": null,
+    "description": "Aligned legacy transport assertions with controller-owned recovery",
+    "status": "fixed",
+    "reason": "",
+    "recorded_at": "2026-07-31T00:16:42.072Z",
+    "resolved_at": "2026-07-31T00:17:08.965Z"
   }
 ]
 ````
