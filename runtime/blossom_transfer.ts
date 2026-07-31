@@ -5,7 +5,6 @@ import type {
   UploadStatus,
 } from "@napplet/core";
 import {
-  Actions,
   type BlobDescriptor,
   computeBlobSha256,
   createUploadAuth,
@@ -13,6 +12,11 @@ import {
   parseBlossomURI,
   type SignedEvent,
 } from "blossom-client-sdk";
+import {
+  ResourceDestinationPolicy,
+  ResourcePolicyError,
+} from "./resource_policy.ts";
+import { pinnedFetch } from "./pinned_fetch.ts";
 
 const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
 const AUTH_LIFETIME_SECONDS = 60;
@@ -61,6 +65,7 @@ interface UploadSdkOptions {
   readonly authorization: string;
   readonly authorizationEvent: unknown;
   readonly signal: AbortSignal;
+  readonly approvedAddresses: readonly string[];
 }
 
 export interface BlossomUploadSdk {
@@ -119,12 +124,22 @@ const DEFAULT_SDK: BlossomUploadSdk = {
     ),
   encodeAuthorizationHeader: (event) =>
     encodeAuthorizationHeader(event as SignedEvent),
-  uploadBlob: (server, blob, options) =>
-    Actions.uploadBlob(server, blob, {
-      auth: options.authorizationEvent as SignedEvent,
+  uploadBlob: async (server, blob, options) => {
+    const response = await pinnedFetch(server, {
+      method: "PUT",
+      headers: {
+        authorization: options.authorization,
+        "content-type": blob.type || "application/octet-stream",
+      },
+      body: blob,
       signal: options.signal,
-      timeout: 30_000,
-    }),
+      redirect: "manual",
+    }, options.approvedAddresses);
+    if (!response.ok || response.status >= 300) {
+      throw new Error("network-error");
+    }
+    return await response.json();
+  },
   parseUploadResponse: (value) => value as BlobDescriptor,
 };
 
@@ -152,17 +167,26 @@ export interface BlossomTransferAdapterOptions {
   readonly signEvent: (template: EventTemplate) => Promise<NostrEvent>;
   readonly sdk?: BlossomUploadSdk;
   readonly now?: () => number;
+  readonly localCacheUrl?: string;
+  readonly policy?: ResourceDestinationPolicy;
 }
 
 export class BlossomTransferAdapter {
   readonly #signEvent: (template: EventTemplate) => Promise<NostrEvent>;
   readonly #sdk: BlossomUploadSdk;
   readonly #now: () => number;
+  readonly #policy: ResourceDestinationPolicy;
+  readonly #localOrigin?: string;
 
   constructor(options: BlossomTransferAdapterOptions) {
     this.#signEvent = options.signEvent;
     this.#sdk = options.sdk ?? DEFAULT_SDK;
     this.#now = options.now ?? (() => Date.now());
+    this.#policy = options.policy ??
+      new ResourceDestinationPolicy({ localCacheUrl: options.localCacheUrl });
+    this.#localOrigin = options.localCacheUrl
+      ? new URL(options.localCacheUrl).origin
+      : undefined;
   }
 
   async uploadRequired(
@@ -172,6 +196,16 @@ export class BlossomTransferAdapter {
   ): Promise<PortalBlobDescriptor & { readonly mimeType: string }> {
     if (input.size > MAX_UPLOAD_BYTES) throw new Error("rejected");
     signal.throwIfAborted();
+    const destinationClass = server.origin === this.#localOrigin
+      ? "local-cache"
+      : "public";
+    let destination;
+    try {
+      destination = await this.#policy.authorize(server, destinationClass);
+    } catch (error) {
+      if (error instanceof ResourcePolicyError) throw new Error("rejected");
+      throw error;
+    }
     const bytes = new Uint8Array(await input.slice(0, 512).arrayBuffer());
     const mimeType = this.#sdk.sniffMimeType(bytes, input.type);
     const blob = input.type === mimeType
@@ -187,6 +221,7 @@ export class BlossomTransferAdapter {
       authorization: this.#sdk.encodeAuthorizationHeader(auth),
       authorizationEvent: auth,
       signal,
+      approvedAddresses: destination.addresses,
     });
     const descriptor = validateDescriptor(
       server,

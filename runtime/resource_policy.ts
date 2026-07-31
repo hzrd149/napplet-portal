@@ -169,11 +169,9 @@ export class ResourceDestinationPolicy {
       });
     }
 
-    if (url.protocol !== "http:" && url.protocol !== "https:") {
-      throw new ResourcePolicyError();
-    }
-    const port = url.port || (url.protocol === "https:" ? "443" : "80");
-    if (port !== "80" && port !== "443") throw new ResourcePolicyError();
+    if (url.protocol !== "https:") throw new ResourcePolicyError();
+    const port = url.port || "443";
+    if (port !== "443") throw new ResourcePolicyError();
 
     const hostname = url.hostname.replace(/^\[|\]$/g, "");
     const literalV4 = parseIpv4(hostname);

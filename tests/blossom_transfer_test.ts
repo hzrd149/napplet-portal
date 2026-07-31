@@ -4,9 +4,14 @@ import {
   BlossomTransferService,
   type BlossomUploadSdk,
 } from "../runtime/blossom_transfer.ts";
+import { ResourceDestinationPolicy } from "../runtime/resource_policy.ts";
 
 const HASH = "a".repeat(64);
 const SERVER = new URL("https://one.example/");
+const uploadPolicy = new ResourceDestinationPolicy({
+  resolveDns: (_hostname, type) =>
+    Promise.resolve(type === "A" ? ["93.184.216.34"] : []),
+});
 
 function descriptor(server = SERVER) {
   return {
@@ -54,6 +59,7 @@ Deno.test("adapter hashes bytes and scopes backend authorization to server and h
       });
     },
     now: () => 1_000,
+    policy: uploadPolicy,
   });
 
   const result = await adapter.uploadRequired(
@@ -80,6 +86,7 @@ Deno.test("adapter rejects a descriptor that does not match the requested bytes"
   const adapter = new BlossomTransferAdapter({
     sdk,
     signEvent: () => Promise.resolve({} as never),
+    policy: uploadPolicy,
   });
 
   await assertRejects(

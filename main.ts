@@ -140,21 +140,14 @@ const resourceService = new ResourceService({ localCacheUrl: localBlossom });
 const blossomTransfer = new BlossomTransferService({
   uploader: new BlossomTransferAdapter({
     signEvent: (template) => signerAccounts.signEvent(template),
+    localCacheUrl: localBlossom,
   }),
 });
 export const napDispatcher = new NapDispatcher({
   resource: resourceService,
   transfer: blossomTransfer,
   settings: () => ({
-    blossomServers: runtimeSettings.settings.blossomServers.filter((value) => {
-      try {
-        const host = new URL(value).hostname;
-        return host !== "localhost" && host !== "::1" &&
-          !host.startsWith("127.");
-      } catch {
-        return false;
-      }
-    }),
+    blossomServers: runtimeSettings.settings.blossomServers,
     localBlossom,
   }),
   send: (owner, message, bytes) =>
