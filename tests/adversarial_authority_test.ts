@@ -4,7 +4,11 @@ import fixture from "./fixtures/supplied_napplet_contract.json" with {
   type: "json",
 };
 import { CommonService } from "../runtime/common.ts";
-import { NapDispatcher } from "../runtime/nap_dispatcher.ts";
+import {
+  isExactWindowAuthority,
+  NapDispatcher,
+  type WindowCapabilityContext,
+} from "../runtime/nap_dispatcher.ts";
 import { createPortalRuntime } from "../runtime/portal_runtime.ts";
 import {
   CATALOG_IDENTIFIER,
@@ -12,6 +16,9 @@ import {
   type VerifiedCatalogArtifact,
 } from "../runtime/catalog.ts";
 import { hasContractGrant } from "../runtime/nap_contract_registry.ts";
+import { SignerConnectionService } from "../runtime/signer_service.ts";
+import { BehaviorSubject } from "npm:rxjs@7.8.2";
+import type { IdentitySnapshot } from "../runtime/accounts.ts";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -161,6 +168,56 @@ Deno.test("authority matrix denies malformed invented and sibling grants", () =>
   }
 });
 
+Deno.test("window authority matrix rejects foreign identity instance and generation", () => {
+  const current: WindowCapabilityContext = Object.freeze({
+    connectionId: "connection",
+    windowId: "window",
+    accountPubkey,
+    coordinate: fixture.coordinate,
+    manifestEventId,
+    dTag: "authority",
+    aggregateHash: "3".repeat(64),
+    grantedDomains: Object.freeze(["common"]),
+    grantedCapabilities: Object.freeze(["common.follow"]),
+    instanceId: "instance",
+    generation: 7,
+  });
+  const accepted = (coordinate: string, eventId: string) =>
+    coordinate === fixture.coordinate && eventId === manifestEventId;
+  assert(
+    isExactWindowAuthority(current, current, accountPubkey, accepted),
+    "the exact server-owned context must remain authorized",
+  );
+  const mutations: Partial<WindowCapabilityContext>[] = [
+    { connectionId: "foreign" },
+    { windowId: "foreign" },
+    { accountPubkey: "f".repeat(64) },
+    { coordinate: "35129:" + "f".repeat(64) + ":foreign" },
+    { manifestEventId: "f".repeat(64) },
+    { dTag: "foreign" },
+    { aggregateHash: "f".repeat(64) },
+    { grantedDomains: ["common", "storage"] },
+    { grantedCapabilities: ["common"] },
+    { instanceId: "foreign" },
+    { generation: 6 },
+  ];
+  for (const mutation of mutations) {
+    const candidate = Object.freeze({ ...current, ...mutation });
+    assert(
+      !isExactWindowAuthority(current, candidate, accountPubkey, accepted),
+      `foreign authority mutation must deny: ${JSON.stringify(mutation)}`,
+    );
+  }
+  assert(
+    !isExactWindowAuthority(current, current, "f".repeat(64), accepted),
+    "active account replacement must deny the prior context",
+  );
+  assert(
+    !isExactWindowAuthority(current, current, accountPubkey, () => false),
+    "catalog replacement must deny the prior context",
+  );
+});
+
 function deferred<T>() {
   let resolve!: (value: T) => void;
   const promise = new Promise<T>((done) => resolve = done);
@@ -202,7 +259,10 @@ function catalogAuthorityHarness() {
       Promise.resolve(finalizeEvent(template, accountASecret)),
     publish: () => {
       publishes++;
-      return Promise.resolve([{ relay: "wss://required.example", accepted: true }]);
+      return Promise.resolve([{
+        relay: "wss://required.example",
+        accepted: true,
+      }]);
     },
   });
   return {
@@ -263,9 +323,49 @@ Deno.test("catalog signer authority rejects account replacement before publicati
   harness.resolution.resolve(verifiedArtifact(harness.acceptedManifestEventId));
   const result = await pending;
   assert(!result.ok, "foreign active account must not mutate the catalog");
-  assert(harness.publishes() === 0, "stale signer must cause zero publication effects");
+  assert(
+    harness.publishes() === 0,
+    "stale signer must cause zero publication effects",
+  );
   assert(
     result.error === "catalog mutation failed",
     "signer authority denial must be sanitized",
   );
+});
+
+Deno.test("signer failures never return nsec bunker or upstream authority details", async () => {
+  const unavailable = {
+    accountId: null,
+    pubkey: null,
+    status: "unavailable" as const,
+  };
+  const secretError = "nsec1secret bunker://private local=/home/user/key";
+  const service = new SignerConnectionService({
+    identity$: new BehaviorSubject<IdentitySnapshot>(unavailable),
+    startNostrConnect: () => Promise.reject(new Error("unused")),
+    signInBunker: () => Promise.reject(new Error(secretError)),
+    signInNsec: () => Promise.reject(new Error(secretError)),
+  });
+
+  for (
+    const [invoke, expected] of [
+      [
+        () => service.signInBunker("bunker://untrusted"),
+        "Bunker sign-in failed",
+      ],
+      [() => service.signInNsec("nsec1untrusted"), "nsec sign-in failed"],
+    ] as const
+  ) {
+    let observed = "";
+    try {
+      await invoke();
+    } catch (error) {
+      observed = error instanceof Error ? error.message : String(error);
+    }
+    assert(observed === expected, "signer rejection must use a stable error");
+    assert(
+      !JSON.stringify(service.state).includes(secretError),
+      "projected signer state must contain no upstream authority detail",
+    );
+  }
 });

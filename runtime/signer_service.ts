@@ -102,13 +102,12 @@ export class SignerConnectionService {
       this.#setPending(IDLE);
       return identity;
     } catch (error) {
+      const failure = new Error("Bunker sign-in failed", { cause: error });
       this.#setPending(Object.freeze({
         status: "error",
-        message: error instanceof Error
-          ? error.message
-          : "Bunker sign-in failed",
+        message: failure.message,
       }));
-      throw error;
+      throw failure;
     }
   }
 
@@ -122,11 +121,12 @@ export class SignerConnectionService {
       this.#setPending(IDLE);
       return identity;
     } catch (error) {
+      const failure = new Error("nsec sign-in failed", { cause: error });
       this.#setPending(Object.freeze({
         status: "error",
-        message: error instanceof Error ? error.message : "nsec sign-in failed",
+        message: failure.message,
       }));
-      throw error;
+      throw failure;
     }
   }
 

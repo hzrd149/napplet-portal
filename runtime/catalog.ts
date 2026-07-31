@@ -547,7 +547,8 @@ export class CatalogService {
     manifestEventId: string,
   ): Promise<CatalogAuthorityResult<VerifiedCatalogArtifact>> {
     const event = this.#currentCatalogEvent();
-    const pubkey = this.options.identity().pubkey;
+    const identity = this.options.identity();
+    const pubkey = identity.pubkey;
     if (!event || !pubkey || event.id !== catalogEventId) {
       return { ok: false, error: "catalog changed", retryable: true };
     }
@@ -563,6 +564,23 @@ export class CatalogService {
         coordinate,
         manifestEventId,
       );
+      const currentIdentity = this.options.identity();
+      const currentEvent = this.#currentCatalogEvent();
+      if (
+        currentIdentity.accountId !== identity.accountId ||
+        currentIdentity.pubkey !== identity.pubkey ||
+        currentIdentity.status !== identity.status ||
+        currentEvent?.id !== catalogEventId
+      ) {
+        return { ok: false, error: "catalog changed", retryable: true };
+      }
+      const currentCatalog = decodeCatalogEvent(currentEvent, pubkey);
+      const currentAccepted = currentCatalog?.entries.find((entry) =>
+        entry.coordinate === coordinate
+      );
+      if (currentAccepted?.acceptedManifestEventId !== manifestEventId) {
+        return { ok: false, error: "catalog changed", retryable: true };
+      }
       if (verified.manifestEventId !== manifestEventId) {
         throw new Error("manifest mismatch");
       }
@@ -628,6 +646,7 @@ export class CatalogService {
       : null;
     try {
       const entries = await update([...(current?.entries ?? [])]);
+      this.#assertMutationAuthority(identity, currentEvent?.id ?? null);
       const createdAt = Math.max(
         this.options.now?.() ?? Math.floor(Date.now() / 1000),
         (currentEvent?.created_at ?? 0) + 1,
@@ -638,11 +657,13 @@ export class CatalogService {
         tags: [["d", CATALOG_IDENTIFIER]],
         content: JSON.stringify({ version: 1, entries }),
       });
+      this.#assertMutationAuthority(identity, currentEvent?.id ?? null);
       if (
         event.pubkey !== identity.pubkey ||
         !decodeCatalogEvent(event, identity.pubkey)
       ) return { id, ok: false, error: "event signing failed", outcomes: [] };
       const outcomes = await this.options.publish(event);
+      this.#assertMutationAuthority(identity, currentEvent?.id ?? null);
       if (
         outcomes.length === 0 || outcomes.some((outcome) => !outcome.accepted)
       ) {
@@ -659,6 +680,18 @@ export class CatalogService {
     } catch {
       return { id, ok: false, error: "catalog mutation failed", outcomes: [] };
     }
+  }
+
+  #assertMutationAuthority(
+    expected: IdentitySnapshot,
+    expectedCatalogEventId: string | null,
+  ): void {
+    const current = this.options.identity();
+    if (
+      current.status !== "active" || current.accountId !== expected.accountId ||
+      current.pubkey !== expected.pubkey ||
+      (this.#currentCatalogEvent()?.id ?? null) !== expectedCatalogEventId
+    ) throw new Error("catalog authority changed");
   }
 
   #notify(): void {

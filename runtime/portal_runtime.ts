@@ -39,6 +39,7 @@ import type {
   IntentCommand,
   IntentNavigationMessage,
 } from "./transport.ts";
+import { isExactWindowAuthority } from "./nap_dispatcher.ts";
 import type {
   DispatcherMessage,
   NapDispatcher,
@@ -403,15 +404,19 @@ export function createPortalRuntime(
     },
     configureTransfers(service: NapDispatcher): void {
       dispatcher = service;
-      service.setAuthorityValidator((candidate) =>
-        windowAuthorities.get(candidate.windowId) === candidate &&
-        accounts.active?.pubkey === candidate.accountPubkey &&
-        ((catalog as { acceptsManifest?: CatalogService["acceptsManifest"] })
-          ?.acceptsManifest?.(
-            candidate.coordinate,
-            candidate.manifestEventId,
-          ) ?? true)
-      );
+      service.setAuthorityValidator((candidate) => {
+        const generationIsCurrent =
+          windowAuthorityGenerations.get(candidate.windowId) ===
+            candidate.generation;
+        return generationIsCurrent && isExactWindowAuthority(
+          windowAuthorities.get(candidate.windowId),
+          candidate,
+          accounts.active?.pubkey,
+          (coordinate, manifestEventId) =>
+            (catalog as { acceptsManifest?: CatalogService["acceptsManifest"] })
+              ?.acceptsManifest?.(coordinate, manifestEventId) ?? true,
+        );
+      });
     },
     deliverTransfer(
       owner: NapOwner,

@@ -25,9 +25,20 @@ export interface WindowCapabilityContext {
   readonly dTag: string;
   readonly aggregateHash: string;
   readonly grantedDomains: readonly string[];
-  readonly grantedCapabilities: readonly string[];
-  readonly generation: number;
+  readonly grantedCapabilities?: readonly string[];
+  readonly generation?: number;
   readonly instanceId: string;
+}
+
+export function isExactWindowAuthority(
+  current: WindowCapabilityContext | undefined,
+  candidate: WindowCapabilityContext,
+  activeAccountPubkey: string | null | undefined,
+  acceptsManifest: (coordinate: string, manifestEventId: string) => boolean,
+): boolean {
+  return current === candidate &&
+    activeAccountPubkey === candidate.accountPubkey &&
+    acceptsManifest(candidate.coordinate, candidate.manifestEventId);
 }
 
 type CommonMessage = Record<string, unknown> & {
@@ -385,7 +396,10 @@ export class NapDispatcher {
       typeof context.accountPubkey !== "string" ||
       this.#revokedWindows.has(context.windowId) ||
       !context.grantedDomains?.includes(domain) ||
-      !hasContractGrant(context.grantedCapabilities ?? [], message.type) ||
+      !hasContractGrant(
+        context.grantedCapabilities ?? context.grantedDomains ?? [],
+        message.type,
+      ) ||
       !this.#isCurrent?.(context)
     ) {
       send({

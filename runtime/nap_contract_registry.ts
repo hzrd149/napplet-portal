@@ -364,9 +364,10 @@ export function hasContractGrant(
     candidate.disposition === "SUPPORTED" && candidate.advertised
   );
   return Boolean(
-    row && grants.some((grant) =>
-      grant === row.discriminant || grant === row.domain
-    ),
+    row &&
+      grants.some((grant) =>
+        grant === row.discriminant || grant === row.domain
+      ),
   );
 }
 
