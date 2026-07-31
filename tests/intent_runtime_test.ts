@@ -114,7 +114,11 @@ Deno.test("authenticated invocation verifies, tickets, acknowledges, and settles
     !("payload" in authorized),
     "navigation command must not leak payload",
   );
-  const claimed = h.intents.claim(owner, {
+  const targetOwner = {
+    connectionId: owner.connectionId,
+    windowId: String(authorized.targetWindowId),
+  };
+  const claimed = h.intents.claim(targetOwner, {
     type: "intent.ticket.claim",
     reservationId: "reservation-1",
     ticket: String(authorized.ticket),
@@ -126,7 +130,7 @@ Deno.test("authenticated invocation verifies, tickets, acknowledges, and settles
     "ready target must receive payload through its ticket",
   );
   assert(
-    h.intents.claim(owner, {
+    h.intents.claim(targetOwner, {
       type: "intent.ticket.claim",
       reservationId: "reservation-1",
       ticket: String(authorized.ticket),
@@ -157,6 +161,80 @@ Deno.test("authenticated invocation verifies, tickets, acknowledges, and settles
   assert(
     results[0].result?.handled,
     "committed navigation must report handled",
+  );
+});
+
+Deno.test("intent lifecycle bounds payloads and revokes stale reservations", async () => {
+  const valid = {
+    type: "intent.invoke",
+    id: "payload-valid",
+    request: { archetype: "note", payload: { text: "x".repeat(65_500) } },
+  };
+  assert(
+    decodeIntentCommand(valid)?.type === "intent.invoke",
+    "payload at the serialized 64 KiB bound must decode",
+  );
+  const oversized = structuredClone(valid) as {
+    request: { payload: { text: string } };
+  } & Record<string, unknown>;
+  oversized.request.payload.text = "x".repeat(65_537);
+  assert(
+    decodeIntentCommand(oversized) === null,
+    "payload over 64 KiB must fail closed",
+  );
+  assert(
+    decodeIntentCommand({
+      type: "intent.invoke",
+      id: "non-finite",
+      request: { archetype: "note", payload: { amount: Infinity } },
+    }) === null,
+    "non-finite payload data must fail closed",
+  );
+
+  const h = await readyHarness();
+  const results: IntentReply[] = [];
+  const owner = { connectionId: "connection-1", windowId: "caller-1" };
+  await h.intents.reserve(owner, {
+    type: "intent.navigation.reserve",
+    reservationId: "reservation-stale",
+    invocationId: "invoke-stale",
+    callerWindowId: owner.windowId,
+    mode: "new-tab",
+  }, {
+    type: "intent.invoke",
+    id: "correlation-stale",
+    request: { archetype: "note" },
+  }, (message) => results.push(message));
+  assert(h.sent.length === 0, "caller cannot grant itself new-tab authority");
+  assert(results[0]?.result?.error === "denied", "denial must be canonical");
+
+  await h.intents.reserve(owner, {
+    type: "intent.navigation.reserve",
+    reservationId: "reservation-signout",
+    invocationId: "invoke-signout",
+    callerWindowId: owner.windowId,
+    mode: "reuse",
+  }, {
+    type: "intent.invoke",
+    id: "correlation-signout",
+    request: { archetype: "note", payload: { private: true } },
+  }, (message) => results.push(message));
+  const authorized = h.sent[0];
+  h.signOut();
+  const leaked = h.intents.claim({
+    connectionId: owner.connectionId,
+    windowId: String(authorized.targetWindowId),
+  }, {
+    type: "intent.ticket.claim",
+    reservationId: "reservation-signout",
+    ticket: String(authorized.ticket),
+    targetWindowId: String(authorized.targetWindowId),
+    generation: Number(authorized.generation),
+  });
+  assert(leaked === null, "account change must revoke private ticket payload");
+  assert(
+    results.at(-1)?.result?.error === "failed",
+    "generation churn must settle unresolved invocation once",
   );
 });
 
