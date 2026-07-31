@@ -1,6 +1,6 @@
 import {
-  ResourceDestinationPolicy,
   type ResolveDns,
+  ResourceDestinationPolicy,
 } from "../runtime/resource_policy.ts";
 import {
   ResourceService,
@@ -27,10 +27,12 @@ Deno.test("manual redirect blocks a forbidden hop before it is requested", async
     fetch: (input, init) => {
       calls.push(String(input));
       assert(init?.redirect === "manual", "redirects must be manual");
-      return Promise.resolve(new Response(null, {
-        status: 302,
-        headers: { location: "http://internal.example/secret" },
-      }));
+      return Promise.resolve(
+        new Response(null, {
+          status: 302,
+          headers: { location: "http://internal.example/secret" },
+        }),
+      );
     },
   });
 
@@ -61,10 +63,12 @@ Deno.test("public redirect chains re-resolve every hop and stop after three redi
       const url = new URL(String(input));
       calls.push(url.href);
       const hop = Number(url.pathname.slice(1) || "0");
-      return Promise.resolve(new Response(null, {
-        status: 302,
-        headers: { location: `https://public.example/${hop + 1}` },
-      }));
+      return Promise.resolve(
+        new Response(null, {
+          status: 302,
+          headers: { location: `https://public.example/${hop + 1}` },
+        }),
+      );
     },
   });
 
