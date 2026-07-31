@@ -460,7 +460,7 @@ when ownership does not match.
 | Owner equals origin and detaches   | Owner loss stops immediately; session terminalizes only when origin expires after grace.                                                                                                                                                   |
 | Owner send/delivery failure        | Treat as owner loss using the same transition; never grant based on delivery success.                                                                                                                                                      |
 | Reconnect                          | Snapshot first; old generation is invalid; local playback stops unless snapshot names this connection/window at current generation.                                                                                                        |
-| Hidden tab                         | Local UI may pause/stop defensively; authority changes only from backend command/connection lifecycle.                                                                                                                                     |
+| Hidden tab                         | Local UI may pause/stop defensively. If it is still the current owner at the current generation, it reports canonical `media.state` with truthful `stopped`/`paused` status under that unchanged authority, and the backend broadcasts the accepted projection to every eligible tab. Hidden state alone does not transfer, revoke, detach, or otherwise change ownership. |
 | Runtime shutdown                   | Increment/terminalize all sessions, best-effort stop current owners, then close transport/services.                                                                                                                                        |
 | Active account sign-out/change     | Terminalize all sessions for prior account before broadcasting new identity; never project prior account media into new account.                                                                                                           |
 
@@ -570,10 +570,11 @@ change. **Warning signs:** global `activeSession` without account index.
 **What goes wrong:** position reports cause memory/CPU pressure or invalid
 numbers reach UI. **Why it happens:** `media.state` is explicitly high-frequency
 and TypeScript types do not validate runtime JSON. **How to avoid:** Require
-exact keys, finite bounded numbers, coalesce projection broadcasts to a small
-cadence (recommend ≤4/second for position-only changes), but process
-status/owner changes immediately. Never debounce stop/revoke. **Warning signs:**
-every `timeupdate` causes an allocation/broadcast or accepts `NaN`/Infinity.
+exact keys, finite bounded numbers, bounded input cadence, and broadcast the
+immutable current projection to every eligible connected tab after every
+accepted transition. Do not coalesce accepted transitions; reject or rate-limit
+excess input before acceptance instead. **Warning signs:** accepted transitions
+whose projections are skipped, or input that accepts `NaN`/Infinity.
 
 ## Code Examples
 
@@ -645,7 +646,7 @@ function isCurrentOwner(
 | - | ----------------------------------------------------------------------------------------------------------------------- | ------- | ------------- |
 | — | None. Project-specific choices are recommendations under explicit agent discretion; external facts were verified/cited. | —       | —             |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 All planning-relevant questions are resolved:
 
@@ -677,6 +678,12 @@ All planning-relevant questions are resolved:
 8. **How should autoplay failure settle?**
    - Resolution: do not claim playing until `play()` fulfills; rejection leaves
      stopped/paused and surfaces a user-gesture retry.
+9. **How should a defensive hidden-tab stop affect authority?**
+   - Resolution: only the current owner at the current generation reports the
+     resulting canonical stopped/paused `media.state`; ownership and generation
+     stay unchanged, and every eligible tab receives the accepted truthful
+     projection. A hidden stale or non-owner tab stops locally without reporting
+     owner state.
 
 ## Environment Availability
 
@@ -713,7 +720,7 @@ All planning-relevant questions are resolved:
 | Stale replay reclaims playback             | Tampering               | Monotonic generation check and bounded idempotency keys.                                                                |
 | Cross-account state broadcast              | Information Disclosure  | Account-keyed recipient filter and terminalization on identity change.                                                  |
 | Malicious media URL / Blossom reference    | Tampering / SSRF        | Phase 5 scheme/redirect/size/MIME/hash policy; iframe never fetches arbitrary source by authority.                      |
-| Flood of state updates/creates             | Denial of Service       | 256 KB outer limit, exact shape/field bounds, one active account session, bounded caches, state coalescing/rate limits. |
+| Flood of state updates/creates             | Denial of Service       | 256 KB outer limit, exact shape/field bounds, one active account session, bounded caches, and pre-acceptance rate limits; every accepted transition is still broadcast to every eligible tab. |
 | Hidden stale tab continues sound           | Denial / safety failure | Revoke generation before grant, stop effect first, visibility/snapshot local stop guard.                                |
 | Guessed session ID mutates another session | Elevation               | Account-scoped canonical IDs plus origin/owner authorization independent of ID secrecy.                                 |
 | Logging media URLs/context                 | Information Disclosure  | Log only type and shortened identifiers, not sources/metadata/context.                                                  |
