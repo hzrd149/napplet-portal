@@ -52,6 +52,35 @@ overwritten by the file, so an exported value wins over `.env`. The
 `deno task check` and `deno task test` commands deliberately ignore `.env` and
 stay hermetic.
 
+## Release verification
+
+Run the production and browser gates from the repository root:
+
+```sh
+deno task check
+deno task test
+deno task build
+deno test -A tests/production_multiclient_smoke_test.ts
+deno run -A npm:@playwright/test@1.62.1 test tests/browser/portal_acceptance_test.ts --grep-invert "two browser pages"
+deno test -A tests/requirement_traceability_test.ts
+```
+
+The four non-media local Chromium rows cover phone viewports, themes, reduced
+motion, focus, history, reconnect/visibility, and intent popup behavior. The
+two-page media browser row is not a release pass: after one bounded exact-
+artifact closure attempt it still stops at sanitized `blob-unavailable` before
+media creation. The built Deno two-client media smoke passes, but does not
+replace browser playback evidence.
+
+Before a production release, review
+`.planning/phases/09-runtime-expansion-hardening/UAT-MATRIX.md`. Physical iOS
+Safari and Android Chrome safe-area/background/touch/popup/autoplay checks,
+public relay and public/local Blossom interoperability, target-deployment
+COMMON/STORAGE behavior, and the two-page media browser row are explicitly
+`NOT RUN — accepted residual risk`. Use the disposable-data scripts there; never
+record signer material, reconnect tokens, authorization headers, or private
+payloads.
+
 Configuration is read once when the process starts. Restart after changing it.
 
 | Variable                    | Meaning                                             | Default                                  |

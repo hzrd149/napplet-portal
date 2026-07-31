@@ -16,7 +16,7 @@ const DOCUMENT = `<!doctype html>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Opening napplet</title>
 <link rel="icon" href="/logo.svg" type="image/svg+xml">
-<script src="/intent-reserved.js" defer></script>
+<script src="/intent-reserved.js"></script>
 </head>
 <body><p id="status" aria-live="polite">Preparing verified napplet…</p></body>
 </html>`;

@@ -2,7 +2,7 @@
   "nodeModulesDir": "manual",
   "tasks": {
     "check": "deno fmt --check main.ts client.ts utils.ts vite.config.ts debug.ts deno.json assets routes components islands runtime tests && deno lint main.ts client.ts utils.ts vite.config.ts debug.ts routes components islands runtime tests && deno check",
-    "test": "deno test -A",
+    "test": "DENO_JOBS=1 deno test -A --ignore=tests/browser",
     "test:production-multiclient": "deno test -A tests/production_multiclient_smoke_test.ts",
     "dev": "deno task --env-file dev:server",
     "dev:server": "vite",

@@ -9,10 +9,10 @@ Milestone v1.1 expands the proven backend runtime into a resilient mobile napple
 - [x] **Phase 3: Mobile Shell Resilience** — Polish the shell and make runtime connectivity legible and recoverable on mobile. (completed 2026-07-31)
 - [x] **Phase 4: Installed Napplet Discovery** — Install, synchronize, search, and launch trusted napplets from the home catalog. (completed 2026-07-31)
 - [x] **Phase 5: Resource and Blossom Transfer** — Add bounded resource resolution and explicit multi-server uploads. (completed 2026-07-31)
-- [ ] **Phase 6: Common Data and Durable Storage** — Expose stream-oriented common Nostr helpers and isolated persistent napplet state.
+- [x] **Phase 6: Common Data and Durable Storage** — Expose stream-oriented common Nostr helpers and isolated persistent napplet state. (verified 2026-07-31)
 - [x] **Phase 7: Intent Navigation** — Route declared intents to trusted installed handlers across shell surfaces.
-- [ ] **Phase 8: Cross-Tab Media Sessions** — Coordinate one ownership-aware media session across mobile browser tabs.
-- [ ] **Phase 9: Runtime Expansion Hardening** — Verify contract parity, security boundaries, failure behavior, and real-device flows end to end.
+- [x] **Phase 8: Cross-Tab Media Sessions** — Coordinate one ownership-aware media session across mobile browser tabs. (verified 2026-07-31)
+- [ ] **Phase 9: Runtime Expansion Hardening** — Automated hardening complete; physical/live and two-page media-browser observation accepted as residual risk.
 
 ## Phase Details
 
@@ -59,6 +59,14 @@ Plans:
 
 **Goal:** Napplets can resolve bounded resources and upload blobs through backend-owned Blossom policy.
 **Requirements:** RES-01, RES-02, RES-03, UPL-01, UPL-02, UPL-03
+**Plans:** 4/4 plans complete
+
+Plans:
+
+- [x] 05-01-PLAN.md — Carry canonical RESOURCE bytes through the runtime seam.
+- [x] 05-02-PLAN.md — Enforce redirects, SSRF, limits, and local-first Blossom resolution.
+- [x] 05-03-PLAN.md — Upload through backend authorization with explicit settlement.
+- [x] 05-04-PLAN.md — Bind transfer cancellation and lifecycle ownership.
 
 **Success Criteria:**
 
@@ -71,6 +79,13 @@ Plans:
 
 **Goal:** Napplets can use common Nostr helpers and durable isolated key-value state without taking backend authority into the browser.
 **Requirements:** COM-01, COM-02, STO-01, STO-02, STO-03
+**Plans:** 3/3 plans complete
+
+Plans:
+
+- [x] 06-01-PLAN.md
+- [x] 06-02-PLAN.md
+- [x] 06-03-PLAN.md
 
 **Success Criteria:**
 
@@ -122,7 +137,7 @@ Plans:
 
 **Goal:** The full v1.1 expansion is contract-compatible, secure at every proxy boundary, and verified on mobile devices.
 **Requirements:** QLT-01, QLT-02, QLT-03, QLT-04
-**Plans:** 8/9 plans executed
+**Plans:** 9/9 plans executed
 
 Plans:
 
@@ -134,14 +149,14 @@ Plans:
 - [x] 09-06-PLAN.md — Close intent, media, reconnect, replacement, and shutdown lifecycle boundaries.
 - [x] 09-07-PLAN.md — Prove deterministic lifecycle behavior and production multi-client transport after all adversarial rows are green.
 - [x] 09-08-PLAN.md — Automate mobile viewport, accessibility, reconnect, intent, and media browser flows (four non-media rows passed; media browser observation remains accepted residual risk).
-- [ ] 09-09-PLAN.md — Reconcile canonical ledgers and publish honest UAT and release evidence.
+- [x] 09-09-PLAN.md — Reconcile canonical ledgers and publish honest UAT and release evidence.
 
 **Success Criteria:**
 
 1. Contract and dispatcher tests demonstrate parity with every pinned NAP domain used by v1.1.
 2. Adversarial tests cannot bypass URL policy, capabilities, storage isolation, signer separation, catalog authority, or sandboxing.
 3. Automated coverage exercises normal, empty, partial, denied, stale, reconnect, and failure paths and `deno task check` passes.
-4. Real-device UAT validates themes, navigation, reconnect recovery, intent surfaces, and cross-tab media ownership.
+4. **Incomplete — accepted residual risk:** real-device UAT and the two-page media browser observation were not completed; see Phase 9 `UAT-MATRIX.md` and `09-VERIFICATION.md`.
 
 ## Coverage
 

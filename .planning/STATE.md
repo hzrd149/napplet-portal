@@ -4,11 +4,11 @@ milestone: v1.1
 milestone_name: Runtime & UX Expansion
 current_phase: 9
 current_phase_name: Runtime Expansion Hardening
-status: executing
-stopped_at: "Executing 09-09 final evidence reconciliation"
+status: verifying
+stopped_at: "09-09 complete: QLT-04 accepted residual risk"
 last_updated: "2026-07-31T07:34:29.424Z"
 last_activity: 2026-07-31
-last_activity_desc: Traced QLT-01 through automated evidence and canonical ledgers
+last_activity_desc: Completed Phase 9 automated hardening evidence with QLT-04 accepted residual risk
 progress:
   total_phases: 7
   completed_phases: 6
@@ -29,9 +29,9 @@ See: .planning/PROJECT.md (updated 2026-07-30)
 ## Current Position
 
 Phase: 9 — Runtime Expansion Hardening
-Plan: 9 of 9 executing
-Status: Final evidence reconciliation
-Last activity: 2026-07-31 — Traced QLT-01 through automated evidence and canonical ledgers
+Plan: 9 of 9 complete
+Status: Automated hardening complete — QLT-04 incomplete with accepted residual risk
+Last activity: 2026-07-31 — Completed Phase 9 automated hardening evidence with QLT-04 accepted residual risk
 
 ## Performance Metrics
 
@@ -198,7 +198,7 @@ None yet.
 
 - [Phase 2+] Catalog breadth, multi-user authentication, approval UX, durable cache policy, and NAP domains beyond SHELL, IDENTITY, RELAY, and OUTBOX remain deferred.
 - [Phase 2] Fresh 2.3/Vite middleware cannot exercise WebSocket upgrades under `deno task dev`; use the production build/start path for runtime transport checks.
-- Plan 09-08: two-page Chromium media row blocked because production verified artifact resolves blob-unavailable; close before QLT-04 reconciliation
+- Release risk: QLT-04 remains incomplete. Physical iOS/Android and live-service observations were not run; the two-page Chromium media row remains unobserved after a bounded `blob-unavailable` closure attempt. See Phase 9 UAT-MATRIX.md.
 
 ### Quick Tasks Completed
 
