@@ -2,7 +2,7 @@
 status: resolved
 trigger: "The runtime repeatedly returns runtime.signer.error / Verified napplet could not be opened; determine whether napplet verification requirements should be loosened."
 created: 2026-07-31
-updated: 2026-07-31T14:48:42Z
+updated: 2026-07-31T15:07:51Z
 ---
 
 # Debug Session: Napplet Verification Policy
@@ -17,28 +17,77 @@ updated: 2026-07-31T14:48:42Z
 
 ## Current Focus
 
-- **hypothesis:** Confirmed and fixed: transient artifact unavailability and catch-all error relabeling caused the misleading signer/verification symptom; strict production verification remains correct, while explicit loopback-only unsafe local bytes provide the approved offline testing seam.
-- **test:** Human exercised the built runtime with a disposable UTF-8 HTML file in loopback unsafe mode, attempted unsafe startup on a public bind, and restarted with unsafe variables absent.
-- **expecting:** Satisfied: unsafe mode launched with persistent visual/runtime distinction and actual-byte identity, public-bind startup failed closed without path leakage, and normal mode remained verified with no unsafe marker.
-- **next_action:** None — the human-confirmed session is resolved and archived; commit and push the final resolution records.
-- **bug_class:** heisenbug-mandelbug (reclassified: the same production path now succeeds because remote artifact availability changed; the deterministic catch-all reporting defect remains reproducible)
+- **hypothesis:** Confirmed: the prior implementation added an unsafe-only loopback authorization rule that was not part of the requested one-flag local testing bypass, so the otherwise-valid private bind is rejected only when the bypass is enabled.
+- **test:** Commit the corrected debug and knowledge-base records, then push both commits to `origin/master`.
+- **expecting:** Only the intentional code commit plus resolved-session/KB commit reach the remote; unrelated research cache files remain untracked.
+- **next_action:** Commit `.planning/debug/resolved/napplet-verification-policy.md` and `.planning/debug/knowledge-base.md`, then push `master`.
+- **bug_class:** bohrbug (the same explicit unsafe configuration deterministically fails on every non-loopback bind)
 - **reasoning_checkpoint:**
-  hypothesis: "Artifact bytes were unavailable at incident time; `sendActiveSigner` then collapsed the typed resolver error into `runtime.signer.error`, making an availability failure look like signer/verification rejection."
+  hypothesis: "The unsafe-only `isLoopbackBind` authorization check causes the valid `100.77.91.59` bind to fail because it imposes a loopback requirement beyond the requested explicit one-flag local testing contract."
   confirming_evidence:
-    - "Prior runtime trace recorded `blob unavailable`, which is emitted only after the artifact fetch stage exhausts candidates."
-    - "The same manifest and production resolver now pass all signature, aggregate, capability, size/MIME, and SHA-256 checks with exact bytes from two manifest sources."
-    - "The WebSocket catch block discards the caught error and always emits `Verified napplet could not be opened` as `runtime.signer.error`."
-  falsification_test: "If the production resolver rejects the currently retrievable exact bytes with a signature, aggregate, capability, MIME, size, or SHA-256 error, then availability plus error-collapsing does not explain the symptom."
-  fix_rationale: "Keep the production resolver byte-for-byte unchanged; map its typed failures to stable sanitized artifact categories, and add a separate config-authorized loopback-only local HTML source that is explicitly marked unsafe and retains byte-size/HTML/UTF-8, iframe, signer, capability, storage, URL, and origin boundaries."
-  blind_spots: "The original transient outage cannot be replayed exactly now; physical mobile verification and a real process started with the unsafe environment remain human/E2E checks after automated coverage."
+    - "Unsafe configuration with exact `true`, an explicit HTML path, and `100.77.91.59` deterministically throws the loopback-only error."
+    - "The same bind in normal mode resolves unchanged with zero warnings, proving general bind validation accepts it."
+    - "Source inspection shows the loopback predicate is independent of the exact-boolean and explicit-path checks."
+  falsification_test: "If removing only the loopback predicate still leaves the specified unsafe configuration rejected, or if it weakens any separate path/content/identity/warning boundary test, this hypothesis is wrong or incomplete."
+  fix_rationale: "Delete only the extra loopback authorization predicate and its stale wording; retain valid bind parsing, exact opt-in parsing, the explicit local path requirement, bounded UTF-8 HTML loading, actual-byte SHA-256 identity, persistent unsafe warnings, and all runtime authority boundaries."
+  blind_spots: "Automated process bootstrap verifies config acceptance but does not prove reachability from a physical mobile device; the user-provided live bind is the production-like address for that final operational property."
   candidate_causes:
-    - "environment/data: all usable Blossom candidates were unavailable to the running process during the incident, so no executable bytes reached verification"
-    - "code: the endpoint discarded `ArtifactResolutionError` and mislabeled every artifact failure as a signer error"
-    - "config: there was no fail-closed local artifact mode for intentionally offline loopback testing"
-  and_gate: "yes — the reported generic repeated symptom required both an artifact-resolution failure and the catch-all transport mapping; the absence of a local mode separately prevented testing through such outages"
+    - "code: `loadRuntimeConfig` throws on every unsafe non-loopback bind even after general bind validation succeeds"
+    - "config: the reported bind might have been malformed or rejected by the shared validator, which the normal-mode control disproved"
+    - "environment: host routing/firewall could still affect mobile reachability after startup, but cannot explain the observed pre-serve config throw"
+  and_gate: "no — the loopback predicate alone fully explains the deterministic startup rejection; network reachability is a separate post-start concern"
 - **tdd_checkpoint:**
 
 ## Evidence
+
+- timestamp: 2026-07-31T14:54:28Z
+  checked: Reopened-session knowledge-base record and complete unsafe configuration/bootstrap implementation
+  found: The prior KB entry repeats the loopback-only design. `loadRuntimeConfig` independently validates `PORTAL_BIND`, then throws whenever unsafe mode is enabled and the already-valid bind is not numeric loopback; `runtime/bind.ts` delegates to that function, so the same policy blocks production startup. The exact boolean and explicit-path checks are separate predicates.
+  implication: The reported private bind is rejected solely by a policy predicate added in the previous fix; removing it need not affect bind syntax validation or any other unsafe artifact boundary.
+- timestamp: 2026-07-31T14:54:54Z
+  checked: One-variable unsafe configuration reproduction on `PORTAL_BIND=100.77.91.59`
+  found: `loadRuntimeConfig` deterministically threw `Unsafe local artifact mode requires a validated loopback PORTAL_BIND` before returning configuration.
+  implication: The user-reported workflow is reproducible, and the thrown message identifies the loopback-only admission predicate as the immediate failure site.
+- timestamp: 2026-07-31T14:55:20Z
+  checked: Normal-mode control using the identical `PORTAL_BIND=100.77.91.59`
+  found: `loadRuntimeConfig` returned bind `100.77.91.59`, `unsafeSkipVerification=false`, and zero warnings.
+  implication: The bind is valid configuration; the unsafe-only loopback check is the confirmed single cause of the pre-serve rejection.
+- timestamp: 2026-07-31T14:56:39Z
+  checked: Pre-fix specified-oracle regressions for config and production bootstrap
+  found: `deno test -A tests/config_test.ts tests/env_test.ts` produced exactly two failures: direct unsafe config threw the loopback error, and `runtime/bind.ts` exited nonzero instead of printing `100.77.91.59`. The new normal-mode control and seven adjacent tests passed.
+  implication: The regressions reproduce the precise requirement defect without weakening normal verified mode or unrelated configuration behavior.
+- timestamp: 2026-07-31T14:57:43Z
+  checked: Post-fix specified-oracle config and production-bootstrap regressions
+  found: All 9 tests passed. Unsafe mode retained `100.77.91.59`, the bootstrap printed that bind and emitted a sanitized persistent `UNSAFE` warning, normal mode stayed unsafe-disabled and warning-free, and exact boolean/path plus invalid-bind checks remained green.
+  implication: Removing only the loopback predicate fixes the requested configuration seam while retaining adjacent fail-closed configuration behavior.
+- timestamp: 2026-07-31T14:58:25Z
+  checked: Focused unsafe/artifact/runtime/controller/UI/WebSocket regression matrix
+  found: All 46 focused tests passed across config, environment bootstrap, artifact resolution, end-to-end runtime, controller classification, setup visibility, and WebSocket error handling.
+  implication: The bind correction leaves the 5 MiB/UTF-8/HTML boundaries, actual-byte identity, retained capabilities, unsafe markers, persistent UI warning, and typed artifact failures intact.
+- timestamp: 2026-07-31T14:58:48Z
+  checked: Full formatting, lint, and type-check gate
+  found: `deno task check` passed after checking formatting across 139 files, lint across 135 files, and all TypeScript modules.
+  implication: The minimal correction is formatted, lint-clean, and type-correct across the project.
+- timestamp: 2026-07-31T15:04:49Z
+  checked: Full non-browser project test suite with a bounded summary capture
+  found: `deno task test` exited 0 with 298 passed, 0 failed in 2m3s.
+  implication: All project configuration, artifact, runtime, security, and documentation regressions remain green after the bind-policy correction.
+- timestamp: 2026-07-31T15:05:41Z
+  checked: Production build and fix diff/mutation-tool availability
+  found: `deno task build` completed 54-module client and 865-module SSR bundles. The diff removes only the RCA-identified loopback authorization and replaces its tests/copy with specified behavior; no Stryker or other mutation configuration exists.
+  implication: Production bundling passes. The no-op/deletion signal is justified by the confirmed over-constraint, and mutation testing must be recorded as skipped rather than passed.
+- timestamp: 2026-07-31T15:06:12Z
+  checked: Revert half of the fix-acceptance counterfactual
+  found: With only the loopback predicate restored and the corrected regressions retained, the target returned to exactly 7 passed and 2 failed at the direct config and production-bootstrap private-bind checks.
+  implication: The reported defect returns when the removed predicate returns; reapplying the correction must now reconfirm causation.
+- timestamp: 2026-07-31T15:07:02Z
+  checked: Reapply half of the fix-acceptance counterfactual
+  found: Removing the predicate again restored the identical target to 9 passed, 0 failed. All five applicable guardrail signals now agree; mutation testing is the only skipped signal because no mutation tool is configured.
+  implication: The code change is causally responsible for the corrected behavior and is accepted for commit.
+- timestamp: 2026-07-31T15:07:51Z
+  checked: Final implementation diff and code commit
+  found: `git diff --check` passed; commit `b43510e` contains only `.env.example`, `README.md`, `runtime/config.ts`, `tests/config_test.ts`, and `tests/env_test.ts`. Unrelated `.planning/research/.cache` files were not staged.
+  implication: The minimal correction is committed atomically and the resolved records can be updated without incorporating unrelated worktree state.
 
 - timestamp: 2026-07-31T13:44:31Z
   checked: Phase 0 semantic/keyword knowledge-base recall
@@ -100,15 +149,14 @@ updated: 2026-07-31T14:48:42Z
 
 ## Resolution
 
-- **root_cause:** At incident time, no artifact source delivered bytes to the runtime; independently, `sendActiveSigner` discarded the typed `ArtifactResolutionError` and emitted a generic `runtime.signer.error`, misrepresenting availability as signer/verification failure. Current exact bytes pass the unchanged production verifier, so verification strictness is not causal.
-- **fix:** Kept the normal `resolveNapplet` verification path unchanged; added stable sanitized `runtime.artifact.error` categories; added off-by-default `NAPPLET_UNSAFE_SKIP_VERIFICATION` plus explicit `NAPPLET_UNSAFE_LOCAL_ARTIFACT_PATH`, rejected before serving unless the bind is numeric loopback; bounded local input to UTF-8 HTML and 5 MiB; assigned actual-byte SHA-256 identity; marked runtime/browser/startup as `unsafe-local`; retained origin, sandbox, signer, capability, storage, URL, and message boundaries.
+- **root_cause:** The original incident combined transient artifact unavailability with catch-all artifact error relabeling. During its fix, unsafe local testing was additionally restricted to numeric loopback binds; that extra policy deterministically rejects the otherwise-valid private/mobile bind `100.77.91.59` and was not part of the requested explicit one-flag bypass contract.
+- **fix:** Preserved the original typed artifact error mapping and unsafe local artifact boundaries, but removed the extra unsafe-only numeric-loopback admission check. Unsafe mode now accepts any separately validated `PORTAL_BIND`, including `100.77.91.59`, while exact opt-in, explicit path, 5 MiB/UTF-8/HTML checks, actual-byte SHA-256 identity, persistent warnings, and all non-verification authority boundaries remain unchanged. README and `.env.example` now describe trusted private-network mobile testing without a second acknowledgment flag.
 - **verification:**
-  target_test: { result: pass, detail: "45/45 focused tests" }
+  target_test: { result: pass, detail: "9/9 corrected config and production-bootstrap tests" }
   mutation_check: { result: skipped, reason_if_skipped: "no Stryker/package mutation configuration", mutant_killed: false }
-  no_op_deletion: { result: pass, deletion_justified_by_rca: false }
-  adjacent_tests: { result: pass, suites_run: ["45 focused config/env/artifact/runtime/controller/UI/WebSocket tests", "296 full non-browser tests", "deno task check", "deno task build"] }
+  no_op_deletion: { result: pass, deletion_justified_by_rca: true, detail: "removed only the confirmed extra authorization predicate" }
+  adjacent_tests: { result: pass, suites_run: ["46 focused config/env/artifact/runtime/controller/UI/WebSocket tests", "298 full non-browser tests", "deno task check", "deno task build"] }
   revert_and_reconfirm: { result: pass, bug_returned_on_revert: true, fixed_on_reapply: true }
-  human_checkpoint: { result: pass, detail: "Approved local unsafe-mode, public-bind rejection, and normal verified-mode workflows all passed" }
   guardrail_verdict: accepted
 - **oracle_type:** specified — explicit user security/configuration contract plus existing NIP-5D/runtime transport contracts.
 - **files_changed:** [.env.example, README.md, assets/styles.css, deno.json, islands/NappletShell.tsx, main.ts, routes/api/runtime.ts, routes/index.tsx, runtime/artifacts.ts, runtime/config.ts, runtime/portal_runtime.ts, shell/connection.ts, tests/artifact_resolver_test.ts, tests/config_test.ts, tests/connection_controller_test.ts, tests/end_to_end_test.ts, tests/env_test.ts, tests/setup_visibility_test.tsx, tests/websocket_session_test.ts]
@@ -120,5 +168,11 @@ updated: 2026-07-31T14:48:42Z
   - **Code branch:** The user saw a signer/verification failure because `sendActiveSigner` discarded the typed `ArtifactResolutionError`. The transport catch-all emitted one generic `runtime.signer.error`, so the UI and operator could not distinguish an unavailable artifact from invalid bytes or signer failure.
   - **Config branch:** Offline testing remained blocked because the only launch path required remotely retrieved verified bytes. No explicit local-source configuration existed, so a controlled test could not bypass remote availability while retaining the remaining runtime authority boundaries.
   - **AND-gate:** The misleading reported incident required both remote artifact unavailability and catch-all error relabeling. The lack of a local testing seam was a separate contributor to recovery/testing, not a reason to weaken production verification.
-- **Why not caught:** No regression gate covered typed artifact-error preservation across the WebSocket boundary, and no configuration/runtime/UI test matrix covered a fail-closed, visibly distinct, loopback-only local artifact mode.
-- **Recurrence guard:** Passing regressions now cover stable `runtime.artifact.error` mapping in `tests/websocket_session_test.ts`, explicit/off-by-default loopback configuration in `tests/config_test.ts`, public-bind bootstrap rejection without path leakage in `tests/env_test.ts`, bounded actual-byte local identity and capability retention in `tests/artifact_resolver_test.ts` and `tests/end_to_end_test.ts`, controller distinction in `tests/connection_controller_test.ts`, and persistent UI distinction in `tests/setup_visibility_test.tsx`.
+- **Why not caught:** No regression gate covered typed artifact-error preservation across the WebSocket boundary, and the first unsafe-mode regression matrix encoded an agent-added loopback restriction instead of the requested mobile/private-bind workflow.
+- **Recurrence guard:** Passing regressions cover stable `runtime.artifact.error` mapping in `tests/websocket_session_test.ts`; exact/off-by-default unsafe configuration plus private-bind and normal-mode controls in `tests/config_test.ts`; private-bind production bootstrap with sanitized warning in `tests/env_test.ts`; bounded actual-byte identity and capability retention in `tests/artifact_resolver_test.ts` and `tests/end_to_end_test.ts`; controller classification in `tests/connection_controller_test.ts`; and persistent UI distinction in `tests/setup_visibility_test.tsx`.
+
+### Requirements correction: private/mobile bind admission
+
+- **Branched 5-Whys:** The unsafe testing flag remained unusable in the live mobile workflow because the prior fix treated loopback-only admission as a security requirement. General bind validation already accepts the private address, and artifact authority remains gated by exact opt-in plus an explicit local file; the additional bind predicate was therefore an independent code-policy over-constraint rather than a necessary part of the bypass boundary. Host routing or firewall state can affect reachability after startup, but cannot cause the observed pre-serve loopback exception.
+- **Why not caught:** The original regression suite encoded the agent-added loopback policy as its oracle instead of checking the requested mobile/private-bind workflow, so check, test, build, and human verification all reinforced the wrong requirement.
+- **Recurrence guard:** `tests/config_test.ts` now requires unsafe mode to retain `100.77.91.59` and separately requires normal mode to stay unsafe-disabled and warning-free; `tests/env_test.ts` requires the production bind bootstrap to accept that address while emitting a sanitized persistent unsafe warning.
