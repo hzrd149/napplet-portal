@@ -1,10 +1,9 @@
 import fixture from "./fixtures/supplied_napplet_contract.json" with {
   type: "json",
 };
-import { BehaviorSubject, Subject } from "npm:rxjs@7.8.2";
+import { Subject } from "npm:rxjs@7.8.2";
 import { OutboxAdapter, type OutboxRawItem } from "../runtime/outbox.ts";
-import { RuntimeServiceHub } from "../runtime/portal_runtime.ts";
-import type { IdentitySnapshot } from "../runtime/accounts.ts";
+import { createPortalRuntime } from "../runtime/portal_runtime.ts";
 import { createVerifiedIdentityPublisher } from "../components/NappletFrame.tsx";
 import {
   BackendRelayAdapter,
@@ -49,56 +48,71 @@ Deno.test("sign-out identity delivery is exact once and verified-source bound", 
   );
 });
 
-Deno.test("identity broadcasts browser-safe active offline and unavailable states", () => {
-  const identity$ = new BehaviorSubject<IdentitySnapshot>({
-    accountId: null,
-    pubkey: null,
-    status: "unavailable",
-  });
-  const hub = new RuntimeServiceHub({ identity$ });
-  const first: IdentitySnapshot[] = [];
-  const second: IdentitySnapshot[] = [];
-  const one = hub.openWindow("one", (message) => {
-    if (message.type === "identity.changed") first.push(message.identity);
-  });
-  hub.openWindow("two", (message) => {
-    if (message.type === "identity.changed") second.push(message.identity);
-  });
-  identity$.next({
-    accountId: "account",
-    pubkey: "f".repeat(64),
-    status: "active",
-  });
-  identity$.next({
-    accountId: "account",
-    pubkey: "f".repeat(64),
-    status: "offline",
-  });
-  one.close();
-  identity$.next({ accountId: null, pubkey: null, status: "unavailable" });
+Deno.test("identity broadcasts browser-safe active and unavailable states across windows", () => {
+  const runtime = createPortalRuntime({ fixture });
+  const first: Array<{ identity: { status: string } }> = [];
+  const second: Array<{ identity: { status: string } }> = [];
+  const one = runtime.openWindow(
+    "connection-one",
+    "window-one",
+    {},
+    (message) => first.push(message as { identity: { status: string } }),
+  );
+  const two = runtime.openWindow(
+    "connection-two",
+    "window-two",
+    {},
+    (message) => second.push(message as { identity: { status: string } }),
+  );
 
+  one.replayIdentity();
+  two.replayIdentity();
   assert(
-    first.map((value) => value.status).join(",") ===
-      "unavailable,active,offline",
-    "closed window must stop immediately",
+    first.at(-1)?.identity.status === "unavailable",
+    "no active account starts unavailable",
+  );
+
+  runtime.signIn("f".repeat(64));
+  one.replayIdentity();
+  two.replayIdentity();
+  assert(
+    first.at(-1)?.identity.status === "active",
+    "sign-in must be observable by every window",
   );
   assert(
-    second.at(-1)?.status === "unavailable",
+    second.at(-1)?.identity.status === "active",
+    "both windows observe the same active identity",
+  );
+
+  // AccountRuntime (the tracer account authority behind createPortalRuntime)
+  // only ever reports "active" — the intermediate "offline" leg cannot be
+  // driven through this real bridge. PortalAccounts' offline status
+  // transitions are covered separately in tests/accounts_test.ts (see
+  // "restored unavailable NIP-46 remains active offline and retries").
+
+  runtime.destroyWindow("window-one");
+  const beforeClose = first.length;
+  one.replayIdentity();
+  assert(
+    first.length === beforeClose,
+    "closed window must stop receiving identity updates",
+  );
+
+  runtime.signOut();
+  two.replayIdentity();
+  assert(
+    second.at(-1)?.identity.status === "unavailable",
     "remaining window must receive sign-out",
   );
   assert(
     JSON.stringify(second).includes("signer") === false,
     "identity must contain no signer material",
   );
-  hub.destroy();
+
+  runtime.destroy();
 });
 
-Deno.test("one service hub shares relay authority while windows stay independent", () => {
-  const identity$ = new BehaviorSubject<IdentitySnapshot>({
-    accountId: "a",
-    pubkey: "f".repeat(64),
-    status: "active",
-  });
+Deno.test("BackendRelayAdapter shares relay authority while windows stay independent", () => {
   const raw = new Subject<RawRelayItem>();
   let poolRequests = 0;
   const relay = new BackendRelayAdapter({
@@ -110,35 +124,32 @@ Deno.test("one service hub shares relay authority while windows stay independent
       },
     },
   });
-  const hub = new RuntimeServiceHub({ identity$, relay });
   const first: string[] = [];
   const second: string[] = [];
-  const one = hub.openWindow(
-    "window-one",
+  const oneSubscription = relay.subscribe(
+    { connectionId: "one", windowId: "window-one" },
+    {
+      type: "relay.subscribe",
+      id: "1",
+      subId: "same",
+      relay: "wss://relay",
+      filters: [],
+    },
     (message) => first.push(message.type),
-    "one",
   );
-  const two = hub.openWindow(
-    "window-two",
+  relay.subscribe(
+    { connectionId: "two", windowId: "window-two" },
+    {
+      type: "relay.subscribe",
+      id: "2",
+      subId: "same",
+      relay: "wss://relay",
+      filters: [],
+    },
     (message) => second.push(message.type),
-    "two",
   );
-  one.subscribeRelay({
-    type: "relay.subscribe",
-    id: "1",
-    subId: "same",
-    relay: "wss://relay",
-    filters: [],
-  });
-  two.subscribeRelay({
-    type: "relay.subscribe",
-    id: "2",
-    subId: "same",
-    relay: "wss://relay",
-    filters: [],
-  });
   raw.next({ type: "EVENT", event: fixture.events.live, from: "wss://relay" });
-  one.close();
+  oneSubscription.close();
   assert(
     first.includes("relay.event") && second.includes("relay.event"),
     "shared authority must deliver to both windows",
@@ -151,7 +162,7 @@ Deno.test("one service hub shares relay authority while windows stay independent
     poolRequests === 2,
     "logical subscriptions share one injected pool instance",
   );
-  hub.destroy();
+  relay.destroy();
 });
 
 Deno.test("OUTBOX merges preset and NIP-65 relays, omits EOSE, and signs before settled publish", async () => {

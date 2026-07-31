@@ -2,15 +2,9 @@ import { injectNappletNamespacePrelude } from "@kehto/shell";
 import type { NostrEvent } from "@napplet/core";
 import { verifyEvent } from "nostr-tools";
 import type { RelaySubscribeMessage } from "@napplet/nap/relay";
-import type {
-  IntentAvailableResultMessage,
-  IntentChangedMessage,
-  IntentHandlersResultMessage,
-} from "@napplet/nap/intent";
-import type { BehaviorSubject } from "npm:rxjs@7.8.2";
 import { debug as rootDebug, shortId } from "../debug.ts";
 import { MediaSessionCoordinator } from "./media_sessions.ts";
-import { AccountRuntime, type IdentitySnapshot } from "./accounts.ts";
+import { AccountRuntime } from "./accounts.ts";
 import {
   loadUnsafeLocalArtifact,
   PortalArtifactResolver,
@@ -19,22 +13,11 @@ import {
 import { BlossomCache } from "./blossom_cache.ts";
 import { ConnectionRegistry } from "./connections.ts";
 import { createEventRuntime, type EventRuntime } from "./event_runtime.ts";
-import type {
-  OutboxAdapter,
-  OutboxStreamMessage,
-  OutboxSubscribeRequest,
-} from "./outbox.ts";
-import {
-  type BackendRelayAdapter,
-  type RelayOwner,
-  type RelayStreamMessage,
-  type RelaySubscribeRequest,
-  TracerRelayAdapter,
-} from "./relay_adapter.ts";
+import { TracerRelayAdapter } from "./relay_adapter.ts";
 import type { RuntimeSettingsService } from "./settings.ts";
-import type { CatalogProjection, CatalogService } from "./catalog.ts";
+import type { CatalogService } from "./catalog.ts";
 import { decodeArchetypeDeclarations } from "./catalog.ts";
-import { type IntentReply, IntentService } from "./intent.ts";
+import { IntentService } from "./intent.ts";
 import type {
   CatalogCommand,
   IntentCommand,
@@ -102,199 +85,6 @@ class RuntimeEvents {
       this.#listeners.size,
     );
     for (const listener of this.#listeners) listener(event);
-  }
-}
-
-export interface IdentityRuntimeMessage {
-  readonly type: "identity.changed";
-  readonly identity: IdentitySnapshot;
-}
-
-type ServiceMessage =
-  | IdentityRuntimeMessage
-  | RelayStreamMessage
-  | OutboxStreamMessage
-  | IntentReply
-  | IntentNavigationMessage
-  | IntentAvailableResultMessage
-  | IntentHandlersResultMessage
-  | IntentChangedMessage;
-
-interface RuntimeServiceHubOptions {
-  readonly identity$: BehaviorSubject<IdentitySnapshot>;
-  readonly relay?: BackendRelayAdapter;
-  readonly outbox?: OutboxAdapter;
-  readonly cache?: { destroy?(): void };
-  readonly catalog?: CatalogService;
-  readonly intents?: IntentService;
-}
-
-export class RuntimeServiceHub {
-  readonly #identity$: BehaviorSubject<IdentitySnapshot>;
-  readonly #windows = new Map<string, (message: ServiceMessage) => void>();
-  readonly #subscription: { unsubscribe(): void };
-  readonly #relay?: BackendRelayAdapter;
-  readonly #outbox?: OutboxAdapter;
-  readonly #cache?: { destroy?(): void };
-  readonly #catalog?: CatalogService;
-  readonly #intents?: IntentService;
-  readonly #windowCleanups = new Map<string, Set<() => void>>();
-
-  constructor(options: RuntimeServiceHubOptions) {
-    this.#identity$ = options.identity$;
-    this.#relay = options.relay;
-    this.#outbox = options.outbox;
-    this.#cache = options.cache;
-    this.#catalog = options.catalog;
-    this.#intents = options.intents;
-    this.#subscription = this.#identity$.subscribe((identity) => {
-      debug(
-        "broadcast identity status=%s account=%s windows=%d",
-        identity.status,
-        shortId(identity.accountId),
-        this.#windows.size,
-      );
-      const message: IdentityRuntimeMessage = {
-        type: "identity.changed",
-        identity,
-      };
-      for (const send of this.#windows.values()) send(message);
-    });
-  }
-
-  openWindow(
-    windowId: string,
-    send: (message: ServiceMessage) => void,
-    connectionId = "runtime",
-  ) {
-    debug(
-      "open window connection=%s window=%s",
-      shortId(connectionId),
-      shortId(windowId),
-    );
-    this.#closeWindow(windowId);
-    this.#windows.set(windowId, send);
-    const cleanups = new Set<() => void>();
-    this.#windowCleanups.set(windowId, cleanups);
-    send({ type: "identity.changed", identity: this.#identity$.value });
-    const owner: RelayOwner = { connectionId, windowId };
-    if (this.#intents) cleanups.add(this.#intents.subscribe(send));
-    return {
-      intentQuery: (command: IntentCommand) => {
-        if (!this.#intents) throw new Error("intent service unavailable");
-        if (command.type === "intent.available") {
-          send({
-            type: "intent.available.result",
-            id: command.id,
-            availability: this.#intents.available(command.archetype),
-          });
-        } else if (command.type === "intent.handlers") {
-          send({
-            type: "intent.handlers.result",
-            id: command.id,
-            handlers: [...this.#intents.handlers()],
-          });
-        }
-      },
-      reserveIntent: (
-        reservation: Extract<
-          IntentNavigationMessage,
-          { type: "intent.navigation.reserve" }
-        >,
-        command: Extract<IntentCommand, { type: "intent.invoke" }>,
-      ) => this.#intents?.reserve(owner, reservation, command, send),
-      acknowledgeIntent: (
-        ack: Extract<
-          IntentNavigationMessage,
-          { type: "intent.navigation.ack" }
-        >,
-      ) => this.#intents?.acknowledge(owner, ack) ?? false,
-      claimIntentTicket: (
-        claim: Extract<
-          IntentNavigationMessage,
-          { type: "intent.ticket.claim" }
-        >,
-      ) => this.#intents?.claim(owner, claim) ?? null,
-      catalog: (): Promise<CatalogProjection> =>
-        this.#catalog?.project() ??
-          Promise.resolve({
-            catalogEventId: null,
-            entries: [],
-            status: "idle",
-          }),
-      catalogCommand: (command: CatalogCommand) => {
-        if (!this.#catalog) throw new Error("catalog service unavailable");
-        switch (command.type) {
-          case "catalog.preview":
-            return this.#catalog.previewInstall(command.naddr);
-          case "catalog.approve":
-            return this.#catalog.approveManifestUpdate(
-              command.id,
-              command.coordinate,
-              command.manifestEventId,
-              command.sourceCatalogEventId,
-            );
-          case "catalog.uninstall":
-            return this.#catalog.uninstallNapplet(
-              command.id,
-              command.coordinate,
-            );
-          case "catalog.launch":
-            return this.#catalog.launch(
-              command.catalogEventId,
-              command.coordinate,
-              command.manifestEventId,
-            );
-        }
-      },
-      subscribeRelay: (request: RelaySubscribeRequest) => {
-        if (!this.#relay) throw new Error("relay service unavailable");
-        debug(
-          "window relay subscribe connection=%s window=%s sub=%s relay=%s",
-          shortId(connectionId),
-          shortId(windowId),
-          request.subId,
-          request.relay,
-        );
-        const subscription = this.#relay.subscribe(owner, request, send);
-        cleanups.add(subscription.close);
-        return subscription;
-      },
-      subscribeOutbox: (request: OutboxSubscribeRequest) => {
-        if (!this.#outbox) throw new Error("outbox service unavailable");
-        debug(
-          "window outbox subscribe connection=%s window=%s sub=%s",
-          shortId(connectionId),
-          shortId(windowId),
-          request.subId,
-        );
-        const subscription = this.#outbox.subscribe(owner, request, send);
-        cleanups.add(subscription.close);
-        return subscription;
-      },
-      close: () => this.#closeWindow(windowId),
-    };
-  }
-
-  destroy(): void {
-    debug("destroy started windows=%d", this.#windows.size);
-    for (const windowId of [...this.#windows.keys()]) {
-      this.#closeWindow(windowId);
-    }
-    this.#subscription.unsubscribe();
-    this.#outbox?.destroy();
-    this.#relay?.destroy();
-    this.#cache?.destroy?.();
-    debug("destroy complete");
-  }
-
-  #closeWindow(windowId: string): void {
-    const hadWindow = this.#windows.delete(windowId);
-    debug("close window window=%s known=%s", shortId(windowId), hadWindow);
-    const cleanups = this.#windowCleanups.get(windowId);
-    this.#windowCleanups.delete(windowId);
-    for (const cleanup of cleanups ?? []) cleanup();
-    this.#intents?.abortWindow(windowId);
   }
 }
 
