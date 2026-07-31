@@ -31,7 +31,10 @@ Deno.test("theme preference validation and resolution are closed and determinist
 });
 
 Deno.test("storage failures and invalid values safely become System", () => {
-  assert(readThemePreference(undefined) === "system", "missing storage is safe");
+  assert(
+    readThemePreference(undefined) === "system",
+    "missing storage is safe",
+  );
   assert(
     readThemePreference({ getItem: () => "sepia" }) === "system",
     "invalid storage is safe",
@@ -60,19 +63,32 @@ Deno.test("theme application uses fixed document values and one global meta owne
   assert(root.style.colorScheme === "dark", "native color scheme applied");
   assert(meta.content === DARK_THEME_COLOR, "dark browser chrome applied");
   applyTheme("light", { root, themeColor: meta });
-  assert(meta.content === LIGHT_THEME_COLOR, "light browser chrome applied");
+  assert(
+    String(meta.content) === LIGHT_THEME_COLOR,
+    "light browser chrome applied",
+  );
 });
 
 Deno.test("document bootstrap precedes body and owns one stable theme-color", async () => {
   const app = await Deno.readTextFile("routes/_app.tsx");
-  assert(app.indexOf("THEME_BOOTSTRAP_SCRIPT") < app.indexOf("<body"), "bootstrap precedes body");
+  assert(
+    app.indexOf("THEME_BOOTSTRAP_SCRIPT") < app.indexOf("<body"),
+    "bootstrap precedes body",
+  );
   assert(
     (app.match(/name="theme-color"/g) ?? []).length === 1,
     "one global theme-color meta exists",
   );
   assert(!app.includes("unsafe-inline"), "theme does not weaken CSP");
   const theme = await Deno.readTextFile("shell/theme.ts");
-  for (const forbidden of ["postMessage", "iframe", "runtime.forward", "NappletFrame"]) {
+  for (
+    const forbidden of [
+      "postMessage",
+      "iframe",
+      "runtime.forward",
+      "NappletFrame",
+    ]
+  ) {
     assert(!theme.includes(forbidden), `theme excludes ${forbidden}`);
   }
 });
@@ -107,14 +123,20 @@ Deno.test("theme controller persists choices and observes OS only in System mode
   notify?.();
   assert(applied.at(-1) === "dark", "OS change applies live");
   controller.setPreference("light");
-  assert(listener === undefined && removed === 1, "explicit choice removes listener");
+  assert(
+    listener === undefined && removed === 1,
+    "explicit choice removes listener",
+  );
   assert(stored.at(-1) === `${THEME_STORAGE_KEY}:light`, "choice persists");
   assert(applied.at(-1) === "light", "choice applies immediately");
   controller.setPreference("system");
   assert(listener !== undefined, "returning to System replaces listener");
   controller.dispose();
   assert(listener === undefined && removed >= 2, "unmount removes listener");
-  assert(THEME_MEDIA_QUERY === "(prefers-color-scheme: dark)", "one media query is shared");
+  assert(
+    THEME_MEDIA_QUERY === "(prefers-color-scheme: dark)",
+    "one media query is shared",
+  );
 });
 
 Deno.test("theme controls are accessible and account-independent", async () => {
@@ -129,8 +151,14 @@ Deno.test("theme controls are accessible and account-independent", async () => {
   for (const choice of ["System", "Light", "Dark"]) {
     assert(html.includes(`>${choice}<`), `${choice} is explicit`);
   }
-  assert((html.match(/type="radio"/g) ?? []).length === 3, "exactly three radio choices");
+  assert(
+    (html.match(/type="radio"/g) ?? []).length === 3,
+    "exactly three radio choices",
+  );
   const styles = await Deno.readTextFile("assets/styles.css");
   assert(!styles.includes("transition: color"), "colors do not interpolate");
-  assert(!styles.includes("transition: background"), "backgrounds do not interpolate");
+  assert(
+    !styles.includes("transition: background"),
+    "backgrounds do not interpolate",
+  );
 });
