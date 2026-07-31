@@ -37,19 +37,23 @@ Deno.test("detach revokes immediately while origin expires after grace", () => {
   });
   const clock = new FakeClock();
   let sequence = 0;
-  let actor!: MediaActorRef;
+  const lifecycle: { actor?: MediaActorRef } = {};
   const registry = new ConnectionRegistry({
     createId: () => `id-${++sequence}`,
     graceMs: 100,
     setTimeout: clock.setTimeout,
     clearTimeout: clock.clearTimeout,
     detachConnection: (connectionId) =>
-      coordinator.detach({ ...actor, connectionId }),
-    destroyWindow: () => coordinator.expireOrigin(actor),
+      coordinator.detach({ ...lifecycle.actor!, connectionId }),
+    destroyWindow: () => coordinator.expireOrigin(lifecycle.actor!),
   });
   const attached = registry.attach(() => {});
   const window = registry.createWindow(attached.connectionId);
-  actor = { connectionId: attached.connectionId, windowId: window.windowId };
+  const actor = {
+    connectionId: attached.connectionId,
+    windowId: window.windowId,
+  };
+  lifecycle.actor = actor;
   coordinator.connect("account", actor);
   coordinator.connect("foreign", { connectionId: "foreign", windowId: "wf" });
   coordinator.receive("account", actor, {
