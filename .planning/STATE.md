@@ -4,16 +4,16 @@ milestone: v1.1
 milestone_name: Runtime & UX Expansion
 current_phase: 4
 current_phase_name: Installed Napplet Discovery
-status: planning
-stopped_at: Completed 03-05-PLAN.md
-last_updated: "2026-07-31T00:47:47.855Z"
+status: executing
+stopped_at: Completed 04-01-PLAN.md
+last_updated: "2026-07-31T01:16:44.809Z"
 last_activity: 2026-07-31
-last_activity_desc: Phase 3 complete, transitioned to Phase 4
+last_activity_desc: Completed Phase 4 Plan 01 backend catalog authority
 progress:
   total_phases: 7
   completed_phases: 1
-  total_plans: 5
-  completed_plans: 5
+  total_plans: 9
+  completed_plans: 6
   percent: 14
 ---
 
@@ -24,14 +24,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-30)
 
 **Core value:** A napplet can run in a mobile browser while a server-side Deno runtime handles the heavy Nostr/runtime work.
-**Current focus:** Phase 3 — Mobile Shell Resilience
+**Current focus:** Phase 4 — Installed Napplet Discovery
 
 ## Current Position
 
 Phase: 4 — Installed Napplet Discovery
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-07-31 — Phase 3 complete, transitioned to Phase 4
+Plan: 1 of 4 complete
+Status: In progress
+Last activity: 2026-07-31 — Completed Phase 4 Plan 01 backend catalog authority
 
 ## Performance Metrics
 
@@ -78,6 +78,7 @@ Last activity: 2026-07-31 — Phase 3 complete, transitioned to Phase 4
 | Phase 03 P03 | 8min | 2 tasks | 6 files |
 | Phase 03 P04 | 6min | 3 tasks | 6 files |
 | Phase 03 P05 | 3min | 2 tasks | 6 files |
+| Phase 04 P01 | 14min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -127,6 +128,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase ?]: [Phase 03]: Leave routes/_app.tsx as the sole owner of browser theme-color metadata.
 - [Phase ?]: [Phase 03]: Stable geometry identifiers mechanically link the ready PortalMark to the static SVG asset.
 - [Phase ?]: [Phase 03]: The canonical square SVG is the sole favicon; the stale Fresh ICO fallback is removed.
+- [Phase ?]: [Phase 04]: Accepted membership projects immediately while four-worker exact-key enrichment remains generation-checked.
+- [Phase ?]: [Phase 04]: Install approval is source-catalog-bound and launch releases bytes only for the latest exact accepted triple.
 
 ### Pending Todos
 
@@ -155,6 +158,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-07-31T00:42:39.645Z
-Stopped at: Completed 03-05-PLAN.md
+Last session: 2026-07-31T01:16:44.797Z
+Stopped at: Completed 04-01-PLAN.md
 Resume file: None

@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 1
+open_count: 3
 waived_count: 0
 fixed_count: 5
-total_count: 6
-last_updated: 2026-07-31T00:17:08.965Z
+total_count: 8
+last_updated: 2026-07-31T01:16:44.087Z
 ---
 
 # Broken Windows Ledger
@@ -21,6 +21,8 @@ last_updated: 2026-07-31T00:17:08.965Z
 | 4 | 01 | deviation | runtime/outbox.ts |  | Made OUTBOX and replaced-window cleanup idempotent and replay-safe | fixed |  | 2026-07-30T13:24:01.738Z | 2026-07-30T13:24:01.859Z |
 | 5 | 03 | deviation | runtime/port.ts |  | Added validated PORTAL_PORT support for unattended production smoke | fixed |  | 2026-07-31T00:16:41.967Z | 2026-07-31T00:17:08.857Z |
 | 6 | 03 | deviation | tests/shell_architecture_test.ts |  | Aligned legacy transport assertions with controller-owned recovery | fixed |  | 2026-07-31T00:16:42.072Z | 2026-07-31T00:17:08.965Z |
+| 7 | 04 | unrun-verify | tests/runtime_reconnect_smoke_test.ts |  | Production reconnect smoke could not reach its spawned loopback server; focused Phase 04-01 verification passed | open |  | 2026-07-31T01:16:43.974Z |  |
+| 8 | 04 | deviation | runtime/catalog.ts |  | Corrected redundant async and mutable in-flight task binding during static verification | open |  | 2026-07-31T01:16:44.087Z |  |
 
 ````json
 [
@@ -95,6 +97,30 @@ last_updated: 2026-07-31T00:17:08.965Z
     "reason": "",
     "recorded_at": "2026-07-31T00:16:42.072Z",
     "resolved_at": "2026-07-31T00:17:08.965Z"
+  },
+  {
+    "id": 7,
+    "kind": "unrun-verify",
+    "phase": "04",
+    "file": "tests/runtime_reconnect_smoke_test.ts",
+    "line": null,
+    "description": "Production reconnect smoke could not reach its spawned loopback server; focused Phase 04-01 verification passed",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-07-31T01:16:43.974Z",
+    "resolved_at": null
+  },
+  {
+    "id": 8,
+    "kind": "deviation",
+    "phase": "04",
+    "file": "runtime/catalog.ts",
+    "line": null,
+    "description": "Corrected redundant async and mutable in-flight task binding during static verification",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-07-31T01:16:44.087Z",
+    "resolved_at": null
   }
 ]
 ````
