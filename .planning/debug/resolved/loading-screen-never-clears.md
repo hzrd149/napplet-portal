@@ -2,7 +2,7 @@
 status: resolved
 trigger: "Investigate why the main loading screen never disappears, even after I connect a signer. The status draw is stuck in the status message saying the napplet is being verified. This could mean either it is not being loaded or there is no default one to load now that we have the installed list."
 created: 2026-07-31
-updated: 2026-07-31T00:45:00Z
+updated: 2026-07-31T01:32:00Z
 ---
 
 # Debug Session: Loading Screen Never Clears
@@ -18,11 +18,23 @@ updated: 2026-07-31T00:45:00Z
 ## Current Focus
 
 - **bug_class:** bohrbug
-- **hypothesis:** Confirmed: production artifact resolution fails because the configured fixture blob is unavailable, the backend emits `runtime.signer.error`, and the connection controller ignores that terminal error while remaining in `bootstrapping`. Separate projection defects explain the misleading signed-out drawer and sign-in bounce.
-- **test:** Production build/start plus a real Chromium trace of Home and `/signin` WebSocket frames.
-- **expecting:** Confirmed by observed `runtime.signer.error`, persistent ritual, `signer.active` redirect, and backend artifact resolver logs.
-- **next_action:** Resolved; regression tests, full quality gates, build, and revert-and-reconfirm all passed.
+- **hypothesis:** Confirmed: a terminal runtime failure reaches `ConnectionController` phase `failed`, but `NappletShell` leaves `ritualVisible` true because its snapshot callback clears the ritual only for `ready`.
+- **test:** Focused regression, revert-and-reconfirm, `deno task check`, full `deno task test`, and `deno task build`.
+- **expecting:** Complete: every required verification signal passed, with 284 full-suite tests green.
+- **next_action:** Resolved; commit the minimal fix, regression, debug record, and knowledge-base update, then push.
 - **reasoning_checkpoint:**
+  hypothesis: Terminal runtime failure leaves the blocking overlay mounted because the shell's failed snapshot branch does not clear `ritualVisible`.
+  confirming_evidence:
+    - The controller regression proves runtime terminal messages produce phase `failed`.
+    - The new focused shell regression fails because the failed branch contains the error projection but no `setRitualVisible(false)` transition.
+  falsification_test: If the current failed branch already cleared ritual visibility, or the focused regression passed before the fix, this hypothesis would be false.
+  fix_rationale: Clearing ritual visibility in the terminal failed branch exposes the already-rendered Home and existing error/retry controls without changing controller retry semantics or cold-start behavior.
+  blind_spots: The source-level regression does not execute Preact browser state transitions; full tests and build cover compilation and adjacent behavior.
+  candidate_causes:
+    - code: The shell's failed-state projection omits the ritual visibility transition.
+    - environment/data: Artifact unavailability triggers the terminal failure but does not itself determine whether the browser overlay remains mounted.
+  and_gate: yes — the original stuck symptom requires a terminal backend failure and the shell's omitted failed-state ritual transition; the prior fix addressed only the controller half.
+- **prior_reasoning_checkpoint:**
   hypothesis: The loading ritual remains forever when artifact resolution fails because `ConnectionController` enters bootstrapping before `runtime.start` but recognizes only `runtime.artifact` as terminal; it ignores `runtime.signer.error`.
   confirming_evidence:
     - Chromium received `runtime.signer.error` after `runtime.start`, while the DOM still showed "The napplet is being verified" three seconds later.
@@ -38,6 +50,21 @@ updated: 2026-07-31T00:45:00Z
 - **tdd_checkpoint:**
 
 ## Evidence
+
+- timestamp: 2026-07-31T01:19:00Z
+  checked: Focused shell regression for terminal failure visibility
+  found: The new test failed while confirming configured cold start still initializes the ritual, ready still uses its bounded transition, and failed still exposes error/retry wiring; only the failed branch lacked `setRitualVisible(false)`.
+  implication: The continuation root cause is confirmed and the minimal correction is a single state update in the existing failed branch.
+
+- timestamp: 2026-07-31T01:22:00Z
+  checked: Focused shell regression after the failed-state visibility correction
+  found: All four setup visibility tests passed, including assertions for terminal failure, configured cold start, bounded ready transition, error projection, and retry wiring.
+  implication: The minimal production change satisfies the driving regression without weakening the explicitly held-out shell behaviors.
+
+- timestamp: 2026-07-31T01:31:00Z
+  checked: Revert-and-reconfirm and project-wide verification
+  found: Removing only `setRitualVisible(false)` made the focused test fail; reapplying it restored green. `deno task check`, all 284 tests, and the production build passed.
+  implication: The fix is causally tied to the reported overlay defect and introduces no detected adjacent regression.
 
 - timestamp: 2026-07-31T00:01:00Z
   checked: Reporter-visible account and navigation state
@@ -105,13 +132,13 @@ updated: 2026-07-31T00:45:00Z
 
 ## Resolution
 
-- **root_cause:** The configured fixture artifact blob is unavailable from the production resolver, causing the backend to emit `runtime.signer.error`; `ConnectionController` has no transition for that (or other runtime terminal errors), so it remains in `bootstrapping` and the loading ritual says "The napplet is being verified" indefinitely. Independently, the restored remote signer is offline but `SignerConnectionService` projects it as `active`, causing `/signin` to redirect Home, while the initial `identity.changed` projection is sent during runtime session construction before the WebSocket `open` handler and is lost, leaving the Home account drawer signed out.
-- **fix:** ConnectionController now treats runtime.signer.error, runtime.error, and runtime.auth.required as retryable terminal failures; signer projection now requires an actually active identity; the runtime bridge replays the current identity from the WebSocket open seam; the shell surfaces signer launch errors.
+- **root_cause:** The configured fixture artifact blob is unavailable from the production resolver, causing the backend to emit `runtime.signer.error`; after the prior correction makes `ConnectionController` enter `failed`, `NappletShell` still clears the blocking ritual only for `ready`, so terminal failure leaves the overlay mounted above Home and its recovery UI. Independently, the restored remote signer was projected as active while offline and the initial identity projection was sent before WebSocket open; those projection defects were corrected previously.
+- **fix:** NappletShell now clears `ritualVisible` when the connection snapshot enters terminal `failed`, revealing Home and existing recovery UI; the focused regression preserves cold-start, ready, error, and retry behavior.
 - **verification:**
-  - target_test: { result: pass, suites: [tests/connection_controller_test.ts, tests/signer_service_test.ts, tests/end_to_end_test.ts, tests/websocket_session_test.ts], oracle_type: specified_and_derived }
+  - target_test: { result: pass, suites: [tests/setup_visibility_test.tsx], oracle_type: specified_and_derived }
   - mutation_check: { result: skipped, reason_if_skipped: "No Stryker or mutation-test configuration is present." }
   - no_op_deletion: { result: pass, deletion_justified_by_rca: false }
-  - adjacent_tests: { result: pass, suites_run: [deno_task_check, deno_task_test, deno_task_build, tests/shell_resilience_test.tsx] }
+  - adjacent_tests: { result: pass, suites_run: [deno_task_check, deno_task_test_284_tests, deno_task_build, tests/setup_visibility_test.tsx] }
   - revert_and_reconfirm: { result: pass, bug_returned_on_revert: true, fixed_on_reapply: true }
   - guardrail_verdict: accepted
-- **files_changed:** [shell/connection.ts, runtime/signer_service.ts, runtime/portal_runtime.ts, routes/api/runtime.ts, islands/NappletShell.tsx, tests/connection_controller_test.ts, tests/signer_service_test.ts, tests/end_to_end_test.ts, tests/websocket_session_test.ts, .planning/debug/loading-screen-never-clears.md]
+- **files_changed:** [shell/connection.ts, runtime/signer_service.ts, runtime/portal_runtime.ts, routes/api/runtime.ts, islands/NappletShell.tsx, tests/connection_controller_test.ts, tests/signer_service_test.ts, tests/end_to_end_test.ts, tests/websocket_session_test.ts, tests/setup_visibility_test.tsx, .planning/debug/resolved/loading-screen-never-clears.md, .planning/debug/knowledge-base.md]

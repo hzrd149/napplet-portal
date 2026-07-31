@@ -1156,6 +1156,7 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
             );
             setTimeout(() => setRitualVisible(false), remaining);
           } else if (snapshot.phase === "failed") {
+            setRitualVisible(false);
             setRuntimeError(CONNECT_FAILED);
             if (hasMountedNapplet.current) setNotice("connection");
           }

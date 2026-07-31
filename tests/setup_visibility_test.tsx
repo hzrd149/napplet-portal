@@ -66,3 +66,31 @@ Deno.test("runtime transport upgrades through Fresh and cannot hang silently", a
     "a timed-out transport must enter visible recovery policy",
   );
 });
+
+Deno.test("terminal runtime failure clears the ritual and preserves recovery UI", async () => {
+  const shell = await Deno.readTextFile("islands/NappletShell.tsx");
+  const failedBranch = shell.slice(
+    shell.indexOf('snapshot.phase === "failed"'),
+    shell.indexOf("onMessage: receiveRuntimeMessage"),
+  );
+
+  assert(
+    shell.includes(
+      "const [ritualVisible, setRitualVisible] = useState(Boolean(coordinate))",
+    ),
+    "configured cold start must retain the blocking verification ritual",
+  );
+  assert(
+    shell.includes("setTimeout(() => setRitualVisible(false), remaining)"),
+    "successful startup must retain its bounded ritual transition",
+  );
+  assert(
+    failedBranch.includes("setRitualVisible(false)"),
+    "terminal failure must reveal Home instead of leaving the ritual mounted",
+  );
+  assert(
+    failedBranch.includes("setRuntimeError(CONNECT_FAILED)") &&
+      shell.includes("controller.current?.retryNow()"),
+    "terminal failure must preserve the visible error and retry path",
+  );
+});
