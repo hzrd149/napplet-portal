@@ -216,3 +216,17 @@ Deno.test({
     }
   },
 });
+
+Deno.test("intent target sockets cannot combine reconnect and claim namespaces", async () => {
+  const endpoint = await Deno.readTextFile("routes/api/runtime.ts");
+  assert(
+    endpoint.includes("requestedWindowId &&") &&
+      endpoint.includes("requestedToken"),
+    "target claims must reject reconnect namespace aliasing",
+  );
+  assert(
+    endpoint.includes("runtime.intent.ticket") &&
+      endpoint.includes("claimed !== null"),
+    "claims must correlate without disclosing rejected payloads",
+  );
+});
