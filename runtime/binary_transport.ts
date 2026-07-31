@@ -218,7 +218,10 @@ export function decodeBinaryFrames(
 }
 
 function requestKey(owner: MessageOwner, id: string): string {
-  return `${owner.connectionId.length}:${owner.connectionId}${owner.windowId.length}:${owner.windowId}${id}`;
+  const generation = owner.generation === undefined
+    ? "legacy"
+    : String(owner.generation);
+  return `${owner.connectionId.length}:${owner.connectionId}${owner.windowId.length}:${owner.windowId}${generation.length}:${generation}${id}`;
 }
 
 export class ActiveBinaryRequests {

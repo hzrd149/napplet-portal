@@ -74,6 +74,7 @@ export const UPLOAD_INFO: Readonly<UploadInfo> = Object.freeze(uploadInfo);
 export interface MessageOwner {
   readonly connectionId: string;
   readonly windowId: string;
+  readonly generation?: number;
 }
 
 export interface RuntimeForwardMessage extends MessageOwner {

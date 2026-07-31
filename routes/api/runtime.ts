@@ -323,6 +323,7 @@ export const handler = define.handlers({
         const decoded = decodeBinaryFrames(incoming, {
           connectionId: connection.connectionId,
           windowId,
+          generation: connection.generation,
         });
         const frame = decoded.ok && decoded.frames.length === 1
           ? decoded.frames[0]
@@ -346,6 +347,7 @@ export const handler = define.handlers({
           const result = await handleFixedResourceFrame(incoming, {
             connectionId: connection.connectionId,
             windowId,
+            generation: connection.generation,
           });
           if (result) socket.send(result.slice().buffer as ArrayBuffer);
           else socket.close(1008, "invalid binary message");
@@ -356,7 +358,11 @@ export const handler = define.handlers({
         const view = event.data as ArrayBufferView;
         const result = await handleFixedResourceFrame(
           new Uint8Array(view.buffer, view.byteOffset, view.byteLength),
-          { connectionId: connection.connectionId, windowId },
+          {
+            connectionId: connection.connectionId,
+            windowId,
+            generation: connection.generation,
+          },
         );
         if (result) socket.send(result.slice().buffer as ArrayBuffer);
         else socket.close(1008, "invalid binary message");
