@@ -7,7 +7,7 @@ Milestone v1.1 expands the proven backend runtime into a resilient mobile napple
 ## Phases
 
 - [x] **Phase 3: Mobile Shell Resilience** — Polish the shell and make runtime connectivity legible and recoverable on mobile. (completed 2026-07-31)
-- [ ] **Phase 4: Installed Napplet Discovery** — Install, synchronize, search, and launch trusted napplets from the home catalog.
+- [x] **Phase 4: Installed Napplet Discovery** — Install, synchronize, search, and launch trusted napplets from the home catalog. (completed 2026-07-31)
 - [ ] **Phase 5: Resource and Blossom Transfer** — Add bounded resource resolution and explicit multi-server uploads.
 - [ ] **Phase 6: Common Data and Durable Storage** — Expose stream-oriented common Nostr helpers and isolated persistent napplet state.
 - [ ] **Phase 7: Intent Navigation** — Route declared intents to trusted installed handlers across shell surfaces.
@@ -39,7 +39,7 @@ Milestone v1.1 expands the proven backend runtime into a resilient mobile napple
 
 **Goal:** Users can build and navigate a trusted installed-napplet catalog from the portal home page.
 **Requirements:** CAT-01, CAT-02, CAT-03, CAT-04
-**Plans:** 4/4 plans executed
+**Plans:** 4/4 plans complete
 
 Plans:
 
