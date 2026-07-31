@@ -56,6 +56,12 @@ function createHarness() {
         storageCalls++;
         values.set(`${namespace}:${key}`, value);
       },
+      remove(namespace, key) {
+        values.delete(`${namespace}:${key}`);
+      },
+      keys() {
+        return [];
+      },
     },
     isCurrent: (candidate) =>
       candidate.connectionId === current.connectionId &&
@@ -217,6 +223,10 @@ Deno.test("catalog launch binds backend authority before full proxy forwarding",
       set: (namespace, key, value) => {
         values.set(`${namespace}:${key}`, value);
       },
+      remove: (namespace, key) => {
+        values.delete(`${namespace}:${key}`);
+      },
+      keys: () => [],
     },
     send: (owner, message) => runtime.deliverTransfer(owner, message),
   });

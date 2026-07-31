@@ -225,7 +225,7 @@ Deno.test("namespace key-count and aggregate quotas are enforced prospectively",
           instanceId: `instance-${index}`,
         },
         "payload",
-        "x".repeat(65_536),
+        "x".repeat(65_529),
       );
     }
     let aggregateQuota = false;

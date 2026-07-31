@@ -6,6 +6,8 @@ import type { BlossomTransferService } from "./blossom_transfer.ts";
 import type { ResourceBatchItem, ResourceService } from "./resource_service.ts";
 import { ResourceServiceError } from "./resource_service.ts";
 import { RESOURCE_INFO, TRANSFER_POLICY, UPLOAD_INFO } from "./transport.ts";
+import type { StorageNamespaceIdentity } from "./storage.ts";
+import { StorageServiceError } from "./storage.ts";
 
 export interface NapOwner {
   readonly connectionId: string;
@@ -72,8 +74,19 @@ interface TransferPort {
 }
 
 interface StoragePort {
-  get(namespace: string, key: string): string | null | Promise<string | null>;
-  set(namespace: string, key: string, value: string): void | Promise<void>;
+  get(
+    identity: StorageNamespaceIdentity,
+    key: string,
+  ): string | null | Promise<string | null>;
+  set(
+    identity: StorageNamespaceIdentity,
+    key: string,
+    value: string,
+  ): void | Promise<void>;
+  remove(identity: StorageNamespaceIdentity, key: string): void | Promise<void>;
+  keys(
+    identity: StorageNamespaceIdentity,
+  ): readonly string[] | Promise<readonly string[]>;
 }
 
 interface NapDispatcherOptions {
@@ -393,20 +406,35 @@ export class NapDispatcher {
       return;
     }
     const scope = message.scope ?? "shared";
-    const namespace = JSON.stringify([
-      context.accountPubkey,
-      context.coordinate,
-      context.manifestEventId,
+    const identity: StorageNamespaceIdentity = Object.freeze({
+      accountPubkey: context.accountPubkey,
+      coordinate: context.coordinate,
+      manifestEventId: context.manifestEventId,
+      dTag: context.dTag,
+      aggregateHash: context.aggregateHash,
       scope,
-      scope === "instance" ? context.instanceId : "",
-    ]);
-    if (message.type === "storage.set") {
-      await this.#storage.set(namespace, message.key, message.value);
-      send({});
-    } else if (message.type === "storage.get") {
-      send({ value: await this.#storage.get(namespace, message.key) });
-    } else {
-      send({ error: "invalid-request" });
+      instanceId: scope === "instance" ? context.instanceId : "",
+    });
+    try {
+      if (message.type === "storage.set") {
+        await this.#storage.set(identity, message.key, message.value);
+        send({});
+      } else if (message.type === "storage.get") {
+        send({ value: await this.#storage.get(identity, message.key) });
+      } else if (message.type === "storage.remove") {
+        await this.#storage.remove(identity, message.key);
+        send({});
+      } else if (message.type === "storage.keys") {
+        send({ keys: [...await this.#storage.keys(identity)].sort() });
+      }
+    } catch (error) {
+      send({
+        error: error instanceof StorageServiceError
+          ? error.code
+          : "storage-unavailable",
+        ...(message.type === "storage.get" ? { value: null } : {}),
+        ...(message.type === "storage.keys" ? { keys: [] } : {}),
+      });
     }
   }
 

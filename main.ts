@@ -21,6 +21,8 @@ import {
   BlossomTransferService,
 } from "./runtime/blossom_transfer.ts";
 import { NapDispatcher } from "./runtime/nap_dispatcher.ts";
+import { NappletStorageStore } from "./runtime/storage_store.ts";
+import { StorageService } from "./runtime/storage.ts";
 
 const debug = rootDebug.extend("backend");
 
@@ -143,7 +145,9 @@ const blossomTransfer = new BlossomTransferService({
     localCacheUrl: localBlossom,
   }),
 });
-const tracerStorage = new Map<string, string>();
+export const nappletStorage = await StorageService.open(
+  new NappletStorageStore(".data/napplet-storage.json"),
+);
 export const napDispatcher = new NapDispatcher({
   resource: resourceService,
   transfer: blossomTransfer,
@@ -151,12 +155,7 @@ export const napDispatcher = new NapDispatcher({
     blossomServers: runtimeSettings.settings.blossomServers,
     localBlossom,
   }),
-  storage: {
-    get: (namespace, key) => tracerStorage.get(`${namespace}:${key}`) ?? null,
-    set: (namespace, key, value) => {
-      tracerStorage.set(`${namespace}:${key}`, value);
-    },
-  },
+  storage: nappletStorage,
   send: (owner, message, bytes) =>
     processRuntime.deliverTransfer(owner, message, bytes),
 });

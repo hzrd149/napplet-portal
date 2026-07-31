@@ -3,6 +3,24 @@ import {
   NappletStorageStore,
 } from "./storage_store.ts";
 
+export const STORAGE_QUOTA = Object.freeze({
+  aggregateBytes: 512 * 1024,
+  keysPerNamespace: 256,
+  keyBytes: 1024,
+  valueBytes: 64 * 1024,
+});
+
+const encoder = new TextEncoder();
+
+export class StorageServiceError extends Error {
+  readonly code: "quota-exceeded" | "storage-unavailable";
+
+  constructor(code: "quota-exceeded" | "storage-unavailable") {
+    super(code);
+    this.code = code;
+  }
+}
+
 export interface StorageNamespaceIdentity {
   readonly accountPubkey: string;
   readonly coordinate: string;
@@ -67,20 +85,25 @@ export class StorageService {
     key: string,
     value: string,
   ): Promise<void> {
+    if (
+      encoder.encode(key).byteLength > STORAGE_QUOTA.keyBytes ||
+      encoder.encode(value).byteLength > STORAGE_QUOTA.valueBytes
+    ) return Promise.reject(new StorageServiceError("quota-exceeded"));
     return this.#mutate(identity, (entries) => {
       entries[key] = value;
-    });
+    }, identity);
   }
 
   remove(identity: StorageNamespaceIdentity, key: string): Promise<void> {
     return this.#mutate(identity, (entries) => {
       delete entries[key];
-    });
+    }, identity);
   }
 
   #mutate(
     identity: StorageNamespaceIdentity,
     mutation: (entries: Record<string, string>) => void,
+    quotaIdentity: StorageNamespaceIdentity,
   ): Promise<void> {
     const operation = this.#mutationTail.then(async () => {
       const namespaces: Record<string, Record<string, string>> = Object.create(
@@ -92,13 +115,50 @@ export class StorageService {
       const name = namespaceKey(identity);
       const entries = namespaces[name] ?? Object.create(null);
       mutation(entries);
+      if (Object.keys(entries).length > STORAGE_QUOTA.keysPerNamespace) {
+        throw new StorageServiceError("quota-exceeded");
+      }
       if (Object.keys(entries).length === 0) delete namespaces[name];
       else namespaces[name] = entries;
       const next = freezeSnapshot(namespaces);
-      await this.#store.write(next);
+      this.#validateAggregate(next, quotaIdentity);
+      try {
+        await this.#store.write(next);
+      } catch (error) {
+        if (error instanceof StorageServiceError) throw error;
+        throw new StorageServiceError("storage-unavailable");
+      }
       this.#snapshot = next;
     });
     this.#mutationTail = operation.catch(() => undefined);
     return operation;
+  }
+
+  #validateAggregate(
+    snapshot: NappletStorageSnapshot,
+    identity: StorageNamespaceIdentity,
+  ): void {
+    let bytes = 0;
+    for (const [name, entries] of Object.entries(snapshot.namespaces)) {
+      let tuple: unknown;
+      try {
+        tuple = JSON.parse(name);
+      } catch {
+        continue;
+      }
+      if (
+        !Array.isArray(tuple) || tuple[0] !== identity.accountPubkey ||
+        tuple[1] !== identity.coordinate ||
+        tuple[2] !== identity.manifestEventId || tuple[3] !== identity.dTag ||
+        tuple[4] !== identity.aggregateHash
+      ) continue;
+      for (const [key, value] of Object.entries(entries)) {
+        bytes += encoder.encode(key).byteLength +
+          encoder.encode(value).byteLength;
+      }
+    }
+    if (bytes > STORAGE_QUOTA.aggregateBytes) {
+      throw new StorageServiceError("quota-exceeded");
+    }
   }
 }
