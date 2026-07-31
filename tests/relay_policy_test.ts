@@ -129,3 +129,39 @@ Deno.test("blocked relay is removed before any pool operation input", () => {
     "blocked URL never reaches AUTH",
   );
 });
+
+Deno.test("preview reads combine permitted hints before configured reads with stable cap and fallback", () => {
+  const policy = new RelayPolicy({
+    defaults: [],
+    blocked: ["wss://blocked.example"],
+  });
+  const configured = Array.from(
+    { length: 10 },
+    (_, index) => `wss://configured-${index}.example`,
+  );
+  const selected = policy.previewReads(
+    [
+      "https://not-websocket.example",
+      "wss://blocked.example",
+      "wss://HINT.example",
+      "wss://hint.example/",
+    ],
+    configured,
+    8,
+  );
+  assert(selected.length === 8, "preview reads are capped at eight");
+  assert(
+    selected[0] === "wss://hint.example/" &&
+      selected[1] === "wss://configured-0.example/",
+    "canonical hints precede configured reads with stable dedupe",
+  );
+  const fallback = policy.previewReads(
+    ["https://bad.example", "wss://blocked.example"],
+    configured,
+    8,
+  );
+  assert(
+    fallback.length === 8 && fallback[0] === "wss://configured-0.example/",
+    "rejected hints fall back to the same capped configured set",
+  );
+});
