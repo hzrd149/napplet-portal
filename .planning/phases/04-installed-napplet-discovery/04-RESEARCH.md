@@ -458,14 +458,19 @@ async function launch(request: LaunchRequest): Promise<LaunchResult> {
 | A1 | Debouncing is unnecessary for typical installed-list sizes; if desired it should affect computation only. | Architecture Pattern 4 | Low; planner can choose immediate or lightly debounced local filtering without affecting authority. |
 | A2 | Late artifact promise completion is a realistic source of stale enrichment races. | Pitfall 2 | Medium; even if current fixture resolves quickly, production relay/Blossom latency makes generation guards prudent. |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Which relay set should install preview use?**
+The planner resolved both implementation choices before finalization:
+
+- **Preview relay selection:** canonicalize only `ws:`/`wss:` naddr hints, remove blocked relays through the existing `RelayPolicy`, combine the remaining hints with configured permitted read relays, deduplicate in stable order, and use the bounded configured read set when no usable hint remains. Hints never bypass portal relay policy.
+- **Enrichment concurrency:** use a process-owned four-worker queue with exact `(activePubkey, catalogEventId, coordinate, acceptedManifestEventId)` in-flight deduplication and generation checks before applying completion.
+
+1. **Which relay set should install preview use? — RESOLVED**
    - What we know: `naddr` can contain relay hints, while the runtime has configured read relays and an existing relay policy. [VERIFIED: pinned nostr-tools and codebase]
    - What's unclear: CONTEXT.md locks backend decode/resolve but does not explicitly choose hint-only versus policy-combined reads.
    - Recommendation: Normalize valid `ws:`/`wss:` hints, pass them through existing `RelayPolicy.read`, and combine with configured relays without bypassing policy; test no-hint behavior explicitly. [ASSUMED]
 
-2. **Where should enrichment concurrency be bounded?**
+2. **Where should enrichment concurrency be bounded? — RESOLVED**
    - What we know: current sequential awaits block the projection; unbounded parallel fetches could overload mobile/server/relays. [VERIFIED: codebase gap]
    - What's unclear: no performance target or concurrency limit is locked.
    - Recommendation: expose raw projection immediately and use a small backend queue or shared in-flight promise map keyed by exact artifact identity; planner should choose/test a deterministic bound. [ASSUMED]
