@@ -4,6 +4,7 @@ import {
 } from "../components/NappletFrame.tsx";
 import {
   applyBrowserSecurityHeaders,
+  applyFreshBrowserSecurityHeaders,
   BROWSER_SECURITY_POLICY,
   browserContentSecurityPolicy,
 } from "../runtime/security_headers.ts";
@@ -250,5 +251,28 @@ Deno.test("host scripts require same-origin files or the fixed theme hash", asyn
   assert(
     policy.includes(`script-src 'self' 'sha256-${hash}'`),
     "CSP must authorize only the byte-stable first-paint theme bootstrap",
+  );
+});
+
+Deno.test("Fresh hydration nonce is reflected without enabling arbitrary inline scripts", async () => {
+  const nonce = "freshNonce_123";
+  const response = await applyFreshBrowserSecurityHeaders(
+    new Response(`<script type="module" nonce="${nonce}">boot()</script>`, {
+      headers: { "content-type": "text/html; charset=utf-8" },
+    }),
+    { requestUrl: "https://portal.example/" },
+  );
+  const policy = response.headers.get("content-security-policy") ?? "";
+  const scriptDirective =
+    policy.split("; ").find((directive) =>
+      directive.startsWith("script-src ")
+    ) ?? "";
+  assert(
+    scriptDirective.includes(`'nonce-${nonce}'`),
+    "Fresh-generated nonce must authorize its hydration bootstrap",
+  );
+  assert(
+    !scriptDirective.includes("'unsafe-inline'"),
+    "hydration must not weaken the host script policy",
   );
 });

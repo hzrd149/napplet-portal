@@ -24,8 +24,16 @@ function collectBrowserFailures(page: Page): string[] {
 test("phone tracer loads the built portal without browser or layout failures", async ({ page }) => {
   annotateDeviceBoundary();
   const browserFailures = collectBrowserFailures(page);
-  await page.goto("/");
+  const navigation = await page.goto("/");
   await expect(page).toHaveTitle("Napplet Portal");
+  const hydrationNonce = await page.locator("script[type=module][nonce]")
+    .evaluate((script) => (script as HTMLScriptElement).nonce);
+  expect(hydrationNonce).toBeTruthy();
+  const csp = navigation?.headers()["content-security-policy"] ?? "";
+  expect(csp).toContain(`'nonce-${hydrationNonce}'`);
+  expect(
+    csp.split("; ").find((directive) => directive.startsWith("script-src ")),
+  ).not.toContain("'unsafe-inline'");
   await expect(page.getByRole("navigation", { name: "Primary" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Open account" }))
     .toBeVisible();

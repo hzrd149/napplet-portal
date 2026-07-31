@@ -37,24 +37,40 @@ export const BROWSER_SECURITY_POLICY = Object.freeze({
 interface BrowserSecurityHeaderOptions {
   readonly allowSameOriginFrame?: boolean;
   readonly requestUrl?: string;
+  readonly scriptNonce?: string;
 }
 
-export function browserContentSecurityPolicy(requestUrl?: string): string {
-  if (!requestUrl) return BROWSER_SECURITY_POLICY.contentSecurityPolicy;
-  const portal = new URL(requestUrl);
-  const websocketProtocol = portal.protocol === "https:" ? "wss:" : "ws:";
-  const websocketSource = `${websocketProtocol}//${portal.host}`;
-  return BROWSER_SECURITY_POLICY.contentSecurityPolicy.replace(
-    "connect-src 'self'",
-    `connect-src 'self' ${websocketSource}`,
-  );
+export function browserContentSecurityPolicy(
+  requestUrl?: string,
+  scriptNonce?: string,
+): string {
+  let policy = BROWSER_SECURITY_POLICY.contentSecurityPolicy;
+  if (requestUrl) {
+    const portal = new URL(requestUrl);
+    const websocketProtocol = portal.protocol === "https:" ? "wss:" : "ws:";
+    const websocketSource = `${websocketProtocol}//${portal.host}`;
+    policy = policy.replace(
+      "connect-src 'self'",
+      `connect-src 'self' ${websocketSource}`,
+    );
+  }
+  if (scriptNonce && /^[A-Za-z0-9+/_-]+={0,2}$/.test(scriptNonce)) {
+    policy = policy.replace(
+      "script-src 'self'",
+      `script-src 'self' 'nonce-${scriptNonce}'`,
+    );
+  }
+  return policy;
 }
 
 export function applyBrowserSecurityHeaders(
   response: Response,
   options: BrowserSecurityHeaderOptions = {},
 ): Response {
-  const basePolicy = browserContentSecurityPolicy(options.requestUrl);
+  const basePolicy = browserContentSecurityPolicy(
+    options.requestUrl,
+    options.scriptNonce,
+  );
   const contentSecurityPolicy = options.allowSameOriginFrame
     ? basePolicy.replace(
       "frame-ancestors 'none'",
@@ -76,4 +92,18 @@ export function applyBrowserSecurityHeaders(
     options.allowSameOriginFrame ? "SAMEORIGIN" : "DENY",
   );
   return response;
+}
+
+export async function applyFreshBrowserSecurityHeaders(
+  response: Response,
+  options: Omit<BrowserSecurityHeaderOptions, "scriptNonce"> = {},
+): Promise<Response> {
+  const contentType = response.headers.get("content-type") ?? "";
+  let scriptNonce: string | undefined;
+  if (contentType.toLowerCase().includes("text/html")) {
+    const html = await response.clone().text();
+    scriptNonce = /<script\b[^>]*\bnonce="([A-Za-z0-9+/_-]+={0,2})"/i
+      .exec(html)?.[1];
+  }
+  return applyBrowserSecurityHeaders(response, { ...options, scriptNonce });
 }

@@ -29,7 +29,7 @@ import { NappletStorageStore } from "./runtime/storage_store.ts";
 import { StorageService } from "./runtime/storage.ts";
 import { CommonService } from "./runtime/common.ts";
 import { OutboxAdapter } from "./runtime/outbox.ts";
-import { applyBrowserSecurityHeaders } from "./runtime/security_headers.ts";
+import { applyFreshBrowserSecurityHeaders } from "./runtime/security_headers.ts";
 
 const debug = rootDebug.extend("backend");
 
@@ -244,7 +244,7 @@ export const app = new App<State>();
 
 app.use(staticFiles());
 app.use(async (ctx) =>
-  applyBrowserSecurityHeaders(await ctx.next(), {
+  applyFreshBrowserSecurityHeaders(await ctx.next(), {
     allowSameOriginFrame: new URL(ctx.req.url).pathname === "/settings",
     requestUrl: ctx.req.url,
   })
