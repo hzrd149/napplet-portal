@@ -10,6 +10,9 @@ import { createPortalRuntime } from "../../runtime/portal_runtime.ts";
 import {
   decodeCatalogCommand,
   decodeClientMessage,
+  decodeNapControlMessage,
+  RESOURCE_INFO,
+  UPLOAD_INFO,
 } from "../../runtime/transport.ts";
 import {
   BinaryFrameKind,
@@ -299,6 +302,60 @@ export const handler = define.handlers({
           shortId(windowId),
           napMessage.type,
         );
+        const transfer = decodeNapControlMessage(napMessage);
+        if (transfer?.type === "resource.info") {
+          socket.send(JSON.stringify({
+            type: "runtime.event",
+            connectionId: connection.connectionId,
+            windowId,
+            message: {
+              type: "resource.info.result",
+              id: transfer.id,
+              info: RESOURCE_INFO,
+            },
+          }));
+          return;
+        }
+        if (transfer?.type === "upload.info") {
+          socket.send(JSON.stringify({
+            type: "runtime.event",
+            connectionId: connection.connectionId,
+            windowId,
+            message: {
+              type: "upload.info.result",
+              id: transfer.id,
+              info: UPLOAD_INFO,
+            },
+          }));
+          return;
+        }
+        if (transfer?.type === "resource.bytes") {
+          socket.send(JSON.stringify({
+            type: "runtime.event",
+            connectionId: connection.connectionId,
+            windowId,
+            message: {
+              type: "resource.bytes.error",
+              id: transfer.id,
+              error: "blocked-by-policy",
+              message: "Resource transfer is unavailable",
+            },
+          }));
+          return;
+        }
+        if (transfer?.type === "upload.upload") {
+          socket.send(JSON.stringify({
+            type: "runtime.event",
+            connectionId: connection.connectionId,
+            windowId,
+            message: {
+              type: "upload.upload.result",
+              id: transfer.id,
+              error: "Upload transfer is unavailable",
+            },
+          }));
+          return;
+        }
         if (napMessage.type === "shell.ready") {
           bridge.receive(session.source, napMessage);
           return;

@@ -1,5 +1,70 @@
-import type { NappletMessage } from "@napplet/core";
-import type { UploadRequest } from "@napplet/core";
+import type {
+  NappletMessage,
+  ResourceInfo,
+  UploadInfo,
+  UploadRequest,
+} from "@napplet/core";
+import { MAX_BINARY_PAYLOAD_BYTES } from "./binary_transport.ts";
+
+export const TRANSFER_POLICY = Object.freeze({
+  maxBytes: MAX_BINARY_PAYLOAD_BYTES,
+  maxUrls: 8,
+  maxActivePerWindow: 2,
+  maxRedirects: 3,
+  maxUrlChars: 2_048,
+  resourceDeadlineMs: 10_000,
+  uploadDeadlineMs: 30_000,
+  mimeTypes: Object.freeze([
+    "image/png",
+    "image/jpeg",
+    "image/gif",
+    "image/webp",
+    "image/avif",
+    "text/plain",
+    "application/json",
+    "application/pdf",
+  ]),
+});
+
+const resourceInfo: ResourceInfo = {
+  schemes: [
+    { scheme: "https", enabled: true },
+    { scheme: "blossom", enabled: true },
+  ],
+  maxBytes: TRANSFER_POLICY.maxBytes,
+  maxUrls: TRANSFER_POLICY.maxUrls,
+};
+resourceInfo.schemes.forEach(Object.freeze);
+Object.freeze(resourceInfo.schemes);
+export const RESOURCE_INFO: Readonly<ResourceInfo> = Object.freeze(
+  resourceInfo,
+);
+
+const uploadInfo: UploadInfo = {
+  rails: [
+    {
+      rail: "blossom",
+      enabled: true,
+      returns: [
+        "url",
+        "fallbackUrls",
+        "sha256",
+        "size",
+        "mimeType",
+        "nip94",
+      ],
+    },
+  ],
+  maxBytes: TRANSFER_POLICY.maxBytes,
+  mimeTypes: [...TRANSFER_POLICY.mimeTypes],
+};
+uploadInfo.rails.forEach((rail) => {
+  if (rail.returns) Object.freeze(rail.returns);
+  Object.freeze(rail);
+});
+Object.freeze(uploadInfo.rails);
+if (uploadInfo.mimeTypes) Object.freeze(uploadInfo.mimeTypes);
+export const UPLOAD_INFO: Readonly<UploadInfo> = Object.freeze(uploadInfo);
 
 export interface MessageOwner {
   readonly connectionId: string;
@@ -107,7 +172,8 @@ export function decodeNapControlMessage(
   if (
     message.type === "resource.bytes" &&
     exactKeys(message, ["type", "id", "url"]) &&
-    typeof message.url === "string" && message.url.length <= 2_048
+    typeof message.url === "string" && message.url.length > 0 &&
+    message.url.length <= TRANSFER_POLICY.maxUrlChars
   ) return message as unknown as NapControlMessage;
   if (
     message.type === "upload.info" && exactKeys(message, ["type", "id"])
@@ -193,6 +259,10 @@ export function decodeClientMessage(
     ) {
       return { ok: false, error: "invalid or foreign runtime message" };
     }
+    if (
+      /^(resource|upload)\./.test(message.type) &&
+      !decodeNapControlMessage(message)
+    ) return { ok: false, error: "invalid transfer message" };
     return { ok: true, value: value as unknown as RuntimeForwardMessage };
   } catch {
     return { ok: false, error: "invalid JSON" };

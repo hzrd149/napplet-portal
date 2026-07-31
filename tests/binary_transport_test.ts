@@ -59,13 +59,25 @@ Deno.test("binary frames decode fragmented and concatenated input deterministica
 
 Deno.test("RESOURCE and UPLOAD info are derived from one immutable policy", () => {
   assert(Object.isFrozen(TRANSFER_POLICY), "policy snapshot is immutable");
-  assert(TRANSFER_POLICY.maxBytes === MAX_BINARY_PAYLOAD_BYTES, "byte cap matches codec");
+  assert(
+    TRANSFER_POLICY.maxBytes === MAX_BINARY_PAYLOAD_BYTES,
+    "byte cap matches codec",
+  );
   assert(TRANSFER_POLICY.maxUrls === 8, "URL count is closed");
-  assert(TRANSFER_POLICY.maxActivePerWindow === 2, "active operations are bounded");
+  assert(
+    TRANSFER_POLICY.maxActivePerWindow === 2,
+    "active operations are bounded",
+  );
   assert(TRANSFER_POLICY.maxRedirects === 3, "redirect count is closed");
   assert(TRANSFER_POLICY.maxUrlChars === 2_048, "URL text is bounded");
-  assert(TRANSFER_POLICY.resourceDeadlineMs === 10_000, "resource deadline is closed");
-  assert(TRANSFER_POLICY.uploadDeadlineMs === 30_000, "upload deadline is closed");
+  assert(
+    TRANSFER_POLICY.resourceDeadlineMs === 10_000,
+    "resource deadline is closed",
+  );
+  assert(
+    TRANSFER_POLICY.uploadDeadlineMs === 30_000,
+    "upload deadline is closed",
+  );
   assert(
     JSON.stringify(RESOURCE_INFO) === JSON.stringify({
       schemes: [
@@ -104,14 +116,29 @@ Deno.test("RESOURCE and UPLOAD controls accept only exact canonical shapes", () 
       "upload.info",
     "upload info accepted",
   );
-  for (const malformed of [
-    { type: "resource.info", id: "", extra: true },
-    { type: "resource.bytes", id: "r", url: FIXED_RESOURCE_URL, extra: true },
-    { type: "resource.bytesMany", id: "r", urls: [FIXED_RESOURCE_URL] },
-    { type: "upload.status", id: "u", uploadId: "foreign" },
-    { type: "upload.upload", id: "u", request: { rail: "nip96", data: new Blob() } },
-    { type: "upload.upload", id: "u", request: { rail: "blossom", data: "base64" } },
-  ]) assert(decodeNapControlMessage(malformed) === null, "malformed control denied");
+  for (
+    const malformed of [
+      { type: "resource.info", id: "", extra: true },
+      { type: "resource.bytes", id: "r", url: FIXED_RESOURCE_URL, extra: true },
+      { type: "resource.bytesMany", id: "r", urls: [FIXED_RESOURCE_URL] },
+      { type: "upload.status", id: "u", uploadId: "foreign" },
+      {
+        type: "upload.upload",
+        id: "u",
+        request: { rail: "nip96", data: new Blob() },
+      },
+      {
+        type: "upload.upload",
+        id: "u",
+        request: { rail: "blossom", data: "base64" },
+      },
+    ]
+  ) {
+    assert(
+      decodeNapControlMessage(malformed) === null,
+      "malformed control denied",
+    );
+  }
 });
 
 Deno.test("binary frames fail closed for malformed headers and limits", () => {
