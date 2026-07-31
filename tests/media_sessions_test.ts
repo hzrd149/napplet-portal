@@ -57,6 +57,42 @@ Deno.test("media create tracer rejects invalid input without effects", () => {
   assert(deliveries === 0, "invalid input must produce no effects");
 });
 
+Deno.test("autoplay create stays stopped until owner reports success", () => {
+  const delivered: Array<{ recipient: MediaActorRef; message: unknown }> = [];
+  const coordinator = new MediaSessionCoordinator({
+    deliver: (recipient, message) => {
+      delivered.push({ recipient, message });
+      return true;
+    },
+  });
+  coordinator.connect("account", origin);
+  const outcome = coordinator.receive("account", origin, {
+    type: "media.session.create",
+    id: "autoplay",
+    owner: "napplet",
+    sessionId: "autoplay-session",
+    autoplay: true,
+  });
+  assert(outcome.session?.status === "stopped", "create is never optimistic");
+  assert(
+    (delivered[1].message as { type: string }).type === "runtime.media.grant",
+    "autoplay is delivered as an enactment grant",
+  );
+  assert(
+    (delivered.at(-1)?.message as { status?: string }).status === "stopped",
+    "projection remains stopped before playback acknowledgement",
+  );
+  const acknowledged = coordinator.receive("account", origin, {
+    type: "media.state",
+    sessionId: "autoplay-session",
+    status: "playing",
+  }, { generation: outcome.session?.generation });
+  assert(
+    acknowledged.accepted && acknowledged.session?.status === "playing",
+    "playing becomes authoritative only after owner acknowledgement",
+  );
+});
+
 Deno.test("replacement stops old owner before result and all projections", () => {
   const deliveries: Array<{ recipient: MediaActorRef; message: unknown }> = [];
   let failDelivery = false;

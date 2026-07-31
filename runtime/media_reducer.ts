@@ -207,7 +207,7 @@ export function reduceMedia(
       playbackOwner: command.message.owner,
       origin: Object.freeze({ ...command.actor }),
       owner: Object.freeze({ ...command.actor }),
-      status: command.message.autoplay ? "playing" : "stopped",
+      status: "stopped",
       capabilities: Object.freeze([...(command.message.capabilities ?? [])]),
       transferable: true,
       terminal: false,
@@ -218,10 +218,19 @@ export function reduceMedia(
       }]]),
     });
     working = replace(working, session);
-    effects.push(
-      { recipient: command.actor, message: result },
-      ...broadcast(session, command.recipients),
-    );
+    effects.push({ recipient: command.actor, message: result });
+    if (command.message.autoplay && command.message.owner === "napplet") {
+      effects.push({
+        recipient: command.actor,
+        message: Object.freeze({
+          type: "runtime.media.grant",
+          sessionId: session.sessionId,
+          generation: session.generation,
+          owner: session.owner!,
+        }),
+      });
+    }
+    effects.push(...broadcast(session, command.recipients));
     return { state: working, accepted: true, session, effects };
   }
   if (
