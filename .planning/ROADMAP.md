@@ -122,7 +122,7 @@ Plans:
 
 **Goal:** The full v1.1 expansion is contract-compatible, secure at every proxy boundary, and verified on mobile devices.
 **Requirements:** QLT-01, QLT-02, QLT-03, QLT-04
-**Plans:** 4/9 plans executed
+**Plans:** 5/9 plans executed
 
 Plans:
 
@@ -130,7 +130,7 @@ Plans:
 - [x] 09-02-PLAN.md — Close hostile transport, URL, redirect, and RESOURCE/UPLOAD transfer boundaries.
 - [x] 09-03-PLAN.md — Close capability, catalog, identity, and signer authority boundaries.
 - [x] 09-04-PLAN.md — Close COMMON stream and STORAGE namespace isolation boundaries.
-- [ ] 09-05-PLAN.md — Close iframe sandbox, source/origin, CSP, and Permissions-Policy boundaries.
+- [x] 09-05-PLAN.md — Close iframe sandbox, source/origin, CSP, and Permissions-Policy boundaries.
 - [ ] 09-06-PLAN.md — Close intent, media, reconnect, replacement, and shutdown lifecycle boundaries.
 - [ ] 09-07-PLAN.md — Prove deterministic lifecycle behavior and production multi-client transport after all adversarial rows are green.
 - [ ] 09-08-PLAN.md — Automate mobile viewport, accessibility, reconnect, intent, and media browser flows.

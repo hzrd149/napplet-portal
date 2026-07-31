@@ -5,16 +5,16 @@ milestone_name: Runtime & UX Expansion
 current_phase: 7
 current_phase_name: Intent Navigation
 status: verifying
-stopped_at: Completed 09-04-PLAN.md
-last_updated: "2026-07-31T06:30:17.009Z"
+stopped_at: Completed 09-05-PLAN.md
+last_updated: "2026-07-31T06:39:39.702Z"
 last_activity: 2026-07-31
 last_activity_desc: Completed Phase 7 production intent navigation integration
 progress:
   total_phases: 7
   completed_phases: 6
   total_plans: 32
-  completed_plans: 27
-  percent: 84
+  completed_plans: 28
+  percent: 86
 ---
 
 # Project State
@@ -96,6 +96,7 @@ Last activity: 2026-07-31 — Completed Phase 7 production intent navigation int
 | Phase 09-runtime-expansion-hardening P02 | 6min | 2 tasks | 5 files |
 | Phase 09-runtime-expansion-hardening P03 | 8min | 2 tasks | 6 files |
 | Phase 09-runtime-expansion-hardening P04 | 10min | 2 tasks | 4 files |
+| Phase 09-runtime-expansion-hardening P05 | 14min | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -181,6 +182,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase ?]: [Phase 09]: Revalidate active account and accepted catalog identity before async launch, signer, publication, and commit effects.
 - [Phase ?]: [Phase 09]: Revalidate STORAGE authority inside the serialized owner and immediately before atomic rename.
 - [Phase ?]: [Phase 09]: Leave QLT ledger completion to Plan 09-09 final reconciliation.
+- [Phase ?]: [Phase 09]: Apply one immutable browser policy after Fresh request handling so shell and runtime responses share fail-closed headers.
+- [Phase ?]: [Phase 09]: Admit iframe messages only from the current WindowProxy with opaque srcdoc origin, then recheck exact recipient authority before delivery.
 
 ### Pending Todos
 
@@ -209,6 +212,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-07-31T06:30:16.993Z
-Stopped at: Completed 09-04-PLAN.md
+Last session: 2026-07-31T06:39:39.682Z
+Stopped at: Completed 09-05-PLAN.md
 Resume file: None

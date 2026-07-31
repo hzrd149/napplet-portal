@@ -2,9 +2,9 @@
 schema_version: 1
 open_count: 5
 waived_count: 0
-fixed_count: 14
-total_count: 19
-last_updated: 2026-07-31T06:30:40.280Z
+fixed_count: 15
+total_count: 20
+last_updated: 2026-07-31T06:40:07.750Z
 ---
 
 # Broken Windows Ledger
@@ -34,6 +34,7 @@ last_updated: 2026-07-31T06:30:40.280Z
 | 17 | 08 | deviation | tests/media_lifecycle_test.ts |  | Lifecycle fixture adjusted to satisfy prefer-const lint | fixed |  | 2026-07-31T05:13:48.785Z | 2026-07-31T05:14:14.644Z |
 | 18 | 09 | deviation | tests/requirement_traceability_test.ts |  | Full-suite traceability expectation still lists concurrently advanced QLT-02 and QLT-03 as pending | open |  | 2026-07-31T06:22:40.172Z |  |
 | 19 | 09 | deviation | runtime/storage_store.ts |  | Added commit-time authority fencing discovered by the adversarial state-isolation matrix | fixed |  | 2026-07-31T06:30:16.295Z | 2026-07-31T06:30:40.280Z |
+| 20 | 09 | deviation | tests/runtime_transport_test.ts |  | Added missing named browser-boundary verification suites required by Plan 09-05 | fixed |  | 2026-07-31T06:39:38.954Z | 2026-07-31T06:40:07.750Z |
 
 ````json
 [
@@ -264,6 +265,18 @@ last_updated: 2026-07-31T06:30:40.280Z
     "reason": "",
     "recorded_at": "2026-07-31T06:30:16.295Z",
     "resolved_at": "2026-07-31T06:30:40.280Z"
+  },
+  {
+    "id": 20,
+    "kind": "deviation",
+    "phase": "09",
+    "file": "tests/runtime_transport_test.ts",
+    "line": null,
+    "description": "Added missing named browser-boundary verification suites required by Plan 09-05",
+    "status": "fixed",
+    "reason": "",
+    "recorded_at": "2026-07-31T06:39:38.954Z",
+    "resolved_at": "2026-07-31T06:40:07.750Z"
   }
 ]
 ````
