@@ -40,7 +40,9 @@ Deno.test("reconnect reattaches namespace without duplicating subscriptions", ()
     clearTimeout: clock.clearTimeout,
   });
   const firstMessages: string[] = [];
-  const first = registry.attach((message) => firstMessages.push(message));
+  const first = registry.attach((message) => {
+    if (typeof message === "string") firstMessages.push(message);
+  });
   const window = registry.createWindow(first.connectionId);
   let unsubscribeCount = 0;
   registry.trackSubscription(
@@ -55,7 +57,9 @@ Deno.test("reconnect reattaches namespace without duplicating subscriptions", ()
   registry.detach(first.connectionId);
   const secondMessages: string[] = [];
   const resumed = registry.attach(
-    (message) => secondMessages.push(message),
+    (message) => {
+      if (typeof message === "string") secondMessages.push(message);
+    },
     first.reconnectToken,
   );
   assert(
@@ -71,6 +75,25 @@ Deno.test("reconnect reattaches namespace without duplicating subscriptions", ()
   assert(secondMessages[0] === "live", "replacement socket must receive data");
   clock.flush();
   assert(unsubscribeCount === 0, "cancelled grace timer must not clean up");
+});
+
+Deno.test("reconnect rebinds connection output to the resumed sender", () => {
+  const first: (string | ArrayBuffer)[] = [];
+  const resumed: (string | ArrayBuffer)[] = [];
+  let sequence = 0;
+  const registry = new ConnectionRegistry({
+    createId: () => `id-${++sequence}`,
+  });
+  const initial = registry.attach((message) => first.push(message));
+  registry.detach(initial.connectionId);
+  const next = registry.attach(
+    (message) => resumed.push(message),
+    initial.reconnectToken,
+  );
+  assert(next.resumed, "session must resume");
+  assert(registry.send(next.connectionId, "authorized"), "send must succeed");
+  assert(first.length === 0, "closed sender must not receive bridge output");
+  assert(resumed[0] === "authorized", "resumed sender must receive output");
 });
 
 Deno.test("ownership is connection-scoped and expiry deletes before unsubscribe", () => {

@@ -130,18 +130,23 @@ export const handler = define.handlers({
           windowId,
           source,
           (message, payloads) => {
-            if (socket.readyState !== WebSocket.OPEN) return;
-            socket.send(JSON.stringify({
-              type: "runtime.event",
-              connectionId: connection.connectionId,
-              windowId,
-              message,
-            }));
+            if (
+              !connections.send(
+                connection.connectionId,
+                JSON.stringify({
+                  type: "runtime.event",
+                  connectionId: connection.connectionId,
+                  windowId,
+                  message,
+                }),
+              )
+            ) return;
             payloads?.forEach((payload, index) => {
               const id = payloads.length === 1
                 ? String(message.id)
                 : `${String(message.id)}:${index}`;
-              socket.send(
+              connections.send(
+                connection.connectionId,
                 encodeBinaryFrame({
                   kind: BinaryFrameKind.ResourceResult,
                   id,

@@ -9,7 +9,7 @@ export interface SubscriptionHandle {
 interface ConnectionRecord {
   readonly connectionId: string;
   readonly reconnectToken: string;
-  send?: (message: string) => void;
+  send?: (message: string | ArrayBuffer) => void;
   timer?: number;
   readonly windows: Set<string>;
 }
@@ -59,7 +59,7 @@ export class ConnectionRegistry {
   }
 
   attach(
-    send: (message: string) => void,
+    send: (message: string | ArrayBuffer) => void,
     reconnectToken?: string,
   ): ConnectionAttachment {
     const knownId = reconnectToken
@@ -118,18 +118,25 @@ export class ConnectionRegistry {
     );
   }
 
-  send(connectionId: string, message: string): boolean {
+  send(connectionId: string, message: string | ArrayBuffer): boolean {
     const send = this.#connections.get(connectionId)?.send;
+    const bytes = typeof message === "string"
+      ? message.length
+      : message.byteLength;
     if (!send) {
       debug(
         "send skipped disconnected connection=%s bytes=%d",
         shortId(connectionId),
-        message.length,
+        bytes,
       );
       return false;
     }
     send(message);
-    debug("sent connection=%s bytes=%d", shortId(connectionId), message.length);
+    debug(
+      "sent connection=%s bytes=%d",
+      shortId(connectionId),
+      bytes,
+    );
     return true;
   }
 
