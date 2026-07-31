@@ -1,4 +1,4 @@
-import { assertEquals, assertThrows } from "jsr:@std/assert";
+import { assertEquals, assertThrows } from "jsr:@std/assert@1.0.16";
 import matrix from "./fixtures/v1_1_contract_matrix.json" with { type: "json" };
 import {
   auditContractParity,

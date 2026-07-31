@@ -1,4 +1,4 @@
-import { assertEquals } from "jsr:@std/assert";
+import { assertEquals } from "jsr:@std/assert@1.0.16";
 import { parseRequirementTraceability } from "../runtime/nap_contract_registry.ts";
 
 Deno.test("all 33 v1.1 requirements map exactly once with honest evidence status", async () => {
