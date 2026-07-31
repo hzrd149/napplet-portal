@@ -38,8 +38,14 @@ Deno.test("stack keeps mounted surfaces and browser history contains opaque IDs"
   );
 
   assert(stack.pop("root"), "Back must restore a retained surface");
-  assert(stack.surfaces.length === 1, "Back must remove only the top surface");
-  assert(stack.active?.surfaceId === "root", "prior frame must be revealed");
+  assert(
+    Number(stack.surfaces.length) === 1,
+    "Back must remove only the top surface",
+  );
+  assert(
+    String(stack.active?.surfaceId) === "root",
+    "prior frame must be revealed",
+  );
   assert(settled.join(",") === "child", "closure must settle once");
   assert(!stack.close("child"), "closed surface must reject replay");
   assert(settled.join(",") === "child", "closure replay must not settle twice");
@@ -59,9 +65,9 @@ Deno.test("stack reuses only exact account and verified handler identity", () =>
   );
   assert(
     stack.focusReusable(root.account, {
-        ...root.identity,
-        aggregateHash: "f".repeat(64),
-      }) === null,
+      ...root.identity,
+      aggregateHash: "f".repeat(64),
+    }) === null,
     "cross-version reuse must fail",
   );
 });
@@ -70,7 +76,13 @@ Deno.test("stacked frame source binding and sandbox remain exact", async () => {
   const frame = await Deno.readTextFile("components/NappletFrame.tsx");
   const shell = await Deno.readTextFile("islands/NappletShell.tsx");
   assert(frame.includes('sandbox="allow-scripts"'), "sandbox must be exact");
-  assert(!frame.includes("allow-same-origin"), "frames must remain opaque-origin");
+  assert(
+    !frame.includes("allow-same-origin"),
+    "frames must remain opaque-origin",
+  );
   assert(shell.includes("event.source"), "messages must be source-bound");
-  assert(shell.includes("Back") && shell.includes("Close"), "stack controls required");
+  assert(
+    shell.includes("Back") && shell.includes("Close"),
+    "stack controls required",
+  );
 });

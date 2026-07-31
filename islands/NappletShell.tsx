@@ -47,6 +47,111 @@ interface NappletShellProps {
   readonly coordinate: string;
 }
 
+export interface IntentSurface {
+  readonly surfaceId: string;
+  readonly account: string;
+  readonly identity: VerifiedNappletIdentity;
+  readonly srcdoc: string;
+  readonly owner: { readonly connectionId: string; readonly windowId: string };
+}
+
+interface SurfaceStackOptions {
+  readonly pushHistory?: (state: { readonly surfaceId: string }) => void;
+  readonly settleClosed?: (surfaceId: string) => void;
+  readonly changed?: (surfaces: readonly IntentSurface[]) => void;
+}
+
+export class SurfaceStackController {
+  #surfaces: IntentSurface[] = [];
+  readonly #closed = new Set<string>();
+
+  constructor(readonly options: SurfaceStackOptions = {}) {}
+
+  get surfaces(): readonly IntentSurface[] {
+    return this.#surfaces;
+  }
+
+  get active(): IntentSurface | null {
+    return this.#surfaces.at(-1) ?? null;
+  }
+
+  replaceRoot(surface: IntentSurface): void {
+    this.#surfaces = [surface];
+    this.#emit();
+  }
+
+  push(surface: IntentSurface): boolean {
+    if (
+      this.#surfaces.some((candidate) =>
+        candidate.surfaceId === surface.surfaceId
+      )
+    ) {
+      return false;
+    }
+    this.#surfaces = [...this.#surfaces, surface];
+    this.options.pushHistory?.({ surfaceId: surface.surfaceId });
+    this.#emit();
+    return true;
+  }
+
+  pop(surfaceId: string): boolean {
+    const index = this.#surfaces.findIndex((surface) =>
+      surface.surfaceId === surfaceId
+    );
+    if (index < 0 || index === this.#surfaces.length - 1) return false;
+    for (const surface of this.#surfaces.slice(index + 1)) {
+      this.#settle(surface.surfaceId);
+    }
+    this.#surfaces = this.#surfaces.slice(0, index + 1);
+    this.#emit();
+    return true;
+  }
+
+  close(surfaceId: string): boolean {
+    const index = this.#surfaces.findIndex((surface) =>
+      surface.surfaceId === surfaceId
+    );
+    if (index <= 0) return false;
+    this.#surfaces = this.#surfaces.filter((surface) =>
+      surface.surfaceId !== surfaceId
+    );
+    this.#settle(surfaceId);
+    this.#emit();
+    return true;
+  }
+
+  focusReusable(
+    account: string,
+    identity: VerifiedNappletIdentity,
+  ): IntentSurface | null {
+    const match =
+      this.#surfaces.find((surface) =>
+        surface.account === account &&
+        surface.identity.dTag === identity.dTag &&
+        surface.identity.aggregateHash === identity.aggregateHash
+      ) ?? null;
+    if (!match) return null;
+    const index = this.#surfaces.indexOf(match);
+    this.#surfaces = [
+      ...this.#surfaces.slice(0, index),
+      ...this.#surfaces.slice(index + 1),
+      match,
+    ];
+    this.#emit();
+    return match;
+  }
+
+  #settle(surfaceId: string): void {
+    if (this.#closed.has(surfaceId)) return;
+    this.#closed.add(surfaceId);
+    this.options.settleClosed?.(surfaceId);
+  }
+
+  #emit(): void {
+    this.options.changed?.(this.#surfaces);
+  }
+}
+
 type View = "napplet" | "home" | "profile" | "settings";
 type Notice = "connection" | "handshake" | "integrity" | null;
 
@@ -325,6 +430,7 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
     "loading",
   );
   const [catalogQuery, setCatalogQuery] = useState("");
+  const [surfaces, setSurfaces] = useState<readonly IntentSurface[]>([]);
   const controller = useRef<ConnectionController | null>(null);
   const iframe = useRef<HTMLIFrameElement | null>(null);
   const owner = useRef<{ connectionId: string; windowId: string } | null>(null);
@@ -345,6 +451,13 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
   const mountedAt = useRef(Date.now());
   const binaryRequests = useRef(new ActiveBinaryRequests(2));
   const resourceAssembler = useRef(new ResourceBinaryAssembler());
+  const surfaceStack = useRef<SurfaceStackController | null>(null);
+  if (!surfaceStack.current) {
+    surfaceStack.current = new SurfaceStackController({
+      pushHistory: (state) => history.pushState(state, "", location.href),
+      changed: setSurfaces,
+    });
+  }
 
   const registry = useMemo<FrameIdentityRegistry>(() => ({
     register(source, nextIdentity) {
@@ -475,6 +588,12 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
     globalThis.addEventListener("message", receive);
     const back = (event: PopStateEvent) => {
       closeCatalogDialog();
+      const surfaceId = (event.state as { surfaceId?: string } | null)
+        ?.surfaceId;
+      if (surfaceId && surfaceStack.current?.pop(surfaceId)) {
+        setView("napplet");
+        return;
+      }
       const next = (event.state as { view?: View } | null)?.view;
       setView(
         next === "profile" || next === "napplet" || next === "settings"
@@ -701,6 +820,22 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
       aggregateHash: nextIdentity.aggregateHash,
     });
     setSrcdoc(message.srcdoc);
+    const nextAccount = typeof account?.pubkey === "string"
+      ? account.pubkey
+      : "";
+    const currentOwner = owner.current;
+    if (currentOwner) {
+      surfaceStack.current?.replaceRoot({
+        surfaceId: crypto.randomUUID(),
+        account: nextAccount,
+        identity: {
+          dTag: nextIdentity.dTag,
+          aggregateHash: nextIdentity.aggregateHash,
+        },
+        srcdoc: message.srcdoc,
+        owner: currentOwner,
+      });
+    }
     if (typeof account?.pubkey === "string") {
       setProfile({ pubkey: account.pubkey, status: "active" });
     }
@@ -886,14 +1021,52 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
               onRetry={() => controller.current?.retryNow()}
             />
           )}
-          <NappletFrame
-            srcdoc={srcdoc}
-            identity={identity}
-            title="Security Lab napplet"
-            hidden={view !== "napplet"}
-            registry={registry}
-            onFrame={(frame) => iframe.current = frame}
-          />
+          {(surfaces.length > 0
+            ? surfaces
+            : identity && srcdoc && owner.current
+            ? [{
+              surfaceId: "root",
+              account: profile?.pubkey ?? "",
+              identity,
+              srcdoc,
+              owner: owner.current,
+            }]
+            : []).map((surface, index, all) => (
+              <div key={surface.surfaceId} class="napplet-surface">
+                {index === all.length - 1 && all.length > 1 && (
+                  <nav
+                    aria-label="Napplet stack"
+                    class="napplet-stack-controls"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => history.back()}
+                    >
+                      Back
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        surfaceStack.current?.close(surface.surfaceId)}
+                    >
+                      Close
+                    </button>
+                  </nav>
+                )}
+                <NappletFrame
+                  srcdoc={surface.srcdoc}
+                  identity={surface.identity}
+                  title={`Napplet ${surface.identity.dTag}`}
+                  hidden={view !== "napplet" || index !== all.length - 1}
+                  registry={registry}
+                  onFrame={(frame) => {
+                    if (index === 0) {
+                      iframe.current = frame;
+                    }
+                  }}
+                />
+              </div>
+            ))}
           {!srcdoc && (
             <p class="stream-status" aria-live="polite">
               {connecting ? "Waiting for updates" : "Open a signed-in session"}
