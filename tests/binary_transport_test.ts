@@ -4,6 +4,7 @@ import {
   BinaryFrameStreamDecoder,
   decodeBinaryFrames,
   encodeBinaryFrame,
+  FIXED_RESOURCE_URL,
   MAX_BINARY_PAYLOAD_BYTES,
 } from "../runtime/binary_transport.ts";
 import {
@@ -12,6 +13,12 @@ import {
   handleFixedResourceFrame,
 } from "../routes/api/runtime.ts";
 import { decodeResourceBinaryResult } from "../islands/NappletShell.tsx";
+import {
+  decodeNapControlMessage,
+  RESOURCE_INFO,
+  TRANSFER_POLICY,
+  UPLOAD_INFO,
+} from "../runtime/transport.ts";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -48,6 +55,63 @@ Deno.test("binary frames decode fragmented and concatenated input deterministica
   assert(frames[0].id === "resource-1", "first correlation retained");
   assert(frames[0].owner === owner, "owner comes from authenticated socket");
   assert(frames[1].payload.join(",") === "1,2,3", "payload remains binary");
+});
+
+Deno.test("RESOURCE and UPLOAD info are derived from one immutable policy", () => {
+  assert(Object.isFrozen(TRANSFER_POLICY), "policy snapshot is immutable");
+  assert(TRANSFER_POLICY.maxBytes === MAX_BINARY_PAYLOAD_BYTES, "byte cap matches codec");
+  assert(TRANSFER_POLICY.maxUrls === 8, "URL count is closed");
+  assert(TRANSFER_POLICY.maxActivePerWindow === 2, "active operations are bounded");
+  assert(TRANSFER_POLICY.maxRedirects === 3, "redirect count is closed");
+  assert(TRANSFER_POLICY.maxUrlChars === 2_048, "URL text is bounded");
+  assert(TRANSFER_POLICY.resourceDeadlineMs === 10_000, "resource deadline is closed");
+  assert(TRANSFER_POLICY.uploadDeadlineMs === 30_000, "upload deadline is closed");
+  assert(
+    JSON.stringify(RESOURCE_INFO) === JSON.stringify({
+      schemes: [
+        { scheme: "https", enabled: true },
+        { scheme: "blossom", enabled: true },
+      ],
+      maxBytes: 5_242_880,
+      maxUrls: 8,
+    }),
+    "resource.info uses pinned fields only",
+  );
+  assert(UPLOAD_INFO.rails.length === 1, "one upload rail advertised");
+  assert(UPLOAD_INFO.rails[0].rail === "blossom", "blossom rail advertised");
+  assert(UPLOAD_INFO.rails[0].enabled, "blossom rail enabled");
+  assert(UPLOAD_INFO.maxBytes === 5_242_880, "upload cap advertised");
+  assert(
+    UPLOAD_INFO.mimeTypes?.join(",") ===
+      "image/png,image/jpeg,image/gif,image/webp,image/avif,text/plain,application/json,application/pdf",
+    "closed passive MIME allowlist advertised",
+  );
+  assert(
+    UPLOAD_INFO.rails[0].returns?.join(",") ===
+      "url,fallbackUrls,sha256,size,mimeType,nip94",
+    "canonical return fields advertised",
+  );
+});
+
+Deno.test("RESOURCE and UPLOAD controls accept only exact canonical shapes", () => {
+  assert(
+    decodeNapControlMessage({ type: "resource.info", id: "r-1" })?.type ===
+      "resource.info",
+    "resource info accepted",
+  );
+  assert(
+    decodeNapControlMessage({ type: "upload.info", id: "u-1" })?.type ===
+      "upload.info",
+    "upload info accepted",
+  );
+  for (const malformed of [
+    { type: "resource.info", id: "", extra: true },
+    { type: "resource.bytes", id: "r", url: FIXED_RESOURCE_URL, extra: true },
+    { type: "resource.bytesMany", id: "r", urls: [FIXED_RESOURCE_URL] },
+    { type: "upload.status", id: "u", uploadId: "foreign" },
+    { type: "upload.upload", id: "u", request: { rail: "nip96", data: new Blob() } },
+    { type: "upload.upload", id: "u", request: { rail: "blossom", data: "base64" } },
+  ]) assert(decodeNapControlMessage(malformed) === null, "malformed control denied");
 });
 
 Deno.test("binary frames fail closed for malformed headers and limits", () => {
