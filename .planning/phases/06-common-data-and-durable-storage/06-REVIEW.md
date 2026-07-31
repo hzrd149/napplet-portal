@@ -23,7 +23,7 @@ findings:
   warning: 3
   info: 0
   total: 8
-status: issues_found
+status: resolved
 ---
 
 # Phase 6: Code Review Report
@@ -31,7 +31,7 @@ status: issues_found
 **Reviewed:** 2026-07-31T04:05:00Z
 **Depth:** deep
 **Files Reviewed:** 14
-**Status:** issues_found
+**Status:** resolved
 
 ## Summary
 
@@ -98,3 +98,8 @@ The focused Phase 6 suite passed (20 tests), and `deno task check` passed. Those
 _Reviewed: 2026-07-31T04:05:00Z_
 _Reviewer: the agent (gsd-code-reviewer)_
 _Depth: deep_
+
+## Resolution
+
+All five critical and three warning findings were fixed and verified on
+2026-07-31. See `06-REVIEW-FIX.md` for commits and quality-gate results.
