@@ -183,7 +183,7 @@ export class OutboxAdapter {
     }
     if (
       !sameAuthority(this.#options.identity(), identity) ||
-      event.pubkey !== identity.pubkey
+      (authority !== undefined && event.pubkey !== identity.pubkey)
     ) return { id, ok: false, error: "not authorized", outcomes: [] };
     const relays = this.#relays(identity.pubkey);
     const outcomes = await Promise.all(

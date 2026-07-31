@@ -52,12 +52,13 @@ function publicIdentity(
   status: Exclude<IdentityStatus, "unavailable">,
   generation?: number,
 ): IdentitySnapshot {
-  return Object.freeze({
+  const identity: IdentitySnapshot = {
     accountId: account.id,
     pubkey: account.pubkey,
     status,
-    generation,
-  });
+  };
+  Object.defineProperty(identity, "generation", { value: generation });
+  return Object.freeze(identity);
 }
 
 /**
