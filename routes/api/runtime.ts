@@ -322,6 +322,19 @@ export const handler = define.handlers({
       pendingIntentAcks.clear();
     });
     socket.addEventListener("message", async (event) => {
+      if (
+        !connections.isCurrentAttachment(
+          connection.connectionId,
+          connection.generation,
+        )
+      ) {
+        debug(
+          "ignored stale socket generation connection=%s generation=%d",
+          shortId(connection.connectionId),
+          connection.generation,
+        );
+        return;
+      }
       if (event.data instanceof ArrayBuffer) {
         const incoming = new Uint8Array(event.data);
         const decoded = decodeBinaryFrames(incoming, {
@@ -410,6 +423,12 @@ export const handler = define.handlers({
             return;
           }
           await signer.restore();
+          if (
+            !connections.isCurrentAttachment(
+              connection.connectionId,
+              connection.generation,
+            )
+          ) return;
           const signerState = signer.state;
           if (signerState.status !== "active" || !signerState.identity.pubkey) {
             debug(
@@ -666,6 +685,12 @@ export const handler = define.handlers({
 
     async function sendActiveSigner(pubkey: string): Promise<void> {
       try {
+        if (
+          !connections.isCurrentAttachment(
+            connection.connectionId,
+            connection.generation,
+          )
+        ) return;
         debug(
           "send active signer started connection=%s pubkey=%s",
           shortId(connection.connectionId),
@@ -673,7 +698,13 @@ export const handler = define.handlers({
         );
         const account = runtime.signIn(pubkey);
         const artifact = await runtime.resolveArtifact();
-        if (socket.readyState !== WebSocket.OPEN) return;
+        if (
+          socket.readyState !== WebSocket.OPEN ||
+          !connections.isCurrentAttachment(
+            connection.connectionId,
+            connection.generation,
+          )
+        ) return;
         bridge.verifyNapplet({
           dTag: artifact.dTag,
           aggregateHash: artifact.aggregateHash,

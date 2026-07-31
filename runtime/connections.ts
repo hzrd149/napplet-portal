@@ -165,6 +165,12 @@ export class ConnectionRegistry {
     return true;
   }
 
+  isCurrentAttachment(connectionId: string, generation: number): boolean {
+    const connection = this.#connections.get(connectionId);
+    return connection?.send !== undefined &&
+      connection.generation === generation;
+  }
+
   createWindow(
     connectionId: string,
     requestedWindowId?: string,
