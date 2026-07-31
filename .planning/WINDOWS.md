@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 5
+open_count: 6
 waived_count: 0
 fixed_count: 15
-total_count: 20
-last_updated: 2026-07-31T06:40:07.750Z
+total_count: 21
+last_updated: 2026-07-31T07:34:29.044Z
 ---
 
 # Broken Windows Ledger
@@ -35,6 +35,7 @@ last_updated: 2026-07-31T06:40:07.750Z
 | 18 | 09 | deviation | tests/requirement_traceability_test.ts |  | Full-suite traceability expectation still lists concurrently advanced QLT-02 and QLT-03 as pending | open |  | 2026-07-31T06:22:40.172Z |  |
 | 19 | 09 | deviation | runtime/storage_store.ts |  | Added commit-time authority fencing discovered by the adversarial state-isolation matrix | fixed |  | 2026-07-31T06:30:16.295Z | 2026-07-31T06:30:40.280Z |
 | 20 | 09 | deviation | tests/runtime_transport_test.ts |  | Added missing named browser-boundary verification suites required by Plan 09-05 | fixed |  | 2026-07-31T06:39:38.954Z | 2026-07-31T06:40:07.750Z |
+| 21 | 09 | unrun-verify | tests/browser/portal_acceptance_test.ts |  | Two-page Chromium media ownership row blocked by historical verified artifact blob-unavailable | open |  | 2026-07-31T07:34:29.044Z |  |
 
 ````json
 [
@@ -277,6 +278,18 @@ last_updated: 2026-07-31T06:40:07.750Z
     "reason": "",
     "recorded_at": "2026-07-31T06:39:38.954Z",
     "resolved_at": "2026-07-31T06:40:07.750Z"
+  },
+  {
+    "id": 21,
+    "kind": "unrun-verify",
+    "phase": "09",
+    "file": "tests/browser/portal_acceptance_test.ts",
+    "line": null,
+    "description": "Two-page Chromium media ownership row blocked by historical verified artifact blob-unavailable",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-07-31T07:34:29.044Z",
+    "resolved_at": null
   }
 ]
 ````
