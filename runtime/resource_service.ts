@@ -4,10 +4,12 @@ import {
   ResourcePolicyError,
 } from "./resource_policy.ts";
 import { TRANSFER_POLICY } from "./transport.ts";
+import { pinnedFetch } from "./pinned_fetch.ts";
 
 type FetchLike = (
-  input: string | URL | Request,
+  input: URL,
   init?: RequestInit,
+  approvedAddresses?: readonly string[],
 ) => Promise<Response>;
 
 interface ResourceServiceOptions {
@@ -313,7 +315,7 @@ export class ResourceService {
 
   constructor(options: ResourceServiceOptions = {}) {
     this.#policy = options.policy ?? new ResourceDestinationPolicy();
-    this.#fetch = options.fetch ?? fetch;
+    this.#fetch = options.fetch ?? pinnedFetch;
     this.#maxRedirects = options.maxRedirects ?? TRANSFER_POLICY.maxRedirects;
     this.#maxBytes = options.maxBytes ?? TRANSFER_POLICY.maxBytes;
     this.#maxUrls = options.maxUrls ?? TRANSFER_POLICY.maxUrls;
@@ -468,8 +470,14 @@ export class ResourceService {
       let next = String(input);
       for (let redirects = 0;; redirects++) {
         let url: URL;
+        let addresses: readonly string[];
         try {
-          url = (await this.#policy.authorize(next, destinationClass)).url;
+          const destination = await this.#policy.authorize(
+            next,
+            destinationClass,
+          );
+          url = destination.url;
+          addresses = destination.addresses;
         } catch (error) {
           if (error instanceof ResourcePolicyError) {
             throw new ResourceServiceError("blocked-by-policy");
@@ -479,10 +487,11 @@ export class ResourceService {
 
         let response: Response;
         try {
-          // Deno fetch cannot pin the address authorized above. Every hop and every
-          // DNS answer is revalidated, but deployment egress policy remains required
-          // as defense in depth against DNS rebinding between lookup and connection.
-          response = await this.#fetch(url, { redirect: "manual", signal });
+          response = await this.#fetch(
+            url,
+            { redirect: "manual", signal },
+            addresses,
+          );
         } catch (cause) {
           if (
             signal.aborted ||

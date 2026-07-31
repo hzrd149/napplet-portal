@@ -65,6 +65,7 @@
     "npm:preact@^10.29.7": "10.29.7_preact-render-to-string@6.7.0",
     "npm:rollup@^4.55.1": "4.62.2",
     "npm:tailwindcss@^4.3.3": "4.3.3",
+    "npm:undici@7.16.0": "7.16.0",
     "npm:vite@^7.1.4": "7.3.6",
     "npm:vite@^7.3.6": "7.3.6"
   },
@@ -1741,6 +1742,9 @@
     "tslib@2.8.1": {
       "integrity": "sha512-oJFu94HQb+KVduSUQL7wnpmqnfmLsOA/nAh6b6EH0wCEoK0/mPeXU6c3wKDV83MkOuHPRHtSXKKU99IBazS/2w=="
     },
+    "undici@7.16.0": {
+      "integrity": "sha512-QEg3HPMll0o3t2ourKwOeUAZ159Kn9mx5pnzHRQO8+Wixmh88YdZRiIwat0iNzNNXn0yoEtXJqFpyW7eM8BV7g=="
+    },
     "update-browserslist-db@1.2.3_browserslist@4.28.7": {
       "integrity": "sha512-Js0m9cx+qOgDxo0eMiFGEueWztz+d4+M3rGlmKPT+T4IS/jP4ylw3Nwpu6cpTTP8R1MAC1kF4VbdLt3ARf209w==",
       "dependencies": [
@@ -1792,6 +1796,7 @@
       "npm:nostr-tools@2.24.1",
       "npm:preact@^10.29.7",
       "npm:tailwindcss@^4.3.3",
+      "npm:undici@7.16.0",
       "npm:vite@^7.3.6"
     ]
   }

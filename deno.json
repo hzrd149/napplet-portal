@@ -44,6 +44,7 @@
     "@fresh/plugin-vite": "jsr:@fresh/plugin-vite@1.1.2",
     "@grammyjs/debug": "jsr:@grammyjs/debug@^0.3.1",
     "debug": "./runtime/debug_compat.ts",
+    "undici": "npm:undici@7.16.0",
     "vite": "npm:vite@^7.3.6",
     "tailwindcss": "npm:tailwindcss@^4.3.3",
     "@tailwindcss/vite": "npm:@tailwindcss/vite@^4.3.3"
