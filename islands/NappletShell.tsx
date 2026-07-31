@@ -36,6 +36,7 @@ import {
   BinaryFrameKind,
   decodeBinaryFrames,
   encodeBinaryFrame,
+  encodeUploadPayload,
   FIXED_RESOURCE_URL,
 } from "../runtime/binary_transport.ts";
 import { decodeNapControlMessage } from "../runtime/transport.ts";
@@ -449,7 +450,14 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
                 encodeBinaryFrame({
                   kind: BinaryFrameKind.UploadRequest,
                   id: control.id,
-                  payload: new Uint8Array(buffer),
+                  payload: encodeUploadPayload(
+                    Object.fromEntries(
+                      Object.entries(control.request).filter(([key]) =>
+                        key !== "data"
+                      ),
+                    ),
+                    new Uint8Array(buffer),
+                  ),
                 }).slice().buffer as ArrayBuffer,
               );
             });

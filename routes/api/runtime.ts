@@ -15,6 +15,7 @@ import {
 import {
   BinaryFrameKind,
   decodeBinaryFrames,
+  decodeUploadPayload,
   encodeBinaryFrame,
   FIXED_RESOURCE_ID,
 } from "../../runtime/binary_transport.ts";
@@ -206,14 +207,20 @@ export const handler = define.handlers({
           ? decoded.frames[0]
           : undefined;
         if (frame?.kind === BinaryFrameKind.UploadRequest) {
-          await bridge.dispatchTransfer({
+          const upload = decodeUploadPayload(frame.payload);
+          const control = upload && decodeNapControlMessage({
             type: "upload.upload",
             id: frame.id,
             request: {
-              rail: "blossom",
-              data: frame.payload.slice().buffer as ArrayBuffer,
+              ...upload.metadata,
+              data: upload.data.slice().buffer as ArrayBuffer,
             },
           });
+          if (!control || control.type !== "upload.upload") {
+            socket.close(1008, "invalid upload message");
+            return;
+          }
+          await bridge.dispatchTransfer(control);
         } else {
           const result = await handleFixedResourceFrame(incoming, {
             connectionId: connection.connectionId,

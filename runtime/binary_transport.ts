@@ -5,6 +5,7 @@ const VERSION = 1;
 const HEADER_BYTES = 12;
 export const MAX_BINARY_ID_BYTES = 128;
 export const MAX_BINARY_PAYLOAD_BYTES = 5 * 1024 * 1024;
+const MAX_UPLOAD_METADATA_BYTES = 16 * 1024;
 export const FIXED_RESOURCE_URL =
   "https://napplet.invalid/__portal_resource_tracer__";
 export const FIXED_RESOURCE_ID = "portal-fixed-resource";
@@ -45,7 +46,19 @@ export function encodeBinaryFrame(frame: EncodableFrame): Uint8Array {
     throw new TypeError("invalid binary correlation id");
   }
   if (!validKind(frame.kind)) throw new TypeError("invalid binary frame kind");
-  if (frame.payload.length > MAX_BINARY_PAYLOAD_BYTES) {
+  const upload = frame.kind === BinaryFrameKind.UploadRequest
+    ? decodeUploadPayload(frame.payload)
+    : null;
+  if (
+    frame.kind === BinaryFrameKind.UploadRequest &&
+    (!upload || upload.data.length > MAX_BINARY_PAYLOAD_BYTES)
+  ) {
+    throw new RangeError("invalid upload payload");
+  }
+  const payloadLimit = frame.kind === BinaryFrameKind.UploadRequest
+    ? MAX_BINARY_PAYLOAD_BYTES + MAX_UPLOAD_METADATA_BYTES + 4
+    : MAX_BINARY_PAYLOAD_BYTES;
+  if (frame.payload.length > payloadLimit) {
     throw new RangeError("binary payload too large");
   }
   const bytes = new Uint8Array(HEADER_BYTES + id.length + frame.payload.length);
@@ -58,6 +71,46 @@ export function encodeBinaryFrame(frame: EncodableFrame): Uint8Array {
   bytes.set(id, HEADER_BYTES);
   bytes.set(frame.payload, HEADER_BYTES + id.length);
   return bytes;
+}
+
+export function encodeUploadPayload(
+  metadata: Record<string, unknown>,
+  data: Uint8Array,
+): Uint8Array {
+  const header = encoder.encode(JSON.stringify(metadata));
+  if (header.length > MAX_UPLOAD_METADATA_BYTES) {
+    throw new RangeError("upload metadata too large");
+  }
+  const payload = new Uint8Array(4 + header.length + data.length);
+  new DataView(payload.buffer).setUint32(0, header.length, false);
+  payload.set(header, 4);
+  payload.set(data, 4 + header.length);
+  return payload;
+}
+
+export function decodeUploadPayload(
+  payload: Uint8Array,
+): { metadata: Record<string, unknown>; data: Uint8Array } | null {
+  if (payload.length < 4) return null;
+  const length = new DataView(
+    payload.buffer,
+    payload.byteOffset,
+    payload.byteLength,
+  ).getUint32(0, false);
+  if (length > MAX_UPLOAD_METADATA_BYTES || 4 + length > payload.length) {
+    return null;
+  }
+  try {
+    const metadata = JSON.parse(
+      decoder.decode(payload.subarray(4, 4 + length)),
+    );
+    if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) {
+      return null;
+    }
+    return { metadata, data: payload.slice(4 + length) };
+  } catch {
+    return null;
+  }
 }
 
 function frameLength(bytes: Uint8Array, offset: number): number | null {
@@ -75,7 +128,10 @@ function frameLength(bytes: Uint8Array, offset: number): number | null {
   const payloadLength = view.getUint32(8, false);
   if (
     !idLength || idLength > MAX_BINARY_ID_BYTES ||
-    payloadLength > MAX_BINARY_PAYLOAD_BYTES
+    payloadLength >
+      (bytes[offset + 5] === BinaryFrameKind.UploadRequest
+        ? MAX_BINARY_PAYLOAD_BYTES + MAX_UPLOAD_METADATA_BYTES + 4
+        : MAX_BINARY_PAYLOAD_BYTES)
   ) throw new TypeError("invalid binary frame");
   return HEADER_BYTES + idLength + payloadLength;
 }
