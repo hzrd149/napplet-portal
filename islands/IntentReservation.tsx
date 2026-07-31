@@ -9,7 +9,7 @@ export default function IntentReservation() {
   useEffect(() => {
     // This is deliberately the first browser-side operation. Sensitive transport
     // and ticket work starts only after the opener relationship is gone.
-    window.opener = null;
+    globalThis.opener = null;
     const params = new URLSearchParams(location.hash.slice(1));
     const reservationId = params.get("reservationId");
     const ticket = params.get("ticket");

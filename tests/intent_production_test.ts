@@ -76,7 +76,8 @@ Deno.test("reservation opener is severed before transport and CSP stays external
   const island = await Deno.readTextFile("islands/IntentReservation.tsx");
   const frame = await Deno.readTextFile("components/NappletFrame.tsx");
   assert(
-    island.indexOf("window.opener = null") < island.indexOf("new WebSocket"),
+    island.indexOf("globalThis.opener = null") <
+      island.indexOf("new WebSocket"),
     "opener must be severed before transport",
   );
   assert(
