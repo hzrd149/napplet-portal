@@ -5,15 +5,15 @@ milestone_name: Runtime & UX Expansion
 current_phase: 7
 current_phase_name: Intent Navigation
 status: verifying
-stopped_at: Completed 09-05-PLAN.md
-last_updated: "2026-07-31T06:39:39.702Z"
+stopped_at: Completed 09-06-PLAN.md
+last_updated: "2026-07-31T06:48:55.902Z"
 last_activity: 2026-07-31
 last_activity_desc: Completed Phase 7 production intent navigation integration
 progress:
   total_phases: 7
   completed_phases: 6
   total_plans: 32
-  completed_plans: 28
+  completed_plans: 29
   percent: 86
 ---
 
@@ -97,6 +97,7 @@ Last activity: 2026-07-31 — Completed Phase 7 production intent navigation int
 | Phase 09-runtime-expansion-hardening P03 | 8min | 2 tasks | 6 files |
 | Phase 09-runtime-expansion-hardening P04 | 10min | 2 tasks | 4 files |
 | Phase 09-runtime-expansion-hardening P05 | 14min | 2 tasks | 8 files |
+| Phase 09-runtime-expansion-hardening P06 | 7min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -184,6 +185,9 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase ?]: [Phase 09]: Leave QLT ledger completion to Plan 09-09 final reconciliation.
 - [Phase ?]: [Phase 09]: Apply one immutable browser policy after Fresh request handling so shell and runtime responses share fail-closed headers.
 - [Phase ?]: [Phase 09]: Admit iframe messages only from the current WindowProxy with opaque srcdoc origin, then recheck exact recipient authority before delivery.
+- [Phase ?]: [Phase 09]: Terminalize successful intent navigation only after both caller commit and exact single-use target claim.
+- [Phase ?]: [Phase 09]: Recheck process-owned attachment generation before runtime dispatch and after signer/artifact awaits.
+- [Phase ?]: [Phase 09]: Leave QLT ledger completion to Plan 09-09 final reconciliation.
 
 ### Pending Todos
 
@@ -212,6 +216,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-07-31T06:39:39.682Z
-Stopped at: Completed 09-05-PLAN.md
+Last session: 2026-07-31T06:48:55.885Z
+Stopped at: Completed 09-06-PLAN.md
 Resume file: None
