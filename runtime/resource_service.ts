@@ -27,6 +27,7 @@ export interface ResourceReadOptions {
   readonly blossomServers?: readonly string[];
   readonly authorPubkey?: string;
   readonly deadlineSignal?: AbortSignal;
+  readonly timeoutSignal?: AbortSignal;
 }
 
 export type ResourceErrorCode =
@@ -35,7 +36,8 @@ export type ResourceErrorCode =
   | "timeout"
   | "too-large"
   | "decode-failed"
-  | "network-error";
+  | "network-error"
+  | "cancelled";
 
 export class ResourceServiceError extends Error {
   constructor(
@@ -345,7 +347,12 @@ export class ResourceService {
         throw new ResourceServiceError("blocked-by-policy");
       }
       return this.#release(
-        await this.#fetchBytes(parsed, "public", bounded.deadlineSignal!),
+        await this.#fetchBytes(
+          parsed,
+          "public",
+          bounded.deadlineSignal!,
+          bounded.signal,
+        ),
       );
     });
   }
@@ -441,6 +448,7 @@ export class ResourceService {
           candidate.destinationClass,
           options.deadlineSignal ?? options.signal ??
             new AbortController().signal,
+          options.signal,
         );
         if (read.sha256 !== hash) {
           lastError = new ResourceServiceError("decode-failed");
@@ -470,6 +478,7 @@ export class ResourceService {
     input: string | URL,
     destinationClass: ResourceDestinationClass,
     signal: AbortSignal,
+    externalSignal?: AbortSignal,
   ): Promise<ReadResponse> {
     {
       let next = String(input);
@@ -502,7 +511,9 @@ export class ResourceService {
             signal.aborted ||
             (cause instanceof DOMException && cause.name === "AbortError")
           ) {
-            throw new ResourceServiceError("timeout");
+            throw new ResourceServiceError(
+              externalSignal?.aborted ? "cancelled" : "timeout",
+            );
           }
           throw new ResourceServiceError("network-error");
         }
@@ -530,7 +541,7 @@ export class ResourceService {
           await response.body?.cancel().catch(() => undefined);
           throw new ResourceServiceError("too-large");
         }
-        return await this.#read(response, signal);
+        return await this.#read(response, signal, externalSignal);
       }
     }
   }
@@ -546,13 +557,21 @@ export class ResourceService {
       ? AbortSignal.any([options.signal, deadline.signal])
       : deadline.signal;
     try {
-      return await run({ ...options, deadlineSignal: signal });
+      return await run({
+        ...options,
+        deadlineSignal: signal,
+        timeoutSignal: deadline.signal,
+      });
     } finally {
       clearTimeout(timer);
     }
   }
 
-  async #read(response: Response, signal: AbortSignal): Promise<ReadResponse> {
+  async #read(
+    response: Response,
+    signal: AbortSignal,
+    externalSignal?: AbortSignal,
+  ): Promise<ReadResponse> {
     if (!response.body) {
       const bytes = new Uint8Array();
       const hash = new IncrementalSha256();
@@ -581,7 +600,11 @@ export class ResourceService {
       }
     } catch (cause) {
       if (cause instanceof ResourceServiceError) throw cause;
-      if (signal.aborted) throw new ResourceServiceError("timeout");
+      if (signal.aborted) {
+        throw new ResourceServiceError(
+          externalSignal?.aborted ? "cancelled" : "timeout",
+        );
+      }
       throw new ResourceServiceError("network-error");
     } finally {
       signal.removeEventListener("abort", abort);
