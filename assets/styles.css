@@ -1,10 +1,43 @@
 @import "tailwindcss";
 
 :root {
+  --shell-bg: #f4eddf;
+  --shell-surface: #fffaf0;
+  --shell-surface-raised: #ffffff;
+  --shell-text: #17140f;
+  --shell-muted: #5f574c;
+  --shell-border: #9b8d79;
+  --shell-border-strong: #7a5a21;
+  --shell-accent: #8a5a00;
+  --shell-accent-ink: #ffffff;
+  --shell-accent-fill: #f2b84b;
+  --shell-error-text: #8f2d16;
+  --shell-error-bg: #fff1e8;
+  --shell-success-text: #24613b;
+  --shell-success-bg: #edf8ef;
+  --shell-overlay: rgb(23 20 15 / 50%);
   font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
     "Segoe UI", sans-serif;
-  color: #0f172a;
-  background: #f8fafc;
+  color: var(--shell-text);
+  background: var(--shell-bg);
+}
+
+html[data-theme="dark"] {
+  --shell-bg: #17140f;
+  --shell-surface: #2a251d;
+  --shell-surface-raised: #342e24;
+  --shell-text: #f4eddf;
+  --shell-muted: #d6cbbb;
+  --shell-border: #a99578;
+  --shell-border-strong: #d49a29;
+  --shell-accent: #f2b84b;
+  --shell-accent-ink: #17140f;
+  --shell-accent-fill: #f2b84b;
+  --shell-error-text: #ffb49f;
+  --shell-error-bg: #3b1912;
+  --shell-success-text: #9bd6aa;
+  --shell-success-bg: #183322;
+  --shell-overlay: rgb(0 0 0 / 62%);
 }
 
 * {
@@ -408,7 +441,7 @@ svg {
   grid-template-rows: minmax(0, 1fr) calc(64px + env(safe-area-inset-bottom));
   height: 100vh;
   height: 100dvh;
-  background: #f8fafc;
+  background: var(--shell-bg);
 }
 
 .shell-content {
@@ -428,7 +461,8 @@ svg {
 .portal-view {
   min-height: 100%;
   padding: 24px 16px;
-  background: #f8fafc;
+  color: var(--shell-text);
+  background: var(--shell-bg);
 }
 
 .portal-view h1,
@@ -496,10 +530,10 @@ svg {
   min-width: 0;
   width: 100%;
   padding: 16px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--shell-border);
   border-radius: 12px;
-  color: #0f172a;
-  background: #fff;
+  color: var(--shell-text);
+  background: var(--shell-surface);
 }
 
 .catalog-heading {
@@ -512,7 +546,7 @@ svg {
 
 .catalog-status {
   margin: 0;
-  color: #475569;
+  color: var(--shell-muted);
 }
 
 .catalog-card-copy {
@@ -522,7 +556,7 @@ svg {
 .catalog-card-copy p {
   margin: 2px 0 0;
   overflow: hidden;
-  color: #475569;
+  color: var(--shell-muted);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 12px;
   text-overflow: ellipsis;
@@ -550,9 +584,9 @@ svg {
   display: grid;
   min-width: 10rem;
   padding: 4px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--shell-border);
   border-radius: 8px;
-  background: #fff;
+  background: var(--shell-surface-raised);
 }
 
 .catalog-action-menu button {
@@ -564,10 +598,10 @@ svg {
 .catalog-launch {
   grid-column: 1 / -1;
   padding: 8px 16px;
-  border: 1px solid #7c3aed;
+  border: 1px solid var(--shell-accent);
   border-radius: 8px;
-  color: #fff;
-  background: #7c3aed;
+  color: var(--shell-accent-ink);
+  background: var(--shell-accent);
   font-weight: 600;
 }
 
@@ -576,7 +610,7 @@ svg {
 }
 
 .catalog-signer-support {
-  color: #9a3412;
+  color: var(--shell-error-text);
 }
 
 .visually-hidden {
@@ -595,10 +629,10 @@ svg {
   max-height: calc(100dvh - 32px);
   padding: 24px;
   overflow: hidden;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--shell-border);
   border-radius: 12px;
-  color: #0f172a;
-  background: #fff;
+  color: var(--shell-text);
+  background: var(--shell-surface-raised);
 }
 
 .catalog-dialog[open] {
@@ -624,7 +658,7 @@ svg {
   min-width: 0;
   gap: 4px;
   padding: 8px 0;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--shell-border);
 }
 
 .comparison-field dt {
@@ -646,9 +680,10 @@ svg {
 }
 
 .comparison-field button {
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--shell-border);
   border-radius: 8px;
-  background: #fff;
+  color: var(--shell-text);
+  background: var(--shell-surface-raised);
 }
 
 .capability-changes {
@@ -656,7 +691,7 @@ svg {
 }
 
 .dialog-error {
-  color: #9a3412;
+  color: var(--shell-error-text);
 }
 
 @media (min-width: 640px) {
@@ -685,8 +720,8 @@ svg {
   width: 48px;
   height: 48px;
   border-radius: 10px;
-  color: #475569;
-  background: #f8fafc;
+  color: var(--shell-muted);
+  background: var(--shell-bg);
 }
 
 .napplet-title {
@@ -704,7 +739,7 @@ svg {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  color: #475569;
+  color: var(--shell-muted);
   font-size: 14px;
   line-height: 1.5;
 }
@@ -713,7 +748,7 @@ svg {
   width: 8px;
   height: 8px;
   border-radius: 999px;
-  background: #7c3aed;
+  background: var(--shell-accent);
 }
 
 .empty-state {
@@ -721,7 +756,7 @@ svg {
   place-items: center;
   min-height: 100%;
   padding: 32px 16px;
-  color: #475569;
+  color: var(--shell-muted);
   text-align: center;
 }
 
@@ -732,7 +767,7 @@ svg {
 
 .empty-state h1 {
   margin: 24px 0 8px;
-  color: #0f172a;
+  color: var(--shell-text);
   font-size: 20px;
 }
 
@@ -1008,10 +1043,10 @@ svg {
   gap: 10px;
   min-height: 44px;
   padding: 6px 10px;
-  border: 1px solid #d49a29;
+  border: 1px solid var(--shell-border-strong);
   border-radius: 999px;
-  color: #f4eddf;
-  background: #17140f;
+  color: var(--shell-text);
+  background: var(--shell-surface);
 }
 
 .home-header-avatar {
@@ -1022,7 +1057,7 @@ svg {
   place-items: center;
   overflow: hidden;
   border-radius: 50%;
-  background: #2a251d;
+  background: var(--shell-surface-raised);
 }
 
 .home-header-avatar svg {
@@ -1047,7 +1082,7 @@ svg {
 .header-wide-identity {
   display: none;
   font-size: 12px;
-  color: #d6cbbb;
+  color: var(--shell-muted);
 }
 .identity-disclosure {
   font-size: 24px;
@@ -1060,16 +1095,16 @@ svg {
   z-index: 4;
   display: flex;
   align-items: flex-end;
-  background: rgb(23 20 15 / 45%);
+  background: var(--shell-overlay);
 }
 
 .account-sheet {
   width: 100%;
   padding: 20px 16px calc(20px + env(safe-area-inset-bottom));
-  border-top: 1px solid #d49a29;
+  border-top: 1px solid var(--shell-border-strong);
   border-radius: 18px 18px 0 0;
-  color: #17140f;
-  background: #f4eddf;
+  color: var(--shell-text);
+  background: var(--shell-surface);
 }
 
 .sheet-heading {
@@ -1124,10 +1159,10 @@ svg {
   z-index: 5;
   margin: 0;
   padding: 8px 12px;
-  border: 1px solid #d49a29;
+  border: 1px solid var(--shell-border-strong);
   border-radius: 999px;
-  color: #f4eddf;
-  background: #17140f;
+  color: var(--shell-text);
+  background: var(--shell-surface);
 }
 
 .bottom-nav button[aria-current="page"] {

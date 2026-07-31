@@ -33,8 +33,14 @@ function assertTokenized(selectors: readonly string[]): void {
     const start = styles.indexOf(selector);
     assert(start >= 0, `${selector} must be styled`);
     const block = styles.slice(start, styles.indexOf("}", start));
-    assert(block.includes("var(--"), `${selector} must consume semantic tokens`);
-    assert(!/#[0-9a-fA-F]{3,8}|rgb\(/.test(block), `${selector} has a fixed color`);
+    assert(
+      block.includes("var(--"),
+      `${selector} must consume semantic tokens`,
+    );
+    assert(
+      !/#[0-9a-fA-F]{3,8}|rgb\(/.test(block),
+      `${selector} has a fixed color`,
+    );
   }
 }
 
@@ -42,7 +48,9 @@ Deno.test("ink bone and electric amber tokens meet shell contrast thresholds", (
   for (const theme of ["light", "dark"] as const) {
     const background = token(theme, "shell-bg");
     const surface = token(theme, "shell-surface");
-    for (const foreground of ["shell-text", "shell-muted", "shell-error-text"]) {
+    for (
+      const foreground of ["shell-text", "shell-muted", "shell-error-text"]
+    ) {
       assertGreaterOrEqual(
         contrast(token(theme, foreground), surface),
         4.5,
@@ -78,7 +86,15 @@ Deno.test("reusable home and account surfaces consume semantic tokens", () => {
     ".account-sheet",
     ".signout-toast",
   ]);
-  assert(styles.includes('data-status="offline"'), "signer status keeps text semantics");
-  assert(styles.includes("text-decoration: underline"), "offline state keeps a non-color cue");
-  assert(!/transition:\s*(?:all|[^;]*(?:color|background|border))/.test(styles));
+  assert(
+    styles.includes('data-status="offline"'),
+    "signer status keeps text semantics",
+  );
+  assert(
+    styles.includes("text-decoration: underline"),
+    "offline state keeps a non-color cue",
+  );
+  assert(
+    !/transition:\s*(?:all|[^;]*(?:color|background|border))/.test(styles),
+  );
 });
