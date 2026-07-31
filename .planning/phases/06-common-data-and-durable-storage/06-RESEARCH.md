@@ -428,27 +428,24 @@ On startup, read once into immutable committed state. Before each mutation, oper
 |---|-------|---------|---------------|
 | A1 | Use 512 KiB aggregate per account + exact manifest across all shared/instance scopes; 256 keys per namespace; 1 KiB keys; 64 KiB values. | Recommended Quota Policy | Changes compatibility/capacity; constants are easy to revise before release. |
 | A2 | Use a global mutation commit tail around the single snapshot, with namespace-local semantics optional. | Architecture Pattern 2 | A different transactional store could safely relax global serialization. |
-| A3 | Live backend projection plus repeated correlated lookups satisfies “updating” without inventing a wire subscription. | Summary / Pattern 3 | If product requires unsolicited iframe updates, the pinned contract cannot express them and scope must be revisited. |
+| R3 | RESOLVED: live backend projection plus repeated correlated lookups is the Phase 6 meaning of “updating”; no wire subscription exists or will be invented. | Summary / Pattern 3 / Resolved Questions | A later contract revision would be required for unsolicited iframe updates. |
 | A4 | Recommended module/file split and stable public error vocabulary. | Project Structure / Code Examples | Planner may choose fewer files or different exact strings while preserving behavior. |
-| A5 | Exact accepted identity tuple includes coordinate, manifest event id, dTag, and aggregate hash. | Authority / Snapshot | If canonical identity is defined differently upstream, namespace compatibility changes. |
+| R5 | RESOLVED: successful backend catalog launch registers account pubkey, coordinate, accepted manifest event id, dTag, aggregate hash, granted domains, and backend window id. | Authority / Snapshot / Resolved Questions | This matches the verified launch output and current backend window ownership seams. |
 | A6 | Relay load methods for kind 0/3 are added to existing EventRuntime request seam. | Pattern 3 | Another existing loader API may offer equivalent integration, but must still reuse store/policy/pool. |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **How does backend launch authority reach `/api/runtime`?**
    - What we know: verified identity is held by the browser frame registry and catalog artifact output; current runtime sessions contain only connection/window/source. [VERIFIED: project code]
-   - What's unclear: no existing authenticated command binds exact accepted manifest identity to a backend window record. [VERIFIED: project code scan]
-   - Recommendation: make this a Wave 1 prerequisite and integration test. Register the exact identity as part of backend-resolved launch/start, not as an iframe-declared field. [ASSUMED]
+   - **Resolution:** the successful backend `catalog.launch` branch is the sole authority-registration point. `RuntimeServiceHub.openWindow(...).catalogCommand(...)` receives the verified launch value directly from `CatalogService.launch`; before that value is returned to `/api/runtime`, it records an immutable window capability context containing the active account pubkey, exact coordinate, accepted manifest event id, verified `dTag`/aggregate hash, granted domains, and the already backend-issued window id as instance id. The route never reconstructs this tuple from the browser, and failed/stale launches register nothing. `runtime.start` remains tracer compatibility and must resolve its artifact through the same backend registration method before forwarding napplet messages. [VERIFIED: `runtime/catalog.ts`, `runtime/portal_runtime.ts`, `routes/api/runtime.ts`; composition choice RESOLVED]
 
 2. **What does “updating” mean at the napplet wire surface?**
    - What we know: the pinned shim exposes Promise-returning `getProfile` and no common subscription envelope. [VERIFIED: pinned package]
-   - What's unclear: whether acceptance requires unsolicited napplet updates or only a live backend projection observed by later calls. [ASSUMED]
-   - Recommendation: implement the latter in Phase 6; treat a new push protocol as a contract change, not an implementation detail. [ASSUMED]
+   - **Resolution:** each correlated `common.getProfile` or `common.follows` call returns exactly one current partial/stale snapshot and schedules bounded relay work into the shared EventStore; a later correlated call reads the newer replacement truth. Phase 6 emits no unsolicited COMMON update and defines no new subscription or push envelope. [VERIFIED: pinned 0.31.0 Promise/result contract; semantics RESOLVED]
 
 3. **Which exact event-building helpers govern follow/unfollow/react/report?**
    - What we know: the core result contract and backend signer/outbox seams are present; Applesauce exposes contact helpers. [VERIFIED: pinned/project source]
-   - What's unclear: no locked consent UI or exact event-builder policy is stated in Phase 6 context. [VERIFIED: CONTEXT.md]
-   - Recommendation: planner should add a focused task to reuse existing Applesauce/nostr-tools event construction, preserve contact tags, and define stable denial/publish outcomes without browser authority. [ASSUMED]
+   - **Resolution:** `CommonService` builds unsigned templates only after current window/capability validation. Follow/unfollow re-read the active account's latest kind-3 event from the shared EventStore, preserve all non-target tags and content, and deterministically add/remove only requested `p` tags; react builds kind 7 with canonical `e`/`p` context available from the target and report builds kind 1984 with the validated NIP-56 reason tag. Production composition injects `PortalAccounts.signEvent` through the existing `OutboxAdapter`, whose RelayPolicy-filtered preset plus NIP-65 write set is the required relay set; success requires at least one required relay and acceptance from every selected relay, while signer absence/denial, signing failure, zero required relays, or any relay rejection returns a stable correlated failure and does not add the event to EventStore. No new consent UI is introduced: the verified COMMON capability plus active signer is the authorization boundary already locked for this phase. [VERIFIED: `runtime/accounts.ts`, `runtime/outbox.ts`, `runtime/catalog.ts`; policy RESOLVED]
 
 ## Environment Availability
 
