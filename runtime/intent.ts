@@ -27,7 +27,10 @@ export type IntentReply = IntentInvokeResultMessage;
 
 interface IntentServiceOptions {
   readonly account?: () => string | null;
-  readonly sendNavigation?: (message: IntentNavigationMessage) => void;
+  readonly sendNavigation?: (
+    message: IntentNavigationMessage,
+    owner: MessageOwner,
+  ) => void;
   readonly createId?: () => string;
   readonly now?: () => number;
   readonly setTimeout?: (callback: () => void, delay: number) => number;
@@ -220,15 +223,18 @@ export class IntentService {
         expiresAt: this.#options.now() + this.#options.timeoutMs,
       }),
     );
-    this.#options.sendNavigation(Object.freeze({
-      type: "intent.navigation.authorized",
-      reservationId: reservation.reservationId,
-      invocationId: reservation.invocationId,
-      targetWindowId,
-      ticket,
-      launchPath: `/napplet?ticket=${encodeURIComponent(ticket)}`,
-      generation: selection.generation,
-    }));
+    this.#options.sendNavigation(
+      Object.freeze({
+        type: "intent.navigation.authorized",
+        reservationId: reservation.reservationId,
+        invocationId: reservation.invocationId,
+        targetWindowId,
+        ticket,
+        launchPath: `/napplet?ticket=${encodeURIComponent(ticket)}`,
+        generation: selection.generation,
+      }),
+      owner,
+    );
   }
 
   claim(
@@ -243,6 +249,7 @@ export class IntentService {
       ticket.targetWindowId !== claim.targetWindowId ||
       ticket.generation !== claim.generation ||
       owner.connectionId !== ticket.caller.connectionId ||
+      owner.windowId !== ticket.targetWindowId ||
       this.#options.account() !== ticket.accountPubkey ||
       !this.isCurrent(ticket.generation) ||
       this.#options.now() > ticket.expiresAt
@@ -441,6 +448,11 @@ export class IntentService {
       }
     }
     this.#generation++;
+    for (const pending of [...this.#pending.values()]) {
+      if (pending.generation !== this.#generation) {
+        this.#settle(pending, "failed");
+      }
+    }
     this.#registry = new Map([...next].map(([archetype, candidates]) => {
       candidates.sort((a, b) =>
         a.dTag.localeCompare(b.dTag) ||

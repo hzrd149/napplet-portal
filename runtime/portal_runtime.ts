@@ -1,6 +1,11 @@
 import { injectNappletNamespacePrelude } from "@kehto/shell";
 import type { NostrEvent } from "@napplet/core";
 import type { RelaySubscribeMessage } from "@napplet/nap/relay";
+import type {
+  IntentAvailableResultMessage,
+  IntentChangedMessage,
+  IntentHandlersResultMessage,
+} from "@napplet/nap/intent";
 import type { BehaviorSubject } from "npm:rxjs@7.8.2";
 import { debug as rootDebug, shortId } from "../debug.ts";
 import { AccountRuntime, type IdentitySnapshot } from "./accounts.ts";
@@ -26,7 +31,12 @@ import {
 import type { RuntimeSettingsService } from "./settings.ts";
 import type { CatalogProjection, CatalogService } from "./catalog.ts";
 import { decodeArchetypeDeclarations } from "./catalog.ts";
-import type { CatalogCommand } from "./transport.ts";
+import { type IntentReply, IntentService } from "./intent.ts";
+import type {
+  CatalogCommand,
+  IntentCommand,
+  IntentNavigationMessage,
+} from "./transport.ts";
 import type {
   DispatcherMessage,
   NapDispatcher,
@@ -76,7 +86,12 @@ export interface IdentityRuntimeMessage {
 type ServiceMessage =
   | IdentityRuntimeMessage
   | RelayStreamMessage
-  | OutboxStreamMessage;
+  | OutboxStreamMessage
+  | IntentReply
+  | IntentNavigationMessage
+  | IntentAvailableResultMessage
+  | IntentHandlersResultMessage
+  | IntentChangedMessage;
 
 interface RuntimeServiceHubOptions {
   readonly identity$: BehaviorSubject<IdentitySnapshot>;
@@ -84,6 +99,7 @@ interface RuntimeServiceHubOptions {
   readonly outbox?: OutboxAdapter;
   readonly cache?: { destroy?(): void };
   readonly catalog?: CatalogService;
+  readonly intents?: IntentService;
 }
 
 export class RuntimeServiceHub {
@@ -94,6 +110,7 @@ export class RuntimeServiceHub {
   readonly #outbox?: OutboxAdapter;
   readonly #cache?: { destroy?(): void };
   readonly #catalog?: CatalogService;
+  readonly #intents?: IntentService;
   readonly #windowCleanups = new Map<string, Set<() => void>>();
 
   constructor(options: RuntimeServiceHubOptions) {
@@ -102,6 +119,7 @@ export class RuntimeServiceHub {
     this.#outbox = options.outbox;
     this.#cache = options.cache;
     this.#catalog = options.catalog;
+    this.#intents = options.intents;
     this.#subscription = this.#identity$.subscribe((identity) => {
       debug(
         "broadcast identity status=%s account=%s windows=%d",
@@ -133,7 +151,43 @@ export class RuntimeServiceHub {
     this.#windowCleanups.set(windowId, cleanups);
     send({ type: "identity.changed", identity: this.#identity$.value });
     const owner: RelayOwner = { connectionId, windowId };
+    if (this.#intents) cleanups.add(this.#intents.subscribe(send));
     return {
+      intentQuery: (command: IntentCommand) => {
+        if (!this.#intents) throw new Error("intent service unavailable");
+        if (command.type === "intent.available") {
+          send({
+            type: "intent.available.result",
+            id: command.id,
+            availability: this.#intents.available(command.archetype),
+          });
+        } else if (command.type === "intent.handlers") {
+          send({
+            type: "intent.handlers.result",
+            id: command.id,
+            handlers: [...this.#intents.handlers()],
+          });
+        }
+      },
+      reserveIntent: (
+        reservation: Extract<
+          IntentNavigationMessage,
+          { type: "intent.navigation.reserve" }
+        >,
+        command: Extract<IntentCommand, { type: "intent.invoke" }>,
+      ) => this.#intents?.reserve(owner, reservation, command, send),
+      acknowledgeIntent: (
+        ack: Extract<
+          IntentNavigationMessage,
+          { type: "intent.navigation.ack" }
+        >,
+      ) => this.#intents?.acknowledge(owner, ack) ?? false,
+      claimIntentTicket: (
+        claim: Extract<
+          IntentNavigationMessage,
+          { type: "intent.ticket.claim" }
+        >,
+      ) => this.#intents?.claim(owner, claim) ?? null,
       catalog: (): Promise<CatalogProjection> =>
         this.#catalog?.project() ??
           Promise.resolve({
@@ -213,6 +267,7 @@ export class RuntimeServiceHub {
     const cleanups = this.#windowCleanups.get(windowId);
     this.#windowCleanups.delete(windowId);
     for (const cleanup of cleanups ?? []) cleanup();
+    this.#intents?.abortWindow(windowId);
   }
 }
 
@@ -301,6 +356,7 @@ export function createPortalRuntime(
     : undefined;
   let destroyed = false;
   let catalog: CatalogService | undefined;
+  let intents: IntentService | undefined;
   let dispatcher: NapDispatcher | undefined;
   const windowAuthorities = new Map<string, WindowCapabilityContext>();
   const transferSends = new Map<
@@ -316,7 +372,16 @@ export function createPortalRuntime(
     relay,
     eventRuntime,
     configureCatalog(service: CatalogService): void {
+      intents?.destroy();
       catalog = service;
+      intents = new IntentService(service, {
+        account: () => accounts.active?.pubkey ?? null,
+        sendNavigation: (message, owner) => {
+          transferSends.get(owner.windowId)?.(
+            message as unknown as Record<string, unknown>,
+          );
+        },
+      });
     },
     configureTransfers(service: NapDispatcher): void {
       dispatcher = service;
@@ -341,6 +406,7 @@ export function createPortalRuntime(
       transferSends.delete(windowId);
       windowAuthorities.delete(windowId);
       dispatcher?.abortWindow(windowId);
+      intents?.abortWindow(windowId);
       connections.remove(windowId);
     },
     get activeAccount() {
@@ -352,6 +418,9 @@ export function createPortalRuntime(
         dispatcher?.abortWindow(windowId);
       }
       windowAuthorities.clear();
+      for (const windowId of transferSends.keys()) {
+        intents?.abortWindow(windowId);
+      }
       return accounts.signOut();
     },
     loadEvent: (id: string) => {
@@ -473,6 +542,55 @@ export function createPortalRuntime(
         return true;
       };
       return {
+        intentQuery(command: IntentCommand) {
+          if (!intents) return;
+          if (command.type === "intent.available") {
+            transferSends.get(windowId)?.({
+              type: "intent.available.result",
+              id: command.id,
+              availability: intents.available(command.archetype),
+            });
+          } else if (command.type === "intent.handlers") {
+            transferSends.get(windowId)?.({
+              type: "intent.handlers.result",
+              id: command.id,
+              handlers: [...intents.handlers()],
+            });
+          }
+        },
+        reserveIntent(
+          reservation: Extract<
+            IntentNavigationMessage,
+            { type: "intent.navigation.reserve" }
+          >,
+          command: Extract<IntentCommand, { type: "intent.invoke" }>,
+        ) {
+          return intents?.reserve(
+            { connectionId, windowId },
+            reservation,
+            command,
+            (message) =>
+              transferSends.get(windowId)?.(
+                message as unknown as Record<string, unknown>,
+              ),
+          );
+        },
+        acknowledgeIntent(
+          ack: Extract<
+            IntentNavigationMessage,
+            { type: "intent.navigation.ack" }
+          >,
+        ) {
+          return intents?.acknowledge({ connectionId, windowId }, ack) ?? false;
+        },
+        claimIntentTicket(
+          claim: Extract<
+            IntentNavigationMessage,
+            { type: "intent.ticket.claim" }
+          >,
+        ) {
+          return intents?.claim({ connectionId, windowId }, claim) ?? null;
+        },
         verifyNapplet(identity: { dTag: string; aggregateHash: string }) {
           verifiedNapplet = `${identity.dTag}@${identity.aggregateHash}`;
         },
@@ -635,6 +753,7 @@ export function createPortalRuntime(
       if (destroyed) return;
       destroyed = true;
       dispatcher?.destroy();
+      intents?.destroy();
       windowAuthorities.clear();
       transferSends.clear();
       eventRuntime.destroy();
