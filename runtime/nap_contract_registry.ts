@@ -354,6 +354,22 @@ export function auditContractParity(
   };
 }
 
+export function hasContractGrant(
+  grants: readonly string[],
+  discriminant: string,
+): boolean {
+  const row = CONTRACT_REGISTRY.find((candidate) =>
+    candidate.direction === "napplet-to-runtime" &&
+    candidate.discriminant === discriminant &&
+    candidate.disposition === "SUPPORTED" && candidate.advertised
+  );
+  return Boolean(
+    row && grants.some((grant) =>
+      grant === row.discriminant || grant === row.domain
+    ),
+  );
+}
+
 export function parseRequirementTraceability(
   requirements: string,
   roadmap: string,

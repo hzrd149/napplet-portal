@@ -362,6 +362,7 @@ export function createPortalRuntime(
   let intents: IntentService | undefined;
   let dispatcher: NapDispatcher | undefined;
   const windowAuthorities = new Map<string, WindowCapabilityContext>();
+  const windowAuthorityGenerations = new Map<string, number>();
   const transferSends = new Map<
     string,
     (
@@ -559,6 +560,8 @@ export function createPortalRuntime(
       }): boolean => {
         const accountPubkey = accounts.active?.pubkey;
         if (!accountPubkey) return false;
+        const generation = (windowAuthorityGenerations.get(windowId) ?? 0) + 1;
+        windowAuthorityGenerations.set(windowId, generation);
         authority = Object.freeze({
           connectionId,
           windowId,
@@ -572,7 +575,9 @@ export function createPortalRuntime(
               value.capabilities.map((capability) => capability.split(".")[0]),
             ),
           ]),
+          grantedCapabilities: Object.freeze([...value.capabilities]),
           instanceId: crypto.randomUUID(),
+          generation,
         });
         windowAuthorities.set(windowId, authority);
         dispatcher?.authorizeWindow(windowId);

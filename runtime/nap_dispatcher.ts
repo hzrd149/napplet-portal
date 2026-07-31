@@ -7,6 +7,7 @@ import { ResourceServiceError } from "./resource_service.ts";
 import { RESOURCE_INFO, TRANSFER_POLICY, UPLOAD_INFO } from "./transport.ts";
 import type { StorageNamespaceIdentity } from "./storage.ts";
 import { StorageServiceError } from "./storage.ts";
+import { hasContractGrant } from "./nap_contract_registry.ts";
 
 export interface NapOwner {
   readonly connectionId: string;
@@ -24,6 +25,8 @@ export interface WindowCapabilityContext {
   readonly dTag: string;
   readonly aggregateHash: string;
   readonly grantedDomains: readonly string[];
+  readonly grantedCapabilities: readonly string[];
+  readonly generation: number;
   readonly instanceId: string;
 }
 
@@ -382,6 +385,7 @@ export class NapDispatcher {
       typeof context.accountPubkey !== "string" ||
       this.#revokedWindows.has(context.windowId) ||
       !context.grantedDomains?.includes(domain) ||
+      !hasContractGrant(context.grantedCapabilities ?? [], message.type) ||
       !this.#isCurrent?.(context)
     ) {
       send({
