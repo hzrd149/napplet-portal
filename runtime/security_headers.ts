@@ -11,6 +11,9 @@ export const BROWSER_SECURITY_POLICY = Object.freeze({
     "font-src 'self'",
     "connect-src 'self' ws: wss:",
     "frame-src 'self' blob:",
+    "worker-src 'none'",
+    "media-src 'none'",
+    "manifest-src 'none'",
   ].join("; "),
   permissionsPolicy: [
     "accelerometer=()",
