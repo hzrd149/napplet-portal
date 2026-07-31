@@ -103,6 +103,13 @@ Plans:
 
 **Goal:** Napplets can participate in one backend-coordinated media session with deterministic playback ownership across tabs.
 **Requirements:** MED-01, MED-02, MED-03, MED-04
+**Plans:** 3 plans
+
+Plans:
+
+- [ ] 08-01-PLAN.md — Establish exact MEDIA contracts and deterministic process-owned session authority.
+- [ ] 08-02-PLAN.md — Carry snapshot-first ownership across authenticated transport and lifecycle boundaries.
+- [ ] 08-03-PLAN.md — Deliver shell controls, autoplay-safe enactment, and two-client production proof.
 
 **Success Criteria:**
 
