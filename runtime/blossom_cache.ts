@@ -1,5 +1,6 @@
 export const LOCAL_BLOSSOM_URL = "http://127.0.0.1:24242/";
 export const LOCAL_BLOSSOM_TIMEOUT_MS = 1_500;
+import { TRANSFER_POLICY } from "./transport.ts";
 
 export interface BlossomCacheHealth {
   readonly state: "unknown" | "available" | "degraded";
@@ -95,7 +96,7 @@ export async function fetchWithBlossomCache(
   const service = new ResourceService({
     policy,
     fetch: options.fetch,
-    deadlineMs: options.timeoutMs ?? LOCAL_BLOSSOM_TIMEOUT_MS,
+    deadlineMs: options.timeoutMs ?? TRANSFER_POLICY.resourceDeadlineMs,
     localCacheUrl,
   });
   try {
