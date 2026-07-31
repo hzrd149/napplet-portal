@@ -12,6 +12,7 @@ interface ConnectionRecord {
   send?: (message: string | ArrayBuffer) => void;
   timer?: number;
   readonly windows: Set<string>;
+  generation: number;
 }
 
 interface WindowRecord {
@@ -25,12 +26,15 @@ export interface ConnectionRegistryOptions {
   readonly setTimeout?: (callback: () => void, delay: number) => number;
   readonly clearTimeout?: (id: number) => void;
   readonly destroyWindow?: (windowId: string) => void;
+  readonly detachConnection?: (connectionId: string) => void;
+  readonly sendFailure?: (connectionId: string) => void;
 }
 
 export interface ConnectionAttachment {
   readonly connectionId: string;
   readonly reconnectToken: string;
   readonly resumed: boolean;
+  readonly generation: number;
 }
 
 export class ConnectionRegistry {
@@ -43,6 +47,8 @@ export class ConnectionRegistry {
   readonly #setTimeout: (callback: () => void, delay: number) => number;
   readonly #clearTimeout: (id: number) => void;
   readonly #destroyWindow: (windowId: string) => void;
+  readonly #detachConnection: (connectionId: string) => void;
+  readonly #sendFailure: (connectionId: string) => void;
 
   constructor(options: ConnectionRegistryOptions = {}) {
     this.#graceMs = options.graceMs ?? 10_000;
@@ -51,6 +57,8 @@ export class ConnectionRegistry {
       ((callback, delay) => setTimeout(callback, delay));
     this.#clearTimeout = options.clearTimeout ?? clearTimeout;
     this.#destroyWindow = options.destroyWindow ?? (() => {});
+    this.#detachConnection = options.detachConnection ?? (() => {});
+    this.#sendFailure = options.sendFailure ?? (() => {});
     debug("initialized graceMs=%d", this.#graceMs);
   }
 
@@ -70,6 +78,7 @@ export class ConnectionRegistry {
       if (known.timer !== undefined) this.#clearTimeout(known.timer);
       known.timer = undefined;
       known.send = send;
+      known.generation++;
       debug(
         "attached resumed connection=%s windows=%d",
         shortId(known.connectionId),
@@ -79,6 +88,7 @@ export class ConnectionRegistry {
         connectionId: known.connectionId,
         reconnectToken: known.reconnectToken,
         resumed: true,
+        generation: known.generation,
       };
     }
 
@@ -89,16 +99,25 @@ export class ConnectionRegistry {
       reconnectToken: token,
       send,
       windows: new Set(),
+      generation: 0,
     };
     this.#connections.set(connectionId, record);
     this.#tokens.set(token, connectionId);
     debug("attached new connection=%s", shortId(connectionId));
-    return { connectionId, reconnectToken: token, resumed: false };
+    return {
+      connectionId,
+      reconnectToken: token,
+      resumed: false,
+      generation: record.generation,
+    };
   }
 
-  detach(connectionId: string): void {
+  detach(connectionId: string, generation?: number): void {
     const connection = this.#connections.get(connectionId);
-    if (!connection || connection.timer !== undefined) {
+    if (
+      !connection || connection.timer !== undefined ||
+      (generation !== undefined && generation !== connection.generation)
+    ) {
       debug(
         "detach ignored connection=%s known=%s",
         shortId(connectionId),
@@ -107,6 +126,7 @@ export class ConnectionRegistry {
       return;
     }
     connection.send = undefined;
+    this.#detachConnection(connectionId);
     connection.timer = this.#setTimeout(
       () => this.#expire(connectionId),
       this.#graceMs,
@@ -131,7 +151,12 @@ export class ConnectionRegistry {
       );
       return false;
     }
-    send(message);
+    try {
+      send(message);
+    } catch {
+      this.#sendFailure(connectionId);
+      return false;
+    }
     debug(
       "sent connection=%s bytes=%d",
       shortId(connectionId),

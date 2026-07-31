@@ -249,6 +249,16 @@ export function reduceMedia(
         : terminal(session, generation);
       working = replace(working, next, !next.terminal);
       last = next;
+      if (session.owner) {
+        effects.push({
+          recipient: session.owner,
+          message: Object.freeze({
+            type: "media.command",
+            sessionId: session.sessionId,
+            action: "stop",
+          }),
+        });
+      }
       const recipients = command.recipientsByAccount.get(session.accountId) ??
         [];
       effects.push(...broadcast(next, recipients));
@@ -263,6 +273,16 @@ export function reduceMedia(
       if (session.accountId === command.accountId && !session.terminal) {
         last = terminal(session, working.nextGeneration + 1);
         working = replace(working, last, false);
+        if (session.owner) {
+          effects.push({
+            recipient: session.owner,
+            message: Object.freeze({
+              type: "media.command",
+              sessionId: session.sessionId,
+              action: "stop",
+            }),
+          });
+        }
         effects.push(...broadcast(last, command.recipients));
       }
     }

@@ -108,11 +108,24 @@ const sessions = new Map<
   }
 >();
 const connections = new ConnectionRegistry({
+  detachConnection: (connectionId) => {
+    const session = sessions.get(connectionId);
+    if (session) {
+      session.runtime.detachMediaConnection(connectionId, session.windowId);
+    }
+  },
+  sendFailure: (connectionId) => {
+    const session = sessions.get(connectionId);
+    if (session) {
+      session.runtime.detachMediaConnection(connectionId, session.windowId);
+    }
+  },
   destroyWindow: (windowId) => {
     let ownerRuntime: PortalRuntime | undefined;
     for (const [connectionId, session] of sessions) {
       if (session.windowId !== windowId) continue;
       ownerRuntime = session.runtime;
+      session.runtime.expireMediaOrigin(connectionId, windowId);
       sessions.delete(connectionId);
     }
     ownerRuntime?.destroyWindow(windowId);
@@ -177,13 +190,22 @@ export const handler = define.handlers({
           source,
           (message, payloads) => {
             if (String(message.type).startsWith("runtime.media.")) {
+              if (message.type === "runtime.media.snapshot") {
+                const { accountId: _accountId, type: _type, ...projection } =
+                  message;
+                connections.send(
+                  connection.connectionId,
+                  JSON.stringify({
+                    type: "runtime.media.snapshot",
+                    accountEpoch: runtime.mediaAccountEpoch,
+                    session: projection,
+                  }),
+                );
+                return;
+              }
               connections.send(
                 connection.connectionId,
-                JSON.stringify(
-                  message.type === "runtime.media.snapshot"
-                    ? { ...message, accountId: undefined }
-                    : message,
-                ),
+                JSON.stringify(message),
               );
               return;
             }
@@ -290,7 +312,7 @@ export const handler = define.handlers({
         shortId(connection.connectionId),
         shortId(windowId),
       );
-      connections.detach(connection.connectionId);
+      connections.detach(connection.connectionId, connection.generation);
       unsubscribeCatalog();
       pendingIntentReservations.clear();
       pendingIntentAcks.clear();

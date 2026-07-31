@@ -383,6 +383,9 @@ export function createPortalRuntime(
     events,
     relay,
     media,
+    get mediaAccountEpoch() {
+      return mediaAccountEpoch;
+    },
     eventRuntime,
     configureCatalog(service: CatalogService): IntentService {
       intents?.destroy();
@@ -415,6 +418,12 @@ export function createPortalRuntime(
       bytes?: readonly Uint8Array[],
     ): void {
       transferSends.get(owner.windowId)?.(message, bytes);
+    },
+    detachMediaConnection(connectionId: string, windowId: string): void {
+      media.detach({ connectionId, windowId });
+    },
+    expireMediaOrigin(connectionId: string, windowId: string): void {
+      media.expireOrigin({ connectionId, windowId });
     },
     destroyWindow(windowId: string): void {
       transferSends.delete(windowId);
@@ -835,6 +844,7 @@ export function createPortalRuntime(
     destroy() {
       if (destroyed) return;
       destroyed = true;
+      media.destroy();
       dispatcher?.destroy();
       intents?.destroy();
       windowAuthorities.clear();
