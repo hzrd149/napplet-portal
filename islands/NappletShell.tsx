@@ -245,7 +245,7 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
     if (message.type === "runtime.event" && message.message) {
       const currentOwner = owner.current;
       if (
-        message.connectionId !== currentOwner?.connectionId ||
+        !currentOwner || message.connectionId !== currentOwner.connectionId ||
         message.windowId !== currentOwner.windowId
       ) return;
       const eventMessage = message.message as Record<string, unknown>;
@@ -459,7 +459,7 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
         >
           <ProfileView
             profile={profile}
-            onSignOut={() => signOutDialog.current?.showModal()}
+            onSignOut={signOut}
             onOpenSettings={() => navigate("settings")}
           />
         </div>

@@ -195,9 +195,12 @@ export const handler = define.handlers({
           );
           runtime.signOut();
           await signer.signOut();
-          socket.send(
-            JSON.stringify({ type: "runtime.identity", account: null }),
-          );
+          socket.send(JSON.stringify({
+            type: "runtime.event",
+            connectionId: connection.connectionId,
+            windowId,
+            message: { type: "identity.changed", identity: { pubkey: "" } },
+          }));
           return;
         }
 

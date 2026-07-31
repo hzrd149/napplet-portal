@@ -15,6 +15,33 @@ export interface FrameIdentityRegistry {
   ): void;
 }
 
+interface VerifiedIdentityPublisherOptions {
+  readonly source: () => Window | null;
+  readonly registered: () => {
+    source: Window;
+    identity: VerifiedNappletIdentity;
+  } | null;
+  readonly post: (
+    message: { type: "identity.changed"; identity: { pubkey: string } },
+  ) => void;
+}
+
+export function createVerifiedIdentityPublisher(
+  options: VerifiedIdentityPublisherOptions,
+) {
+  return (
+    candidate: Window,
+    message: { type: "identity.changed"; identity: { pubkey: string } },
+  ): boolean => {
+    const source = options.source();
+    if (
+      !source || candidate !== source || options.registered()?.source !== source
+    ) return false;
+    options.post(message);
+    return true;
+  };
+}
+
 export function mountVerifiedFrame(
   frame: HTMLIFrameElement,
   identity: VerifiedNappletIdentity,

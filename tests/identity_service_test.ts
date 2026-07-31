@@ -5,6 +5,7 @@ import { BehaviorSubject, Subject } from "npm:rxjs@7.8.2";
 import { OutboxAdapter, type OutboxRawItem } from "../runtime/outbox.ts";
 import { RuntimeServiceHub } from "../runtime/portal_runtime.ts";
 import type { IdentitySnapshot } from "../runtime/accounts.ts";
+import { createVerifiedIdentityPublisher } from "../components/NappletFrame.tsx";
 import {
   BackendRelayAdapter,
   type RawRelayItem,
@@ -13,6 +14,40 @@ import {
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
 }
+
+Deno.test("sign-out identity delivery is exact once and verified-source bound", () => {
+  const trusted = {} as Window;
+  const stale = {} as Window;
+  const sent: unknown[] = [];
+  const publish = createVerifiedIdentityPublisher({
+    source: () => trusted,
+    registered: () => ({
+      source: trusted,
+      identity: { dTag: "app", aggregateHash: "hash" },
+    }),
+    post: (message) => sent.push(message),
+  });
+  const canonical = {
+    type: "identity.changed" as const,
+    identity: { pubkey: "" },
+  };
+  assert(
+    !publish(stale, canonical),
+    "stale or foreign source must be rejected",
+  );
+  assert(
+    publish(trusted, canonical),
+    "eligible verified source must receive sign-out",
+  );
+  assert(
+    sent.length === 1,
+    "eligible source must receive exactly one transition",
+  );
+  assert(
+    JSON.stringify(sent[0]) === JSON.stringify(canonical),
+    "delivery must use pinned canonical envelope",
+  );
+});
 
 Deno.test("identity broadcasts browser-safe active offline and unavailable states", () => {
   const identity$ = new BehaviorSubject<IdentitySnapshot>({

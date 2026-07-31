@@ -110,4 +110,61 @@ Deno.test("supplied Security Lab traverses verified mount, handshake, identity, 
     runtime.activeAccount === null,
     "sign-out must remove signing authority",
   );
+  runtime.relay.emitLive({ ...fixture.events.live, id: "4".repeat(64) });
+  assert(
+    messages.length === 3,
+    "closed subscription remains closed while public runtime stays available",
+  );
+  const publicWindow = runtime.openWindow(
+    "connection-public",
+    "window-public",
+    {},
+  );
+  const publicMessages: Array<RelayEventMessage | RelayClosedMessage> = [];
+  publicWindow.subscribeRelay(
+    fixture.envelopes.relaySubscribe as RelaySubscribeMessage,
+    (message) => {
+      if (message.type === "relay.event" || message.type === "relay.closed") {
+        publicMessages.push(message);
+      }
+    },
+  );
+  assert(
+    publicMessages[0]?.type === "relay.event",
+    "public relay reads must continue after sign-out",
+  );
+});
+
+Deno.test("runtime sign-out emits only the canonical identity transition", async () => {
+  const endpoint = await Deno.readTextFile("routes/api/runtime.ts");
+  const shell = await Deno.readTextFile("islands/NappletShell.tsx");
+  assert(
+    !endpoint.includes("runtime.identity"),
+    "portal-only identity envelope must be removed",
+  );
+  assert(
+    endpoint.includes('type: "identity.changed"') &&
+      endpoint.includes('pubkey: ""'),
+    "endpoint must emit canonical empty-pubkey identity",
+  );
+  assert(
+    !shell.includes("showModal()"),
+    "sign-out must not require confirmation",
+  );
+  const signOut = shell.slice(
+    shell.indexOf("function signOut"),
+    shell.indexOf("function openCatalogEntry"),
+  );
+  assert(
+    !signOut.includes('navigate("home")'),
+    "sign-out must preserve current view",
+  );
+  assert(
+    signOut.includes("setAccountSheetOpen(false)"),
+    "sign-out must close account sheet",
+  );
+  assert(
+    shell.match(/<NappletFrame/g)?.length === 1,
+    "sign-out must retain one frame node",
+  );
 });
