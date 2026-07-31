@@ -5,15 +5,15 @@ milestone_name: Runtime & UX Expansion
 current_phase: 5
 current_phase_name: Resource and Blossom Transfer
 status: executing
-stopped_at: Completed 05-01-PLAN.md
-last_updated: "2026-07-31T02:18:16.878Z"
+stopped_at: Completed 05-02-PLAN.md
+last_updated: "2026-07-31T02:30:12.059Z"
 last_activity: 2026-07-31
-last_activity_desc: Phase 4 complete, transitioned to Phase 5
+last_activity_desc: Completed binary RESOURCE/UPLOAD transport seam and closed policy inspection
 progress:
   total_phases: 7
   completed_phases: 2
   total_plans: 20
-  completed_plans: 10
+  completed_plans: 11
   percent: 29
 ---
 
@@ -29,8 +29,8 @@ See: .planning/PROJECT.md (updated 2026-07-30)
 ## Current Position
 
 Phase: 5 — Resource and Blossom Transfer
-Plan: 1 of 4 complete
-Status: In progress
+Plan: 2 of 4 complete
+Status: Ready to execute
 Last activity: 2026-07-31 — Completed binary RESOURCE/UPLOAD transport seam and closed policy inspection
 
 ## Performance Metrics
@@ -84,6 +84,7 @@ Last activity: 2026-07-31 — Completed binary RESOURCE/UPLOAD transport seam an
 | Phase 04 P03 | 12min | 2 tasks | 7 files |
 | Phase 04 P04 | 16min | 2 tasks | 5 files |
 | Phase 05 P01 | 14min | 2 tasks | 5 files |
+| Phase 05 P02 | 11min | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -144,6 +145,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase ?]: [Phase 04]: Bind immutable install review to its source catalog generation and clear input only after accepted approval.
 - [Phase ?]: [Phase 05]: Bind binary frames to authenticated socket ownership supplied out of band; never trust owner identifiers from frame bytes.
 - [Phase ?]: [Phase 05]: Generate canonical RESOURCE and UPLOAD inspection envelopes from one immutable backend transfer policy snapshot.
+- [Phase ?]: [Phase 05]: Authorize only the exact 127.0.0.1 cache origin as a separate destination class.
+- [Phase ?]: [Phase 05]: Release resource bytes only after streamed size, observed MIME, and SHA-256 policy succeeds.
 
 ### Pending Todos
 
@@ -172,6 +175,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-07-31T02:18:16.864Z
-Stopped at: Completed 05-01-PLAN.md
+Last session: 2026-07-31T02:30:12.045Z
+Stopped at: Completed 05-02-PLAN.md
 Resume file: None

@@ -16,7 +16,7 @@
 
 - [x] **RES-01**: Napplet can inspect supported resource schemes and coarse runtime limits through the pinned NAP-RESOURCE contract.
 - [x] **RES-02**: Napplet can resolve bounded HTTP(S), Blossom, and BUD-10 resources through the backend without gaining unrestricted network access.
-- [ ] **RES-03**: Runtime tries configured local Blossom cache servers before upstream Blossom sources while preserving content hash, MIME, size, redirect, timeout, and SSRF policy checks.
+- [x] **RES-03**: Runtime tries configured local Blossom cache servers before upstream Blossom sources while preserving content hash, MIME, size, redirect, timeout, and SSRF policy checks.
 - [x] **UPL-01**: Napplet can inspect configured upload rails and coarse limits and submit bytes through the pinned NAP-UPLOAD contract.
 - [ ] **UPL-02**: Runtime uploads through a reviewed pinned `blossom-client-sdk` using the user's configured Blossom servers and backend-owned authorization.
 - [ ] **UPL-03**: User receives explicit per-server upload outcomes, including partial failures, and optional local Blossom copying occurs only after required remote upload success.
