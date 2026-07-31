@@ -1,8 +1,8 @@
 ---
-status: awaiting_human_verify
+status: resolved
 trigger: "The runtime repeatedly returns runtime.signer.error / Verified napplet could not be opened; determine whether napplet verification requirements should be loosened."
 created: 2026-07-31
-updated: 2026-07-31T14:23:00Z
+updated: 2026-07-31T14:48:42Z
 ---
 
 # Debug Session: Napplet Verification Policy
@@ -17,11 +17,10 @@ updated: 2026-07-31T14:23:00Z
 
 ## Current Focus
 
-- **hypothesis:** An external artifact-availability failure triggered the incident, and the route's catch-all converted that typed artifact failure into a misleading signer/verification error; no production check rejected the current bytes. A separate, explicitly unsafe loopback-only local byte source is required for offline/local testing.
-- **hypothesis:** Confirmed and fixed: strict production verification is correct; availability failures now report their true typed category, and explicit loopback-only unsafe local bytes unblock controlled testing without entering the verified path.
-- **test:** Human starts the built server in loopback unsafe mode with a disposable local HTML file, confirms the persistent warning and napplet launch, then restarts without unsafe variables and confirms normal verified launch/reporting.
-- **expecting:** Unsafe mode is visibly marked and launches only the explicit file; public-bind startup rejects; normal mode remains verified and has no warning.
-- **next_action:** Await end-to-end confirmation from the user's real browser/workflow before archiving this session.
+- **hypothesis:** Confirmed and fixed: transient artifact unavailability and catch-all error relabeling caused the misleading signer/verification symptom; strict production verification remains correct, while explicit loopback-only unsafe local bytes provide the approved offline testing seam.
+- **test:** Human exercised the built runtime with a disposable UTF-8 HTML file in loopback unsafe mode, attempted unsafe startup on a public bind, and restarted with unsafe variables absent.
+- **expecting:** Satisfied: unsafe mode launched with persistent visual/runtime distinction and actual-byte identity, public-bind startup failed closed without path leakage, and normal mode remained verified with no unsafe marker.
+- **next_action:** None — the human-confirmed session is resolved and archived; commit and push the final resolution records.
 - **bug_class:** heisenbug-mandelbug (reclassified: the same production path now succeeds because remote artifact availability changed; the deterministic catch-all reporting defect remains reproducible)
 - **reasoning_checkpoint:**
   hypothesis: "Artifact bytes were unavailable at incident time; `sendActiveSigner` then collapsed the typed resolver error into `runtime.signer.error`, making an availability failure look like signer/verification rejection."
@@ -81,6 +80,14 @@ updated: 2026-07-31T14:23:00Z
   checked: Full project verification
   found: `deno task check` passed formatting, lint, and type checking across 139/135 files; `deno task test` passed 296 tests with zero failures; `deno task build` completed client and SSR production bundles.
   implication: All applicable automated acceptance signals pass and the fix is ready for real-workflow human verification.
+- timestamp: 2026-07-31T14:48:42Z
+  checked: Human verification checkpoint in the approved local testing workflow
+  found: The focused 45-test/local runtime workflow passed with a disposable UTF-8 HTML artifact, persistent unsafe banner, `unsafe-local` runtime classification, actual-byte SHA-256 identity, and unchanged capabilities; public-bind unsafe startup exited nonzero with a loopback-only explanation and no path leak; with unsafe variables absent, configuration and server/UI output remained verified and contained no unsafe marker.
+  implication: The original workflow and both fail-closed boundaries are confirmed end to end; the session can be resolved and archived.
+- timestamp: 2026-07-31T14:48:42Z
+  checked: Semantic-memory archive integration
+  found: Project configuration has `mempalace.enabled: false`; the durable knowledge-base entry was written instead.
+  implication: MemPalace indexing is intentionally skipped, with `.planning/debug/knowledge-base.md` remaining the persistent recall source.
 
 ## Eliminated
 
@@ -101,6 +108,17 @@ updated: 2026-07-31T14:23:00Z
   no_op_deletion: { result: pass, deletion_justified_by_rca: false }
   adjacent_tests: { result: pass, suites_run: ["45 focused config/env/artifact/runtime/controller/UI/WebSocket tests", "296 full non-browser tests", "deno task check", "deno task build"] }
   revert_and_reconfirm: { result: pass, bug_returned_on_revert: true, fixed_on_reapply: true }
+  human_checkpoint: { result: pass, detail: "Approved local unsafe-mode, public-bind rejection, and normal verified-mode workflows all passed" }
   guardrail_verdict: accepted
 - **oracle_type:** specified — explicit user security/configuration contract plus existing NIP-5D/runtime transport contracts.
 - **files_changed:** [.env.example, README.md, assets/styles.css, deno.json, islands/NappletShell.tsx, main.ts, routes/api/runtime.ts, routes/index.tsx, runtime/artifacts.ts, runtime/config.ts, runtime/portal_runtime.ts, shell/connection.ts, tests/artifact_resolver_test.ts, tests/config_test.ts, tests/connection_controller_test.ts, tests/end_to_end_test.ts, tests/env_test.ts, tests/setup_visibility_test.tsx, tests/websocket_session_test.ts]
+
+## Prevention
+
+- **Branched 5-Whys:**
+  - **Environment/data branch:** The runtime could not open the napplet because no candidate returned artifact bytes at incident time. That condition could change between attempts because the usable Blossom candidates are remote and independently available. The production verifier correctly rejected the absence of bytes; loosening signature, aggregate, MIME, size, capability, or SHA-256 checks would not address availability.
+  - **Code branch:** The user saw a signer/verification failure because `sendActiveSigner` discarded the typed `ArtifactResolutionError`. The transport catch-all emitted one generic `runtime.signer.error`, so the UI and operator could not distinguish an unavailable artifact from invalid bytes or signer failure.
+  - **Config branch:** Offline testing remained blocked because the only launch path required remotely retrieved verified bytes. No explicit local-source configuration existed, so a controlled test could not bypass remote availability while retaining the remaining runtime authority boundaries.
+  - **AND-gate:** The misleading reported incident required both remote artifact unavailability and catch-all error relabeling. The lack of a local testing seam was a separate contributor to recovery/testing, not a reason to weaken production verification.
+- **Why not caught:** No regression gate covered typed artifact-error preservation across the WebSocket boundary, and no configuration/runtime/UI test matrix covered a fail-closed, visibly distinct, loopback-only local artifact mode.
+- **Recurrence guard:** Passing regressions now cover stable `runtime.artifact.error` mapping in `tests/websocket_session_test.ts`, explicit/off-by-default loopback configuration in `tests/config_test.ts`, public-bind bootstrap rejection without path leakage in `tests/env_test.ts`, bounded actual-byte local identity and capability retention in `tests/artifact_resolver_test.ts` and `tests/end_to_end_test.ts`, controller distinction in `tests/connection_controller_test.ts`, and persistent UI distinction in `tests/setup_visibility_test.tsx`.
