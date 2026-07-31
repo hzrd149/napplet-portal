@@ -36,7 +36,6 @@ import {
   BinaryFrameKind,
   decodeBinaryFrames,
   encodeBinaryFrame,
-  FIXED_RESOURCE_ID,
   FIXED_RESOURCE_URL,
 } from "../runtime/binary_transport.ts";
 import { decodeNapControlMessage } from "../runtime/transport.ts";
@@ -318,7 +317,8 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
         message && typeof message === "object" &&
         message.type === "resource.bytes" &&
         Object.keys(message).sort().join(",") === "id,type,url" &&
-        message.id === FIXED_RESOURCE_ID && message.url === FIXED_RESOURCE_URL
+        typeof message.id === "string" && message.id.length > 0 &&
+        message.id.length <= 128 && message.url === FIXED_RESOURCE_URL
       ) {
         const ws = controller.current?.socket;
         const currentOwner = owner.current;
