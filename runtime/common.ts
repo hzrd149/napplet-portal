@@ -58,6 +58,7 @@ export interface CommonServiceOptions {
 export class CommonService {
   readonly #options: CommonServiceOptions;
   readonly #loads = new Map<string, Set<() => void>>();
+  readonly #contactTails = new Map<string, Promise<void>>();
   #destroyed = false;
 
   constructor(options: CommonServiceOptions) {
@@ -117,21 +118,31 @@ export class CommonService {
       0,
       resolved.pubkey,
     );
-    this.#track(
+    this.#refresh(
       owner,
-      this.#options.eventRuntime.refreshReplaceable(0, resolved.pubkey, [
+      0,
+      resolved.pubkey,
+      [
         ...new Set([...resolved.relays, ...this.#options.relays()]),
-      ]),
+      ],
     );
     let profile: Record<string, string> | null = null;
     if (event) {
-      const parsed = JSON.parse(event.content) as Record<string, unknown>;
-      profile = {};
-      for (const field of PROFILE_FIELDS) {
-        if (typeof parsed[field] === "string") {
-          profile[field === "display_name" ? "displayName" : field] =
-            parsed[field] as string;
+      try {
+        const parsed: unknown = JSON.parse(event.content);
+        if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+          profile = {};
+          for (const field of PROFILE_FIELDS) {
+            if (
+              typeof (parsed as Record<string, unknown>)[field] === "string"
+            ) {
+              profile[field === "display_name" ? "displayName" : field] =
+                (parsed as Record<string, string>)[field];
+            }
+          }
         }
+      } catch {
+        profile = null;
       }
     }
     return {
@@ -151,14 +162,7 @@ export class CommonService {
       3,
       identity.pubkey,
     );
-    this.#track(
-      owner,
-      this.#options.eventRuntime.refreshReplaceable(
-        3,
-        identity.pubkey,
-        this.#options.relays(),
-      ),
-    );
+    this.#refresh(owner, 3, identity.pubkey, this.#options.relays());
     const pubkeys = [
       ...new Set(
         (event?.tags ?? []).filter((tag) =>
@@ -175,6 +179,28 @@ export class CommonService {
     this.#loads.set(owner, loads);
   }
 
+  #refresh(
+    owner: string,
+    kind: 0 | 3,
+    pubkey: string,
+    relays: readonly string[],
+  ): void {
+    let cleanup: () => void = () => undefined;
+    const release = () => {
+      const loads = this.#loads.get(owner);
+      loads?.delete(cleanup);
+      if (loads?.size === 0) this.#loads.delete(owner);
+    };
+    cleanup = this.#options.eventRuntime.refreshReplaceable(
+      kind,
+      pubkey,
+      relays,
+      5_000,
+      release,
+    );
+    this.#track(owner, cleanup);
+  }
+
   async #contacts(
     message: Record<string, unknown>,
     follow: boolean,
@@ -185,28 +211,37 @@ export class CommonService {
     ) throw new Error("invalid");
     const targets = message.pubkeys.map(decodeNpub);
     const identity = this.#activeIdentity();
-    const current = this.#options.eventRuntime.eventStore.getReplaceable(
-      3,
-      identity.pubkey,
-    );
-    const targetSet = new Set(targets);
-    const tags = (current?.tags ?? []).filter((tag) =>
-      tag[0] !== "p" || (follow || !targetSet.has(tag[1] ?? ""))
-    ).map((tag) => [...tag]);
-    if (follow) {
-      const existing = new Set(
-        tags.filter((tag) => tag[0] === "p").map((tag) => tag[1]),
-      );
-      for (const target of [...targetSet].sort()) {
-        if (!existing.has(target)) tags.push(["p", target]);
+    const tailKey = `${identity.accountId ?? ""}:${identity.pubkey}`;
+    return await this.#serializeContact(tailKey, async () => {
+      if (!sameAuthority(this.#options.identity(), identity)) {
+        return { ok: false, error: "not-authorized" };
       }
-    }
-    return await this.#publish(message.id, {
-      kind: 3,
-      created_at: Math.floor(Date.now() / 1000),
-      content: current?.content ?? "",
-      tags,
-    }, identity);
+      const current = this.#options.eventRuntime.eventStore.getReplaceable(
+        3,
+        identity.pubkey,
+      );
+      const targetSet = new Set(targets);
+      const tags = (current?.tags ?? []).filter((tag) =>
+        tag[0] !== "p" || (follow || !targetSet.has(tag[1] ?? ""))
+      ).map((tag) => [...tag]);
+      if (follow) {
+        const existing = new Set(
+          tags.filter((tag) => tag[0] === "p").map((tag) => tag[1]),
+        );
+        for (const target of [...targetSet].sort()) {
+          if (!existing.has(target)) tags.push(["p", target]);
+        }
+      }
+      return await this.#publish(message.id, {
+        kind: 3,
+        created_at: Math.max(
+          Math.floor(Date.now() / 1000),
+          (current?.created_at ?? 0) + 1,
+        ),
+        content: current?.content ?? "",
+        tags,
+      }, identity);
+    });
   }
 
   async #react(
@@ -250,23 +285,21 @@ export class CommonService {
     ) throw new Error("invalid");
     const target = message.target as Record<string, unknown>;
     const reason = String(message.reason);
-    let tag: string[];
+    let tags: string[][];
     if (target.type === "event" && HEX.test(String(target.id ?? ""))) {
-      tag = ["e", String(target.id), String(target.relay ?? ""), reason];
+      tags = [["e", String(target.id), reason]];
+      if (target.pubkey !== undefined) {
+        tags.push(["p", decodePublicKey(target.pubkey), reason]);
+      }
     } else if (target.type === "pubkey") {
-      tag = [
-        "p",
-        decodePublicKey(target.pubkey),
-        String(target.relay ?? ""),
-        reason,
-      ];
+      tags = [["p", decodePublicKey(target.pubkey), reason]];
     } else throw new Error("invalid");
     const identity = this.#activeIdentity();
     return await this.#publish(message.id, {
       kind: 1984,
       created_at: Math.floor(Date.now() / 1000),
       content: message.text,
-      tags: [tag],
+      tags,
     }, identity);
   }
 
@@ -302,6 +335,19 @@ export class CommonService {
     ) return { ok: false, error: "not-authorized" };
     this.#options.eventRuntime.eventStore.add(result.event);
     return { ok: true, eventId: result.event.id, event: result.event };
+  }
+
+  #serializeContact<T>(key: string, operation: () => Promise<T>): Promise<T> {
+    const previous = this.#contactTails.get(key) ?? Promise.resolve();
+    const result = previous.then(operation, operation);
+    const settled = result.then(() => undefined, () => undefined);
+    this.#contactTails.set(key, settled);
+    void settled.then(() => {
+      if (this.#contactTails.get(key) === settled) {
+        this.#contactTails.delete(key);
+      }
+    });
+    return result;
   }
 }
 

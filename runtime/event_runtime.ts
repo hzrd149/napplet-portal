@@ -52,22 +52,34 @@ export class EventRuntime {
     pubkey: string,
     relays: readonly string[],
     timeoutMs = 5_000,
+    onDone?: () => void,
   ): () => void {
     if (this.destroyed) return () => undefined;
     const eligible = this.#policy
       ? this.#policy.read({ inboxes: relays, outboxes: [] })
       : relays;
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      queueMicrotask(() => onDone?.());
+    };
     const subscription = this.#request([...eligible], [{
       kinds: [kind],
       authors: [pubkey],
     }]).subscribe({
       next: (event) => this.eventStore.add(event),
-      error: () => undefined,
+      error: finish,
+      complete: finish,
     });
-    const timer = setTimeout(() => subscription.unsubscribe(), timeoutMs);
+    const timer = setTimeout(() => {
+      subscription.unsubscribe();
+      finish();
+    }, timeoutMs);
     return () => {
       clearTimeout(timer);
       subscription.unsubscribe();
+      finish();
     };
   }
 
