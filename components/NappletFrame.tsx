@@ -62,6 +62,7 @@ export function mountVerifiedFrame(
 
 interface BridgeEvent {
   readonly source: MessageEventSource | null;
+  readonly origin?: string;
   readonly data: unknown;
 }
 
@@ -84,10 +85,14 @@ export function createIframeBridge(options: IframeBridgeOptions) {
     },
     receive(event: BridgeEvent): void {
       const source = options.source();
-      if (!source || event.source !== source) {
+      if (
+        !source || event.source !== source ||
+        (event.origin !== undefined && event.origin !== "null")
+      ) {
         debug(
-          "ignored message source trusted=%s",
+          "ignored message boundary trusted=%s opaqueOrigin=%s",
           Boolean(source && event.source === source),
+          event.origin === "null",
         );
         return;
       }

@@ -47,6 +47,29 @@ import type {
   WindowCapabilityContext,
 } from "./nap_dispatcher.ts";
 
+export function isCurrentTransferRecipient(
+  candidate: {
+    readonly connectionId: string;
+    readonly windowId: string;
+    readonly generation?: number;
+    readonly account?: string;
+    readonly napplet?: string;
+  },
+  current: WindowCapabilityContext | undefined,
+): boolean {
+  if (
+    !current || candidate.connectionId !== current.connectionId ||
+    candidate.windowId !== current.windowId ||
+    (candidate.generation !== undefined &&
+      candidate.generation !== current.generation) ||
+    (candidate.account !== undefined &&
+      candidate.account !== current.accountPubkey)
+  ) return false;
+  if (candidate.napplet === undefined) return true;
+  return candidate.napplet === `${current.dTag}@${current.aggregateHash}` ||
+    candidate.napplet === `${current.coordinate}@${current.manifestEventId}`;
+}
+
 const debug = rootDebug.extend("runtime");
 
 interface Fixture {
@@ -423,6 +446,12 @@ export function createPortalRuntime(
       message: Record<string, unknown>,
       bytes?: readonly Uint8Array[],
     ): void {
+      if (
+        !isCurrentTransferRecipient(
+          owner,
+          windowAuthorities.get(owner.windowId),
+        )
+      ) return;
       transferSends.get(owner.windowId)?.(message, bytes);
     },
     detachMediaConnection(connectionId: string, windowId: string): void {

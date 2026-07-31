@@ -29,6 +29,7 @@ import { NappletStorageStore } from "./runtime/storage_store.ts";
 import { StorageService } from "./runtime/storage.ts";
 import { CommonService } from "./runtime/common.ts";
 import { OutboxAdapter } from "./runtime/outbox.ts";
+import { applyBrowserSecurityHeaders } from "./runtime/security_headers.ts";
 
 const debug = rootDebug.extend("backend");
 
@@ -242,6 +243,7 @@ export function startupSummary(
 export const app = new App<State>();
 
 app.use(staticFiles());
+app.use(async (ctx) => applyBrowserSecurityHeaders(await ctx.next()));
 app.use((ctx) => {
   ctx.state.config = runtimeConfig;
   ctx.state.runtime = processRuntime;

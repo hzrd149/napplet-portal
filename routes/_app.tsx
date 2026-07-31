@@ -9,6 +9,7 @@ export default define.page(function App({ Component }) {
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <meta name="theme-color" content={LIGHT_THEME_COLOR} />
+        <meta name="referrer" content="no-referrer" />
         <link rel="icon" href="/logo.svg" type="image/svg+xml" />
         <script dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP_SCRIPT }} />
         <title>Napplet Portal</title>
