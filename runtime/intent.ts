@@ -31,6 +31,17 @@ interface AuthorityCandidate {
   readonly conventions: readonly string[];
 }
 
+export type IntentSelection =
+  | {
+    readonly ok: true;
+    readonly generation: number;
+    readonly candidate: AuthorityCandidate;
+    readonly request: Readonly<
+      Required<Pick<IntentRequest, "archetype" | "action">> & IntentRequest
+    >;
+  }
+  | { readonly ok: false; readonly result: IntentResult };
+
 export class IntentService {
   readonly #catalog: CatalogService;
   readonly #unsubscribe: () => void;
@@ -71,8 +82,65 @@ export class IntentService {
     return this.#lastGood.get(archetype) ?? Object.freeze({
       archetype,
       available: false,
-      candidates: Object.freeze([]),
+      candidates: [],
       hasDefault: false,
+    });
+  }
+
+  isCurrent(generation: number): boolean {
+    return generation === this.#generation;
+  }
+
+  select(request: IntentRequest): IntentSelection {
+    const action = request.action ?? "open";
+    if (
+      !ARCHETYPE.test(request.archetype) || !ARCHETYPE.test(action) ||
+      (request.convention !== undefined &&
+        (!CONVENTION.test(request.convention) ||
+          request.convention !== `napplet:${request.archetype}/${action}`))
+    ) {
+      return {
+        ok: false,
+        result: failure(request.archetype, action, "denied"),
+      };
+    }
+    if (request.handler === "choose") {
+      return {
+        ok: false,
+        result: failure(request.archetype, action, "denied"),
+      };
+    }
+    const eligible = (this.#registry.get(request.archetype) ?? []).filter((
+      candidate,
+    ) =>
+      candidate.actions.includes(action) &&
+      (request.convention === undefined ||
+        candidate.conventions.includes(request.convention))
+    );
+    if (eligible.length === 0) {
+      return {
+        ok: false,
+        result: failure(request.archetype, action, "unavailable"),
+      };
+    }
+    let candidate: AuthorityCandidate | undefined;
+    if (request.handler && request.handler !== "default") {
+      const matches = eligible.filter((entry) =>
+        entry.dTag === request.handler
+      );
+      if (matches.length !== 1) {
+        return {
+          ok: false,
+          result: failure(request.archetype, action, "denied"),
+        };
+      }
+      candidate = matches[0];
+    } else candidate = eligible[0];
+    return Object.freeze({
+      ok: true,
+      generation: this.#generation,
+      candidate,
+      request: Object.freeze({ ...request, action }),
     });
   }
 
@@ -128,18 +196,23 @@ export class IntentService {
       }
     }
     this.#generation++;
-    this.#registry = new Map([...next].map(([archetype, candidates]) => [
-      archetype,
-      Object.freeze(candidates),
-    ]));
+    this.#registry = new Map([...next].map(([archetype, candidates]) => {
+      candidates.sort((a, b) =>
+        a.dTag.localeCompare(b.dTag) ||
+        a.manifestEventId.localeCompare(b.manifestEventId)
+      );
+      return [archetype, Object.freeze(candidates)] as const;
+    }));
     const changed = new Map<string, IntentAvailability>();
     for (const [archetype, candidates] of this.#registry) {
       const projected: IntentCandidate[] = candidates.map((candidate, index) =>
         Object.freeze({
           dTag: candidate.dTag,
           title: candidate.title,
-          actions: [...candidate.actions],
-          conventions: [...candidate.conventions],
+          actions: Object.freeze([...candidate.actions]) as unknown as string[],
+          conventions: Object.freeze([
+            ...candidate.conventions,
+          ]) as unknown as string[],
           ...(index === 0 ? { isDefault: true } : {}),
         })
       );
@@ -148,12 +221,15 @@ export class IntentService {
         Object.freeze({
           archetype,
           available: projected.length > 0,
-          candidates: Object.freeze(projected),
+          candidates: Object.freeze(projected) as unknown as IntentCandidate[],
           hasDefault: projected.length > 0,
         }),
       );
     }
-    this.#lastGood = changed;
+    if (
+      changed.size > 0 || !snapshot.accountPubkey ||
+      !["refreshing", "stale", "error"].includes(snapshot.status ?? "idle")
+    ) this.#lastGood = changed;
     for (const availability of changed.values()) {
       const message = Object.freeze({
         type: "intent.changed" as const,
@@ -162,4 +238,15 @@ export class IntentService {
       for (const listener of this.#listeners) listener(message);
     }
   }
+}
+
+const ARCHETYPE = /^[a-z][a-z0-9-]{0,127}$/;
+const CONVENTION = /^napplet:[^/?#\s]+\/[^/?#\s]+$/;
+
+function failure(
+  archetype: string,
+  action: string,
+  error: "unavailable" | "denied" | "failed",
+): IntentResult {
+  return Object.freeze({ ok: false, archetype, action, handled: false, error });
 }

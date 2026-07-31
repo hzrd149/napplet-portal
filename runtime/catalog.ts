@@ -246,13 +246,13 @@ export class CatalogService {
   authoritySnapshot(): {
     readonly accountPubkey: string | null;
     readonly catalogEventId: string | null;
+    readonly status: CatalogProjection["status"];
     readonly artifacts: readonly {
       readonly coordinate: string;
       readonly acceptedManifestEventId: string;
       readonly artifact: VerifiedCatalogArtifact;
     }[];
   } {
-    this.#refresh();
     const artifacts = this.#projection.entries.flatMap((entry) => {
       if (entry.resolution !== "ready") return [];
       const artifact = this.#verified.get(
@@ -269,6 +269,7 @@ export class CatalogService {
     return Object.freeze({
       accountPubkey: this.options.identity().pubkey,
       catalogEventId: this.#projection.catalogEventId,
+      status: this.#projection.status,
       artifacts: Object.freeze(artifacts),
     });
   }

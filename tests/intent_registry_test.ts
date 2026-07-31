@@ -135,17 +135,18 @@ Deno.test("intent registry deterministically selects current verified candidates
     explicit.ok && explicit.candidate.dTag === "z-handler",
     "installed explicit handler resolves",
   );
+  const choose = h.intents.select({ archetype: "note", handler: "choose" });
   assert(
-    h.intents.select({ archetype: "note", handler: "choose" }).result.error ===
-      "denied",
+    !choose.ok && choose.result.error === "denied",
     "choose is policy denied",
   );
+  const mismatch = h.intents.select({
+    archetype: "note",
+    action: "edit",
+    convention: "napplet:note/open",
+  });
   assert(
-    h.intents.select({
-      archetype: "note",
-      action: "edit",
-      convention: "napplet:note/open",
-    }).result.error === "denied",
+    !mismatch.ok && mismatch.result.error === "denied",
     "convention action mismatch is denied",
   );
 });
@@ -181,7 +182,7 @@ Deno.test("intent registry revokes stale authority while retaining last-good dis
     h.intents.select({ archetype: "note" }).ok,
     "new verified generation gains authority",
   );
-  h.replaceIdentity({ accountId: null, pubkey: null, status: "signed-out" });
+  h.replaceIdentity({ accountId: null, pubkey: null, status: "unavailable" });
   assert(
     !h.intents.select({ archetype: "note" }).ok,
     "sign-out revokes authority",
