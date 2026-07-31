@@ -142,7 +142,7 @@ export class StorageService {
       const next = freezeSnapshot(namespaces);
       this.#validateAggregate(next, quotaIdentity);
       try {
-        await this.#store.write(next);
+        await this.#store.write(next, isCurrent);
       } catch (error) {
         if (error instanceof StorageServiceError) throw error;
         throw new StorageServiceError("storage-unavailable");

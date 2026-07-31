@@ -108,16 +108,22 @@ export class NappletStorageStore {
     }
   }
 
-  write(snapshot: NappletStorageSnapshot): Promise<void> {
+  write(
+    snapshot: NappletStorageSnapshot,
+    isCurrent: () => boolean = () => true,
+  ): Promise<void> {
     const serialized = canonicalSerialize(snapshot);
     const operation = this.#writeTail.then(() =>
-      this.#writeAtomically(serialized)
+      this.#writeAtomically(serialized, isCurrent)
     );
     this.#writeTail = operation.catch(() => undefined);
     return operation;
   }
 
-  async #writeAtomically(serialized: string): Promise<void> {
+  async #writeAtomically(
+    serialized: string,
+    isCurrent: () => boolean,
+  ): Promise<void> {
     const separator = this.#path.lastIndexOf("/");
     const directory = separator < 0
       ? "."
@@ -141,6 +147,9 @@ export class NappletStorageStore {
       }
       if (Deno.build.os !== "windows") await Deno.chmod(temporary, 0o600);
       await this.#hooks.beforeRename?.();
+      if (!isCurrent()) {
+        throw new Error("Napplet storage authority is stale");
+      }
       await Deno.rename(temporary, this.#path);
       if (Deno.build.os !== "windows") {
         using directoryHandle = await Deno.open(directory, { read: true });
