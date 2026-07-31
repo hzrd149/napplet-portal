@@ -42,6 +42,7 @@ import {
 import {
   decodeNapControlMessage,
   type IntentNavigationMessage,
+  isReservedIntentLaunchPath,
 } from "../runtime/transport.ts";
 
 const debug = rootDebug.extend("shell");
@@ -238,7 +239,7 @@ export class PopupReservationController {
       if (pending) this.fail(message.reservationId, "closed");
       return false;
     }
-    if (!message.launchPath.startsWith("/napplet?")) {
+    if (!isReservedIntentLaunchPath(message.launchPath)) {
       return this.fail(message.reservationId, "failed");
     }
     pending.handle.location.replace(message.launchPath);

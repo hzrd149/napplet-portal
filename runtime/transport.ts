@@ -158,6 +158,32 @@ export type IntentNavigationMessage =
     readonly generation: number;
   };
 
+const RESERVED_INTENT_PATH = "/intent/reserved";
+
+export function createReservedIntentLaunchPath(input: {
+  readonly reservationId: string;
+  readonly ticket: string;
+  readonly targetWindowId: string;
+  readonly generation: number;
+}): string {
+  return `${RESERVED_INTENT_PATH}#${new URLSearchParams({
+    reservationId: input.reservationId,
+    ticket: input.ticket,
+    targetWindowId: input.targetWindowId,
+    generation: String(input.generation),
+  })}`;
+}
+
+export function isReservedIntentLaunchPath(path: string): boolean {
+  if (!path.startsWith(`${RESERVED_INTENT_PATH}#`)) return false;
+  const params = new URLSearchParams(path.slice(path.indexOf("#") + 1));
+  return boundedId(params.get("reservationId")) &&
+    boundedId(params.get("ticket")) &&
+    boundedId(params.get("targetWindowId")) &&
+    Number.isSafeInteger(Number(params.get("generation"))) &&
+    Number(params.get("generation")) >= 0;
+}
+
 const INTENT_SLUG = /^[a-z][a-z0-9-]{0,127}$/;
 
 export function decodeIntentCommand(value: unknown): IntentCommand | null {

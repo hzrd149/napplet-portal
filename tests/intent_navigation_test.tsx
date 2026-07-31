@@ -132,13 +132,15 @@ Deno.test("new-tab reservation opens synchronously and settles exactly once", ()
       invocationId: "invoke-1",
       targetWindowId: "target-1",
       ticket: "ticket-1",
-      launchPath: "/napplet?ticket=ticket-1",
+      launchPath:
+        "/intent/reserved#reservationId=reservation-1&ticket=ticket-1&targetWindowId=target-1&generation=1",
       generation: 1,
     }),
     "matching authorization must commit",
   );
   assert(
-    navigated.join("") === "/napplet?ticket=ticket-1",
+    navigated.join("") ===
+      "/intent/reserved#reservationId=reservation-1&ticket=ticket-1&targetWindowId=target-1&generation=1",
     "commit path must be backend-issued",
   );
   assert(!popup.fail(reserved, "failed"), "terminal replay must fail");

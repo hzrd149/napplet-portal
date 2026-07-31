@@ -17,6 +17,7 @@ import type {
   IntentNavigationMode,
   MessageOwner,
 } from "./transport.ts";
+import { createReservedIntentLaunchPath } from "./transport.ts";
 
 export type IntentCommand =
   | IntentInvokeMessage
@@ -236,12 +237,12 @@ export class IntentService {
         invocationId: reservation.invocationId,
         targetWindowId,
         ticket,
-        launchPath: `/intent/reserved#${new URLSearchParams({
+        launchPath: createReservedIntentLaunchPath({
           reservationId: reservation.reservationId,
           ticket,
           targetWindowId,
-          generation: String(selection.generation),
-        })}`,
+          generation: selection.generation,
+        }),
         generation: selection.generation,
       }),
       owner,
