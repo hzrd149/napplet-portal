@@ -240,8 +240,10 @@ export class CatalogService {
   #refresh(force = false): void {
     const identity = this.options.identity();
     if (!identity.pubkey) {
-      this.#projection = EMPTY;
-      this.#notify();
+      if (this.#projection !== EMPTY) {
+        this.#projection = EMPTY;
+        this.#notify();
+      }
       return;
     }
     const event = this.options.eventStore.getReplaceable(
@@ -250,8 +252,10 @@ export class CatalogService {
       CATALOG_IDENTIFIER,
     );
     if (!event) {
-      this.#projection = EMPTY;
-      this.#notify();
+      if (this.#projection !== EMPTY) {
+        this.#projection = EMPTY;
+        this.#notify();
+      }
       return;
     }
     const catalog = decodeCatalogEvent(event, identity.pubkey);

@@ -301,6 +301,25 @@ Deno.test("catalog listeners observe synchronized loads and accepted mutations",
   );
 });
 
+Deno.test("reading an unchanged catalog projection does not notify listeners", async () => {
+  const service = new CatalogService({
+    eventStore: new EventStore(),
+    identity: () => ({ accountId: pubkey, pubkey, status: "active" }),
+    resolveVerifiedArtifact: (_coordinate, eventId) =>
+      Promise.resolve(artifact(eventId)),
+    signEvent: () => Promise.reject(new Error("unused")),
+    publish: () => Promise.resolve([]),
+  });
+  let notifications = 0;
+  const unsubscribe = service.subscribe(() => {
+    notifications++;
+    void service.project();
+  });
+  await service.project();
+  unsubscribe();
+  assert(notifications === 0, "projection reads must not emit a change");
+});
+
 Deno.test("accepted truth emits pending immediately, retains failure, retries, and discards stale completion", async () => {
   const store = new EventStore();
   const first = deferred<VerifiedCatalogArtifact>();

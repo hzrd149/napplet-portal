@@ -152,7 +152,13 @@ Deno.test({
       stdout: "piped",
       stderr: "piped",
     }).spawn();
+    const stdoutText = new Response(child.stdout).text();
+    const stderrText = new Response(child.stderr).text();
     const sockets = new Set<Deno.TcpConn>();
+    let failure: unknown;
+    let serverStatus: Deno.CommandStatus | undefined;
+    let serverStdout = "";
+    let serverStderr = "";
     try {
       await waitForHttp(`${origin}/`, child);
       const first = await connectRuntime(port);
@@ -186,6 +192,8 @@ Deno.test({
         "window namespace remains",
       );
       assert(sockets.size === 1, "handoff leaves one live client socket");
+    } catch (error) {
+      failure = error;
     } finally {
       for (const socket of sockets) socket.close();
       await new Deno.Command("kill", {
@@ -193,11 +201,18 @@ Deno.test({
         stdout: "null",
         stderr: "null",
       }).output();
-      await child.status;
-      await Promise.all([
-        new Response(child.stdout).text(),
-        new Response(child.stderr).text(),
+      serverStatus = await child.status;
+      [serverStdout, serverStderr] = await Promise.all([
+        stdoutText,
+        stderrText,
       ]);
+    }
+    if (failure) {
+      throw new Error(
+        `built server failed (exit ${serverStatus?.code ?? "unknown"})\n` +
+          `stdout:\n${serverStdout}\nstderr:\n${serverStderr}`,
+        { cause: failure },
+      );
     }
   },
 });
