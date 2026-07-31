@@ -18,6 +18,7 @@ export interface IdentitySnapshot {
   readonly accountId: string | null;
   readonly pubkey: string | null;
   readonly status: IdentityStatus;
+  readonly generation?: number;
 }
 
 export interface PendingNostrConnect {
@@ -49,11 +50,13 @@ const UNAVAILABLE: IdentitySnapshot = Object.freeze({
 function publicIdentity(
   account: IAccount,
   status: Exclude<IdentityStatus, "unavailable">,
+  generation?: number,
 ): IdentitySnapshot {
   return Object.freeze({
     accountId: account.id,
     pubkey: account.pubkey,
     status,
+    generation,
   });
 }
 
@@ -71,6 +74,7 @@ export class PortalAccounts {
   readonly #connectedAccountIds = new Set<string>();
   readonly identity$ = new BehaviorSubject<IdentitySnapshot>(UNAVAILABLE);
   readonly publicReadsEnabled = true;
+  #authorityGeneration = 0;
 
   constructor(store: AccountStore, factories: PortalAccountFactories) {
     this.#store = store;
@@ -81,6 +85,7 @@ export class PortalAccounts {
     this.#manager.registerType(Accounts.NostrConnectAccount);
     this.#manager.registerType(Accounts.PrivateKeyAccount);
     this.#manager.active$.subscribe((account) => {
+      this.#authorityGeneration++;
       this.identity$.next(this.#identityForActive(account));
     });
     debug(
@@ -159,12 +164,17 @@ export class PortalAccounts {
       await (this.#factories.reconnectNostrConnect?.(account) ??
         this.#reconnectNostrConnect(account));
       this.#connectedAccountIds.add(account.id);
+      this.#authorityGeneration++;
       const identity = this.#identityForActive(account);
       this.identity$.next(identity);
       debug("offline retry active account=%s", shortId(account.id));
       return identity;
     } catch {
-      const identity = publicIdentity(account, "offline");
+      const identity = publicIdentity(
+        account,
+        "offline",
+        ++this.#authorityGeneration,
+      );
       this.identity$.next(identity);
       debug("offline retry failed account=%s", shortId(account.id));
       return identity;
@@ -223,7 +233,7 @@ export class PortalAccounts {
         !this.#connectedAccountIds.has(account.id)
       ? "offline"
       : "active";
-    return publicIdentity(account, status);
+    return publicIdentity(account, status, this.#authorityGeneration);
   }
 
   async #createNostrConnect(abort?: AbortSignal): Promise<PendingNostrConnect> {

@@ -166,7 +166,7 @@ export class OutboxAdapter {
       );
       return { id, ok: false, error: "signer unavailable", outcomes: [] };
     }
-    if (authority && identity !== authority) {
+    if (authority && !sameAuthority(identity, authority)) {
       return { id, ok: false, error: "not authorized", outcomes: [] };
     }
     let event: NostrEvent;
@@ -182,12 +182,13 @@ export class OutboxAdapter {
       return { id, ok: false, error: "event signing failed", outcomes: [] };
     }
     if (
-      this.#options.identity() !== identity || event.pubkey !== identity.pubkey
+      !sameAuthority(this.#options.identity(), identity) ||
+      event.pubkey !== identity.pubkey
     ) return { id, ok: false, error: "not authorized", outcomes: [] };
     const relays = this.#relays(identity.pubkey);
     const outcomes = await Promise.all(
       relays.map(async (relay) => {
-        if (this.#options.identity() !== identity) {
+        if (!sameAuthority(this.#options.identity(), identity)) {
           return { relay, accepted: false };
         }
         try {
@@ -200,7 +201,7 @@ export class OutboxAdapter {
         }
       }),
     );
-    if (this.#options.identity() !== identity) {
+    if (!sameAuthority(this.#options.identity(), identity)) {
       return { id, ok: false, error: "not authorized", outcomes };
     }
     if (outcomes.length > 0 && outcomes.every((outcome) => outcome.accepted)) {
@@ -254,4 +255,9 @@ export class OutboxAdapter {
       this.#subscriptions.size,
     );
   }
+}
+
+function sameAuthority(a: IdentitySnapshot, b: IdentitySnapshot): boolean {
+  return a.status === b.status && a.accountId === b.accountId &&
+    a.pubkey === b.pubkey && a.generation === b.generation;
 }

@@ -287,7 +287,7 @@ export class CommonService {
       return { ok: false, error: "publication-failed" };
     }
     const current = this.#options.identity();
-    if (current !== authority) {
+    if (!sameAuthority(current, authority)) {
       return { ok: false, error: "not-authorized" };
     }
     const result = await this.#options.publisher.publish(
@@ -297,7 +297,7 @@ export class CommonService {
     );
     if (!result.ok) return { ok: false, error: "publication-failed" };
     if (
-      this.#options.identity() !== authority ||
+      !sameAuthority(this.#options.identity(), authority) ||
       result.event.pubkey !== authority.pubkey
     ) return { ok: false, error: "not-authorized" };
     this.#options.eventRuntime.eventStore.add(result.event);
@@ -306,6 +306,11 @@ export class CommonService {
 }
 
 class CommonDenied extends Error {}
+
+function sameAuthority(a: IdentitySnapshot, b: IdentitySnapshot): boolean {
+  return a.status === b.status && a.accountId === b.accountId &&
+    a.pubkey === b.pubkey && a.generation === b.generation;
+}
 
 export function encodePublicNip19(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== "object") throw new Error("invalid");
