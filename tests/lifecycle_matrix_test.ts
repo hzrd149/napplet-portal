@@ -95,8 +95,8 @@ Deno.test("lifecycle tracer streams partial truth through reconnect and teardown
     onTimeout: () => {},
   });
   pending.register("late");
-  assert(pending.pendingCount === 1, "correlation is pending");
+  assert(Number(pending.pendingCount) === 1, "correlation is pending");
   pending.destroy();
-  assert(pending.pendingCount === 0, "shutdown leaves no pending work");
+  assert(Number(pending.pendingCount) === 0, "shutdown leaves no pending work");
   assert(clock.timers.size === 0, "shutdown clears deterministic timers");
 });

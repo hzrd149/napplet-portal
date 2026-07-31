@@ -326,6 +326,10 @@ export class PendingCorrelations {
     this.#options = options;
   }
 
+  get pendingCount(): number {
+    return this.#timers.size;
+  }
+
   register(id: string): void {
     this.resolve(id);
     const schedule = this.#options.setTimeout ??
@@ -353,5 +357,12 @@ export class PendingCorrelations {
       shortId(id),
       this.#timers.size,
     );
+  }
+
+  destroy(): void {
+    const clear = this.#options.clearTimeout ?? clearTimeout;
+    for (const timer of this.#timers.values()) clear(timer);
+    this.#timers.clear();
+    debug("destroyed pending correlations");
   }
 }
