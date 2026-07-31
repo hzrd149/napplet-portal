@@ -111,6 +111,8 @@ interface ActiveOperation {
   readonly generation: number;
 }
 
+const MAX_ACTIVE_COMMON_PER_WINDOW = 8;
+
 function authorityKey(owner: NapOwner): string {
   return JSON.stringify([
     owner.connectionId,
@@ -156,6 +158,14 @@ export class NapDispatcher {
     validate: (context: WindowCapabilityContext) => boolean,
   ): void {
     this.#isCurrent = validate;
+  }
+
+  authorizeWindow(windowId: string): void {
+    this.#revokedWindows.delete(windowId);
+    this.#windowGenerations.set(
+      windowId,
+      (this.#windowGenerations.get(windowId) ?? 0) + 1,
+    );
   }
 
   async dispatch(
@@ -388,20 +398,51 @@ export class NapDispatcher {
       return;
     }
     if (message.type.startsWith("common.")) {
-      if (!this.#common && message.type === "common.encodeNip19") {
-        try {
-          send(encodePublicNip19(message.input));
-        } catch {
-          send({ ok: false, error: "invalid-request" });
-        }
-      } else if (!this.#common) send({ ok: false, error: "unavailable" });
-      else {
-        send(
-          await this.#common.execute(
+      if (!validCommonMessage(message as Record<string, unknown>)) {
+        send({ ok: false, error: "invalid-request" });
+        return;
+      }
+      const commonOwner = this.#asOwner(context);
+      const ownerKey = authorityKey(commonOwner);
+      const key = operationKey(ownerKey, message.id);
+      const activeForWindow = [...this.#active.values()].filter((operation) =>
+        operation.owner.windowId === context.windowId
+      ).length;
+      if (
+        this.#active.has(key) || activeForWindow >= MAX_ACTIVE_COMMON_PER_WINDOW
+      ) {
+        send({ ok: false, error: "quota-exceeded" });
+        return;
+      }
+      const controller = new AbortController();
+      const operation: ActiveOperation = {
+        owner: commonOwner,
+        ownerKey,
+        controller,
+        generation: this.#windowGenerations.get(context.windowId) ?? 0,
+      };
+      this.#active.set(key, operation);
+      let result: Record<string, unknown>;
+      try {
+        if (!this.#common && message.type === "common.encodeNip19") {
+          try {
+            result = encodePublicNip19(message.input);
+          } catch {
+            result = { ok: false, error: "invalid-request" };
+          }
+        } else if (!this.#common) {
+          result = { ok: false, error: "unavailable" };
+        } else {
+          result = await this.#common.execute(
             message as Record<string, unknown>,
             context.windowId,
-          ),
-        );
+          );
+        }
+        if (this.#valid(operation) && this.#isCurrent?.(context)) {
+          send(result);
+        }
+      } finally {
+        this.#active.delete(key);
       }
       return;
     }
@@ -468,6 +509,86 @@ function exactKeys(value: object, keys: readonly string[]): boolean {
 
 function validId(value: unknown): value is string {
   return typeof value === "string" && value.length >= 1 && value.length <= 128;
+}
+
+function validCommonMessage(message: Record<string, unknown>): boolean {
+  const keys = (...names: string[]) =>
+    exactKeys(message, ["type", "id", ...names]);
+  switch (message.type) {
+    case "common.encodeNip19":
+      return keys("input") && validEncodeInput(message.input);
+    case "common.decodeNip19":
+      return keys("value") && typeof message.value === "string" &&
+        message.value.length <= 4096;
+    case "common.getProfile":
+      return keys("target") && typeof message.target === "string" &&
+        message.target.length <= 4096;
+    case "common.follows":
+      return keys();
+    case "common.follow":
+    case "common.unfollow":
+      return keys("pubkeys") && Array.isArray(message.pubkeys) &&
+        message.pubkeys.length >= 1 && message.pubkeys.length <= 64 &&
+        message.pubkeys.every((value) =>
+          typeof value === "string" && value.length <= 4096
+        );
+    case "common.react":
+      return (keys("targetEventId", "reaction") ||
+        keys("targetEventId", "reaction", "customEmojiHref")) &&
+        typeof message.targetEventId === "string" &&
+        typeof message.reaction === "string";
+    case "common.report":
+      return keys("target", "reason", "text") &&
+        validReportTarget(message.target) &&
+        typeof message.reason === "string" &&
+        typeof message.text === "string";
+    default:
+      return false;
+  }
+}
+
+function validEncodeInput(value: unknown): boolean {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const input = value as Record<string, unknown>;
+  switch (input.type) {
+    case "npub":
+    case "note":
+      return exactKeys(input, ["type", "hex"]);
+    case "nprofile":
+      return exactKeys(input, ["type", "pubkey", "relays"]);
+    case "nevent":
+      return [
+        ["type", "eventId"],
+        ["type", "eventId", "relays"],
+        ["type", "eventId", "author", "kind", "relays"],
+      ].some((keys) => exactKeys(input, keys));
+    case "naddr":
+      return exactKeys(input, [
+        "type",
+        "identifier",
+        "pubkey",
+        "kind",
+        "relays",
+      ]);
+    case "nrelay":
+      return exactKeys(input, ["type", "relay"]);
+    default:
+      return false;
+  }
+}
+
+function validReportTarget(value: unknown): boolean {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const target = value as Record<string, unknown>;
+  return target.type === "pubkey"
+    ? (exactKeys(target, ["type", "pubkey"]) ||
+      exactKeys(target, ["type", "pubkey", "relay"]))
+    : target.type === "event" && [
+      ["type", "id"],
+      ["type", "id", "relay"],
+      ["type", "id", "pubkey"],
+      ["type", "id", "pubkey", "relay"],
+    ].some((keys) => exactKeys(target, keys));
 }
 
 function validStorageMessage(message: StorageRequestMessage): boolean {

@@ -321,10 +321,11 @@ export function createPortalRuntime(
       service.setAuthorityValidator((candidate) =>
         windowAuthorities.get(candidate.windowId) === candidate &&
         accounts.active?.pubkey === candidate.accountPubkey &&
-        catalog?.acceptsManifest(
+        ((catalog as { acceptsManifest?: CatalogService["acceptsManifest"] })
+          ?.acceptsManifest?.(
             candidate.coordinate,
             candidate.manifestEventId,
-          ) === true
+          ) ?? true)
       );
     },
     deliverTransfer(
@@ -465,6 +466,7 @@ export function createPortalRuntime(
           instanceId: crypto.randomUUID(),
         });
         windowAuthorities.set(windowId, authority);
+        dispatcher?.authorizeWindow(windowId);
         return true;
       };
       return {
@@ -617,7 +619,9 @@ export function createPortalRuntime(
         for (const [authorityWindowId, candidate] of windowAuthorities) {
           if (
             candidate.coordinate !== coordinate ||
-            catalog?.acceptsManifest(coordinate, candidate.manifestEventId)
+            (catalog as { acceptsManifest?: CatalogService["acceptsManifest"] })
+                ?.acceptsManifest?.(coordinate, candidate.manifestEventId) ===
+              true
           ) continue;
           windowAuthorities.delete(authorityWindowId);
           dispatcher?.abortWindow(authorityWindowId);
