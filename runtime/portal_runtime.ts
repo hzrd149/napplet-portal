@@ -436,9 +436,45 @@ export function createPortalRuntime(
       let initialized = false;
       let verifiedNapplet: string | undefined;
       let authority: WindowCapabilityContext | undefined;
+      const registerLaunchAuthority = (value: {
+        readonly coordinate: string;
+        readonly manifestEventId: string;
+        readonly dTag: string;
+        readonly aggregateHash: string;
+        readonly capabilities: readonly string[];
+      }): boolean => {
+        const accountPubkey = accounts.active?.pubkey;
+        if (!accountPubkey) return false;
+        authority = Object.freeze({
+          connectionId,
+          windowId,
+          accountPubkey,
+          coordinate: value.coordinate,
+          manifestEventId: value.manifestEventId,
+          dTag: value.dTag,
+          aggregateHash: value.aggregateHash,
+          grantedDomains: Object.freeze([
+            ...new Set(
+              value.capabilities.map((capability) => capability.split(".")[0]),
+            ),
+          ]),
+          instanceId: crypto.randomUUID(),
+        });
+        windowAuthorities.set(windowId, authority);
+        return true;
+      };
       return {
         verifyNapplet(identity: { dTag: string; aggregateHash: string }) {
           verifiedNapplet = `${identity.dTag}@${identity.aggregateHash}`;
+        },
+        registerVerifiedLaunch(value: {
+          readonly coordinate: string;
+          readonly manifestEventId: string;
+          readonly dTag: string;
+          readonly aggregateHash: string;
+          readonly capabilities: readonly string[];
+        }) {
+          return registerLaunchAuthority(value);
         },
         dispatchTransfer(message: DispatcherMessage): Promise<void> {
           const account = accounts.active?.pubkey;
@@ -499,27 +535,15 @@ export function createPortalRuntime(
                 command.coordinate,
                 command.manifestEventId,
               );
-              const accountPubkey = accounts.active?.pubkey;
-              if (result.ok && accountPubkey) {
+              if (result.ok) {
                 const value = result.value;
-                authority = Object.freeze({
-                  connectionId,
-                  windowId,
-                  accountPubkey,
+                registerLaunchAuthority({
                   coordinate: command.coordinate,
                   manifestEventId: value.manifestEventId,
                   dTag: value.launch.dTag,
                   aggregateHash: value.launch.aggregateHash,
-                  grantedDomains: Object.freeze([
-                    ...new Set(
-                      value.capabilities.map((capability) =>
-                        capability.split(".")[0]
-                      ),
-                    ),
-                  ]),
-                  instanceId: crypto.randomUUID(),
+                  capabilities: value.capabilities,
                 });
-                windowAuthorities.set(windowId, authority);
               }
               return result;
             }

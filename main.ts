@@ -15,6 +15,7 @@ import { CatalogSyncOwner } from "./runtime/event_runtime.ts";
 import { CatalogService } from "./runtime/catalog.ts";
 import { RelayPolicy } from "./runtime/relay_policy.ts";
 import { map } from "npm:rxjs@7.8.2";
+import type { Filter } from "nostr-tools";
 import { ResourceService } from "./runtime/resource_service.ts";
 import {
   BlossomTransferAdapter,
@@ -23,6 +24,8 @@ import {
 import { NapDispatcher } from "./runtime/nap_dispatcher.ts";
 import { NappletStorageStore } from "./runtime/storage_store.ts";
 import { StorageService } from "./runtime/storage.ts";
+import { CommonService } from "./runtime/common.ts";
+import { OutboxAdapter } from "./runtime/outbox.ts";
 
 const debug = rootDebug.extend("backend");
 
@@ -148,6 +151,40 @@ const blossomTransfer = new BlossomTransferService({
 export const nappletStorage = await StorageService.open(
   new NappletStorageStore(".data/napplet-storage.json"),
 );
+const commonOutbox = new OutboxAdapter({
+  presetRelays: runtimeSettings.settings.relays,
+  identity: () => signerAccounts.identity,
+  nip65Relays: (pubkey) =>
+    processRuntime.eventRuntime.eventStore.getReplaceable(10002, pubkey)?.tags
+      .filter((tag) => tag[0] === "r" && tag[2] !== "read")
+      .map((tag) => tag[1]) ?? [],
+  signEvent: (template) => signerAccounts.signEvent(template),
+  pool: {
+    req: (relays, filters) =>
+      processRuntime.eventRuntime.relayPool.request(
+        [...relays],
+        [...filters] as Filter[],
+      )
+        .pipe(map((event) => ({ type: "EVENT" as const, event, from: "" }))),
+    publish: async (relay, event) => {
+      const [result] = await processRuntime.eventRuntime.relayPool.publish(
+        [relay],
+        event,
+      );
+      return result?.ok === true;
+    },
+  },
+  relayPolicy: new RelayPolicy({
+    defaults: runtimeSettings.settings.relays,
+    blocked: runtimeSettings.settings.blockedRelays,
+  }),
+});
+export const commonService = new CommonService({
+  eventRuntime: processRuntime.eventRuntime,
+  identity: () => signerAccounts.identity,
+  relays: () => runtimeSettings.settings.relays,
+  publisher: commonOutbox,
+});
 export const napDispatcher = new NapDispatcher({
   resource: resourceService,
   transfer: blossomTransfer,
@@ -156,6 +193,7 @@ export const napDispatcher = new NapDispatcher({
     localBlossom,
   }),
   storage: nappletStorage,
+  common: commonService,
   send: (owner, message, bytes) =>
     processRuntime.deliverTransfer(owner, message, bytes),
 });

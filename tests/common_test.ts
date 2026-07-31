@@ -138,9 +138,12 @@ Deno.test("follow unfollow react and report publish canonical backend events", a
     identity: () => ({ accountId: "a", pubkey, status: "active" }),
     relays: () => ["wss://relay.example/"],
     publisher: {
-      publish: async (_id, template) => {
+      publish: (_id, template) => {
         published.push(template);
-        return { ok: true as const, event: finalizeEvent(template, secret) };
+        return Promise.resolve({
+          ok: true as const,
+          event: finalizeEvent(template, secret),
+        });
       },
     },
   });

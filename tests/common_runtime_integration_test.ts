@@ -1,5 +1,4 @@
 import { finalizeEvent, getPublicKey, nip19 } from "nostr-tools";
-import { of } from "npm:rxjs@7.8.2";
 import fixture from "./fixtures/supplied_napplet_contract.json" with {
   type: "json",
 };
@@ -23,11 +22,13 @@ function harness(accept = true) {
     identity: () => ({ accountId: "active", pubkey, status: "active" }),
     relays: () => ["wss://required.example/"],
     publisher: {
-      publish: async (_id, template) => {
+      publish: (_id, template) => {
         publishes++;
-        return accept
-          ? { ok: true as const, event: finalizeEvent(template, secret) }
-          : { ok: false as const, error: "relay detail" };
+        return Promise.resolve(
+          accept
+            ? { ok: true as const, event: finalizeEvent(template, secret) }
+            : { ok: false as const, error: "relay detail" },
+        );
       },
     },
   });

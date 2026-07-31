@@ -439,6 +439,13 @@ export const handler = define.handlers({
           dTag: artifact.dTag,
           aggregateHash: artifact.aggregateHash,
         });
+        bridge.registerVerifiedLaunch({
+          coordinate: fixture.coordinate,
+          manifestEventId: fixture.manifestEvent.id,
+          dTag: artifact.dTag,
+          aggregateHash: artifact.aggregateHash,
+          capabilities: artifact.manifest.requires,
+        });
         socket.send(JSON.stringify({
           type: "runtime.artifact",
           srcdoc: artifact.indexHtml,
