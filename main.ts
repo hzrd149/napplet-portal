@@ -218,12 +218,15 @@ export const catalogSync = new CatalogSyncOwner({
       blocked: runtimeSettings.settings.blockedRelays,
     }),
 });
-void signerService.restore().catch((error) => {
-  debug(
-    "startup account restore failed error=%s",
-    error instanceof Error ? error.message : "unknown",
-  );
-});
+const startupAccountRestoration = await signerService.restore().catch(
+  (error) => {
+    debug(
+      "startup account restore failed error=%s",
+      error instanceof Error ? error.message : "unknown",
+    );
+    return null;
+  },
+);
 
 export function startupSummary(
   config: RuntimeConfig,
@@ -259,5 +262,10 @@ app.use((ctx) => {
 });
 app.fsRoutes();
 
-console.info(startupSummary(runtimeConfig, "unavailable"));
+console.info(
+  startupSummary(
+    runtimeConfig,
+    startupAccountRestoration?.status ?? signerAccounts.identity.status,
+  ),
+);
 debug("startup complete");

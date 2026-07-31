@@ -139,7 +139,9 @@ Deno.test("socket loss preserves signer identity and projects connection truth",
 Deno.test("startup account restore failure is handled", async () => {
   const main = await Deno.readTextFile("main.ts");
   assert(
-    main.includes("signerService.restore().catch"),
+    main.includes(
+      "const startupAccountRestoration = await signerService.restore().catch",
+    ),
     "startup restore must not create an unhandled rejection",
   );
   assert(
@@ -150,6 +152,12 @@ Deno.test("startup account restore failure is handled", async () => {
   assert(
     main.includes("startup account restore failed"),
     "startup restore failure must be sanitized and logged",
+  );
+  assert(
+    main.includes(
+      "startupAccountRestoration?.status ?? signerAccounts.identity.status",
+    ),
+    "startup summary must reflect the restored account state",
   );
 });
 

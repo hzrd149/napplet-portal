@@ -126,6 +126,10 @@ Deno.test("sign-in endpoint dispatches and projects signer service state", async
     "status endpoint must restore persisted accounts before projection",
   );
   assert(
+    statusEndpoint.includes('identity?.status === "offline"'),
+    "status endpoint must expose restored offline signer identity",
+  );
+  assert(
     accountsRuntime.includes("this.#manager.active$.subscribe"),
     "portal identity must derive from Applesauce active$",
   );

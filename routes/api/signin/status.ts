@@ -3,7 +3,11 @@ import { define } from "../../../utils.ts";
 
 export const handler = define.handlers({
   async GET(ctx) {
-    await ctx.state.signer.restore();
-    return json(publicSignerState(ctx.state.signer.state));
+    const identity = await ctx.state.signer.restore();
+    const state = publicSignerState(ctx.state.signer.state);
+    if (state.status === "idle" && identity?.status === "offline") {
+      return json({ status: "offline", pubkey: identity.pubkey });
+    }
+    return json(state);
   },
 });
