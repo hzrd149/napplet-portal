@@ -27,7 +27,7 @@
 - [ ] **COM-02**: Napplet can load other users' profile and common Nostr data through Applesauce-backed, stream-oriented backend services.
 - [x] **STO-01**: Napplet can set, get, list, and remove scoped key-value data through the pinned NAP-STORAGE contract.
 - [x] **STO-02**: Runtime isolates storage by account and verified napplet identity, supports shared and per-instance scope where the contract requires it, and enforces quotas and deterministic serialization.
-- [ ] **STO-03**: Napplet storage persists across browser reconnects and portal restarts without becoming shell configuration or browser-owned authority.
+- [x] **STO-03**: Napplet storage persists across browser reconnects and portal restarts without becoming shell configuration or browser-owned authority.
 
 ### Intent and Media
 
