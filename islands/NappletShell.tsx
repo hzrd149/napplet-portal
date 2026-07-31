@@ -91,6 +91,96 @@ export function decodeResourceBinaryResult(
   };
 }
 
+type PendingResourceResult = {
+  readonly message: Record<string, unknown>;
+  readonly expected: readonly {
+    id: string;
+    mime: string;
+    itemIndex?: number;
+  }[];
+  readonly payloads: Map<string, Uint8Array>;
+};
+
+export class ResourceBinaryAssembler {
+  readonly #pending = new Map<string, PendingResourceResult>();
+
+  acceptMetadata(message: Record<string, unknown>): boolean {
+    if (typeof message.id !== "string") return false;
+    if (
+      message.type === "resource.bytes.result" &&
+      typeof message.mime === "string"
+    ) {
+      this.#pending.set(message.id, {
+        message,
+        expected: [{ id: message.id, mime: message.mime }],
+        payloads: new Map(),
+      });
+      return true;
+    }
+    if (
+      message.type !== "resource.bytesMany.result" ||
+      !Array.isArray(message.items)
+    ) return false;
+    const expected = message.items.flatMap((item, itemIndex) => {
+      if (!item || typeof item !== "object") return [];
+      const value = item as Record<string, unknown>;
+      return value.ok === true && typeof value.mime === "string" &&
+          typeof value.binaryIndex === "number"
+        ? [{
+          id: `${message.id}:${value.binaryIndex}`,
+          mime: value.mime,
+          itemIndex,
+        }]
+        : [];
+    });
+    if (expected.length === 0) return false;
+    this.#pending.set(message.id, { message, expected, payloads: new Map() });
+    return true;
+  }
+
+  acceptBinary(
+    bytes: Uint8Array,
+    owner: { readonly connectionId: string; readonly windowId: string },
+  ): Record<string, unknown> | null {
+    const decoded = decodeBinaryFrames(bytes, owner);
+    if (!decoded.ok || decoded.frames.length !== 1) return null;
+    const frame = decoded.frames[0];
+    if (frame.kind !== BinaryFrameKind.ResourceResult) return null;
+    const pending = [...this.#pending.values()].find((entry) =>
+      entry.expected.some(({ id }) => id === frame.id)
+    );
+    if (!pending || pending.payloads.has(frame.id)) return null;
+    pending.payloads.set(frame.id, frame.payload);
+    if (pending.payloads.size !== pending.expected.length) return null;
+    this.#pending.delete(String(pending.message.id));
+    if (pending.message.type === "resource.bytes.result") {
+      const expected = pending.expected[0];
+      return {
+        ...pending.message,
+        blob: new Blob([pending.payloads.get(expected.id)!.slice().buffer], {
+          type: expected.mime,
+        }),
+      };
+    }
+    const items = (pending.message.items as Record<string, unknown>[]).map((
+      item,
+    ) => ({ ...item }));
+    for (const expected of pending.expected) {
+      const item = items[expected.itemIndex!] as Record<string, unknown>;
+      delete item.binaryIndex;
+      item.blob = new Blob(
+        [pending.payloads.get(expected.id)!.slice().buffer],
+        { type: expected.mime },
+      );
+    }
+    return { ...pending.message, items };
+  }
+
+  clear(): void {
+    this.#pending.clear();
+  }
+}
+
 export class CatalogCommandRegistry {
   readonly #pending = new Map<string, PendingCatalogCommand>();
   readonly #setTimer: typeof setTimeout;
@@ -253,6 +343,7 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
   const catalogAccount = useRef<string | null>(null);
   const mountedAt = useRef(Date.now());
   const binaryRequests = useRef(new ActiveBinaryRequests(2));
+  const resourceAssembler = useRef(new ResourceBinaryAssembler());
 
   const registry = useMemo<FrameIdentityRegistry>(() => ({
     register(source, nextIdentity) {
@@ -396,11 +487,14 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
             if (!(event.data instanceof ArrayBuffer)) return;
             const currentOwner = owner.current;
             if (!currentOwner) return;
-            const message = decodeResourceBinaryResult(
-              new Uint8Array(event.data),
-              currentOwner,
-              binaryRequests.current,
-            );
+            const incoming = new Uint8Array(event.data);
+            const message =
+              resourceAssembler.current.acceptBinary(incoming, currentOwner) ??
+                decodeResourceBinaryResult(
+                  incoming,
+                  currentOwner,
+                  binaryRequests.current,
+                );
             if (message) {
               iframe.current?.contentWindow?.postMessage(message, "*");
             }
@@ -410,6 +504,7 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
         onSocketTerminal: () => {
           catalogCommands.current?.clear();
           binaryRequests.current.clear();
+          resourceAssembler.current.clear();
         },
         onSnapshot: (snapshot) => {
           setConnection(snapshot);
@@ -498,6 +593,7 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
         message.windowId !== currentOwner.windowId
       ) return;
       const eventMessage = message.message as Record<string, unknown>;
+      if (resourceAssembler.current.acceptMetadata(eventMessage)) return;
       if (eventMessage.type === "identity.changed") {
         const projected = eventMessage.identity as
           | Record<string, unknown>
