@@ -357,6 +357,10 @@ export const handler = define.handlers({
           await bridge.dispatchTransfer(transfer);
           return;
         }
+        if (/^(common|storage)\./.test(napMessage.type)) {
+          await bridge.dispatchTransfer(napMessage as never);
+          return;
+        }
         if (napMessage.type === "shell.ready") {
           bridge.receive(session.source, napMessage);
           return;

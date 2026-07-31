@@ -1,4 +1,7 @@
 import type { UploadRequest } from "@napplet/core";
+import type { CommonNip19EncodeInput } from "@napplet/core";
+import type { StorageRequestMessage } from "@napplet/nap/storage";
+import { nip19 } from "nostr-tools";
 import type { BlossomTransferService } from "./blossom_transfer.ts";
 import type { ResourceBatchItem, ResourceService } from "./resource_service.ts";
 import { ResourceServiceError } from "./resource_service.ts";
@@ -11,7 +14,28 @@ export interface NapOwner {
   readonly account: string;
 }
 
+export interface WindowCapabilityContext {
+  readonly connectionId: string;
+  readonly windowId: string;
+  readonly accountPubkey: string;
+  readonly coordinate: string;
+  readonly manifestEventId: string;
+  readonly dTag: string;
+  readonly aggregateHash: string;
+  readonly grantedDomains: readonly string[];
+  readonly instanceId: string;
+}
+
+type CommonEncodeMessage = {
+  readonly type: "common.encodeNip19";
+  readonly id: string;
+  readonly input: CommonNip19EncodeInput;
+};
+
+type CommonStorageMessage = CommonEncodeMessage | StorageRequestMessage;
+
 export type DispatcherMessage =
+  | CommonStorageMessage
   | { readonly type: "resource.info"; readonly id: string }
   | {
     readonly type: "resource.bytes";
@@ -47,6 +71,11 @@ interface TransferPort {
   clearOwner?(owner: string): void;
 }
 
+interface StoragePort {
+  get(namespace: string, key: string): string | null | Promise<string | null>;
+  set(namespace: string, key: string, value: string): void | Promise<void>;
+}
+
 interface NapDispatcherOptions {
   readonly resource: ResourcePort;
   readonly transfer: TransferPort;
@@ -54,6 +83,8 @@ interface NapDispatcherOptions {
     readonly blossomServers: readonly string[];
     readonly localBlossom?: string;
   };
+  readonly storage?: StoragePort;
+  readonly isCurrent?: (context: WindowCapabilityContext) => boolean;
   readonly send: (
     owner: NapOwner,
     message: Record<string, unknown>,
@@ -90,9 +121,12 @@ export class NapDispatcher {
   readonly #transfer: TransferPort;
   readonly #settings: NapDispatcherOptions["settings"];
   readonly #send: NapDispatcherOptions["send"];
+  readonly #storage?: StoragePort;
+  #isCurrent?: NapDispatcherOptions["isCurrent"];
   readonly #active = new Map<string, ActiveOperation>();
   readonly #windowGenerations = new Map<string, number>();
   readonly #knownOwners = new Map<string, NapOwner>();
+  readonly #revokedWindows = new Set<string>();
   #destroyed = false;
 
   constructor(options: NapDispatcherOptions) {
@@ -100,18 +134,36 @@ export class NapDispatcher {
     this.#transfer = options.transfer;
     this.#settings = options.settings;
     this.#send = options.send;
+    this.#storage = options.storage;
+    this.#isCurrent = options.isCurrent;
   }
 
-  async dispatch(owner: NapOwner, message: DispatcherMessage): Promise<void> {
+  setAuthorityValidator(
+    validate: (context: WindowCapabilityContext) => boolean,
+  ): void {
+    this.#isCurrent = validate;
+  }
+
+  async dispatch(
+    owner: NapOwner | WindowCapabilityContext,
+    message: DispatcherMessage,
+  ): Promise<void> {
     if (this.#destroyed) return;
-    const ownerKey = authorityKey(owner);
-    this.#knownOwners.set(ownerKey, owner);
+    if (
+      message.type.startsWith("common.") || message.type.startsWith("storage.")
+    ) {
+      await this.#dispatchCommonStorage(owner, message as CommonStorageMessage);
+      return;
+    }
+    const transferOwner = owner as NapOwner;
+    const ownerKey = authorityKey(transferOwner);
+    this.#knownOwners.set(ownerKey, transferOwner);
     if (message.type === "resource.cancel") {
       this.#active.get(operationKey(ownerKey, message.id))?.controller.abort();
       return;
     }
     if (message.type === "resource.info") {
-      this.#send(owner, {
+      this.#send(transferOwner, {
         type: "resource.info.result",
         id: message.id,
         info: RESOURCE_INFO,
@@ -119,7 +171,7 @@ export class NapDispatcher {
       return;
     }
     if (message.type === "upload.info") {
-      this.#send(owner, {
+      this.#send(transferOwner, {
         type: "upload.info.result",
         id: message.id,
         info: UPLOAD_INFO,
@@ -128,7 +180,7 @@ export class NapDispatcher {
     }
     if (message.type === "upload.status") {
       const status = this.#transfer.status(ownerKey, message.uploadId);
-      this.#send(owner, {
+      this.#send(transferOwner, {
         type: "upload.status.result",
         id: message.id,
         ...(status ? { status } : { error: "unavailable" }),
@@ -139,13 +191,13 @@ export class NapDispatcher {
     const key = operationKey(ownerKey, message.id);
     const activeForWindow =
       [...this.#active.values()].filter((operation) =>
-        operation.owner.windowId === owner.windowId
+        operation.owner.windowId === transferOwner.windowId
       ).length;
     if (
       this.#active.has(key) ||
       activeForWindow >= TRANSFER_POLICY.maxActivePerWindow
     ) {
-      this.#send(owner, {
+      this.#send(transferOwner, {
         type: message.type === "resource.bytesMany"
           ? "resource.bytesMany.error"
           : message.type === "resource.bytes"
@@ -158,8 +210,13 @@ export class NapDispatcher {
     }
 
     const controller = new AbortController();
-    const generation = this.#windowGenerations.get(owner.windowId) ?? 0;
-    this.#active.set(key, { owner, ownerKey, controller, generation });
+    const generation = this.#windowGenerations.get(transferOwner.windowId) ?? 0;
+    this.#active.set(key, {
+      owner: transferOwner,
+      ownerKey,
+      controller,
+      generation,
+    });
     const settings = this.#settings();
     const operation = this.#active.get(key)!;
     try {
@@ -167,10 +224,10 @@ export class NapDispatcher {
         const result = await this.#resource.bytes(message.url, {
           signal: controller.signal,
           blossomServers: [...settings.blossomServers],
-          authorPubkey: owner.account,
+          authorPubkey: transferOwner.account,
         });
         if (!this.#valid(operation)) return;
-        this.#send(owner, {
+        this.#send(transferOwner, {
           type: "resource.bytes.result",
           id: message.id,
           mime: result.mime,
@@ -179,7 +236,7 @@ export class NapDispatcher {
         const results = await this.#resource.bytesMany(message.urls, {
           signal: controller.signal,
           blossomServers: [...settings.blossomServers],
-          authorPubkey: owner.account,
+          authorPubkey: transferOwner.account,
         });
         if (!this.#valid(operation)) return;
         const bytes: Uint8Array[] = [];
@@ -199,12 +256,12 @@ export class NapDispatcher {
             binaryIndex: bytes.length - 1,
           };
         });
-        this.#send(owner, {
+        this.#send(transferOwner, {
           type: "resource.bytesMany.result",
           id: message.id,
           items,
         }, bytes);
-      } else {
+      } else if (message.type === "upload.upload") {
         const data = message.request.data;
         const blob = data instanceof Blob
           ? data
@@ -222,19 +279,19 @@ export class NapDispatcher {
           signal: controller.signal,
         });
         if (!this.#valid(operation)) return;
-        this.#send(owner, {
+        this.#send(transferOwner, {
           type: "upload.upload.result",
           id: message.id,
           result,
         });
         const status = this.#transfer.status(ownerKey, result.uploadId);
         if (status) {
-          this.#send(owner, { type: "upload.status.changed", status });
+          this.#send(transferOwner, { type: "upload.status.changed", status });
         }
       }
     } catch (error) {
       if (!this.#valid(operation) || controller.signal.aborted) return;
-      this.#send(owner, {
+      this.#send(transferOwner, {
         type: message.type === "resource.bytesMany"
           ? "resource.bytesMany.error"
           : message.type === "resource.bytes"
@@ -251,6 +308,7 @@ export class NapDispatcher {
   }
 
   abortWindow(windowId: string): void {
+    this.#revokedWindows.add(windowId);
     this.#windowGenerations.set(
       windowId,
       (this.#windowGenerations.get(windowId) ?? 0) + 1,
@@ -279,5 +337,137 @@ export class NapDispatcher {
     return !this.#destroyed && !operation.controller.signal.aborted &&
       (this.#windowGenerations.get(operation.owner.windowId) ?? 0) ===
         operation.generation;
+  }
+
+  async #dispatchCommonStorage(
+    owner: NapOwner | WindowCapabilityContext,
+    message: CommonStorageMessage,
+  ): Promise<void> {
+    const context = owner as WindowCapabilityContext;
+    const resultType = `${message.type}.result`;
+    const send = (result: Record<string, unknown>) =>
+      this.#send(this.#asOwner(context), {
+        type: resultType,
+        id: message.id,
+        ...result,
+      });
+    const domain = message.type.startsWith("common.") ? "common" : "storage";
+    if (
+      typeof context.accountPubkey !== "string" ||
+      this.#revokedWindows.has(context.windowId) ||
+      !context.grantedDomains?.includes(domain) ||
+      !this.#isCurrent?.(context)
+    ) {
+      send({
+        error: "not-authorized",
+        ...(message.type === "storage.get" ? { value: null } : {}),
+      });
+      return;
+    }
+    if (!validId(message.id)) {
+      send({
+        error: "invalid-request",
+        ...(message.type === "storage.get" ? { value: null } : {}),
+      });
+      return;
+    }
+    if (message.type === "common.encodeNip19") {
+      if (!exactKeys(message, ["type", "id", "input"])) {
+        send({ ok: false, error: "invalid-request" });
+        return;
+      }
+      try {
+        const encoded = encodeNip19(message.input);
+        if (typeof encoded !== "string") throw new Error("unsupported input");
+        send({ ok: true, value: encoded, nip19Type: message.input.type });
+      } catch {
+        send({ ok: false, error: "invalid-request" });
+      }
+      return;
+    }
+    if (!this.#storage || !validStorageMessage(message)) {
+      send({
+        error: "invalid-request",
+        ...(message.type === "storage.get" ? { value: null } : {}),
+      });
+      return;
+    }
+    const scope = message.scope ?? "shared";
+    const namespace = JSON.stringify([
+      context.accountPubkey,
+      context.coordinate,
+      context.manifestEventId,
+      scope,
+      scope === "instance" ? context.instanceId : "",
+    ]);
+    if (message.type === "storage.set") {
+      await this.#storage.set(namespace, message.key, message.value);
+      send({});
+    } else if (message.type === "storage.get") {
+      send({ value: await this.#storage.get(namespace, message.key) });
+    } else {
+      send({ error: "invalid-request" });
+    }
+  }
+
+  #asOwner(context: WindowCapabilityContext): NapOwner {
+    return {
+      connectionId: context.connectionId,
+      windowId: context.windowId,
+      napplet: `${context.coordinate}@${context.manifestEventId}`,
+      account: context.accountPubkey,
+    };
+  }
+}
+
+function exactKeys(value: object, keys: readonly string[]): boolean {
+  const actual = Object.keys(value).sort();
+  return actual.length === keys.length &&
+    actual.every((key, index) => key === [...keys].sort()[index]);
+}
+
+function validId(value: unknown): value is string {
+  return typeof value === "string" && value.length >= 1 && value.length <= 128;
+}
+
+function validStorageMessage(message: StorageRequestMessage): boolean {
+  const scope = message.scope;
+  if (scope !== undefined && scope !== "shared" && scope !== "instance") {
+    return false;
+  }
+  if (
+    "key" in message &&
+    (typeof message.key !== "string" || message.key.length < 1)
+  ) return false;
+  if (message.type === "storage.set" && typeof message.value !== "string") {
+    return false;
+  }
+  const keys = message.type === "storage.set"
+    ? ["type", "id", "key", "value", ...(scope ? ["scope"] : [])]
+    : message.type === "storage.get" || message.type === "storage.remove"
+    ? ["type", "id", "key", ...(scope ? ["scope"] : [])]
+    : ["type", "id", ...(scope ? ["scope"] : [])];
+  return exactKeys(message, keys);
+}
+
+function encodeNip19(input: CommonNip19EncodeInput): string {
+  switch (input.type) {
+    case "npub":
+      return nip19.npubEncode(input.hex);
+    case "note":
+      return nip19.noteEncode(input.hex);
+    case "nprofile":
+      return nip19.nprofileEncode(input);
+    case "nevent":
+      return nip19.neventEncode({
+        id: input.eventId,
+        relays: input.relays,
+        author: input.author,
+        kind: input.kind,
+      });
+    case "naddr":
+      return nip19.naddrEncode(input);
+    case "nrelay":
+      throw new Error("unsupported public NIP-19 form");
   }
 }

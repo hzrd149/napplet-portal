@@ -71,11 +71,17 @@ interface IframeBridgeOptions {
   readonly forward: (message: Record<string, unknown>) => void;
 }
 
-const DOMAINS = Object.freeze(["shell", "identity", "relay", "outbox"]);
+const BASE_DOMAINS = Object.freeze(["shell", "identity", "relay", "outbox"]);
 
 export function createIframeBridge(options: IframeBridgeOptions) {
   let initialized = false;
+  let domains: readonly string[] = BASE_DOMAINS;
   return {
+    grantDomains(capabilities: readonly string[]): void {
+      const granted = capabilities.map((capability) => capability.split(".")[0])
+        .filter((domain) => domain === "common" || domain === "storage");
+      domains = Object.freeze([...new Set([...BASE_DOMAINS, ...granted])]);
+    },
     receive(event: BridgeEvent): void {
       const source = options.source();
       if (!source || event.source !== source) {
@@ -102,15 +108,16 @@ export function createIframeBridge(options: IframeBridgeOptions) {
       if (message.type === "shell.ready") {
         if (initialized) return;
         initialized = true;
-        debug("posting shell init services=%d", DOMAINS.length);
+        debug("posting shell init services=%d", domains.length);
         options.post({
           type: "shell.init",
-          capabilities: { domains: [...DOMAINS] },
-          services: [...DOMAINS],
+          capabilities: { domains: [...domains] },
+          services: [...domains],
         });
         return;
       }
-      if (!/^(identity|relay|outbox)\./.test(message.type)) {
+      const domain = message.type.split(".")[0];
+      if (!domains.includes(domain) || domain === "shell") {
         debug("ignored unsupported iframe message type=%s", message.type);
         return;
       }
@@ -119,6 +126,7 @@ export function createIframeBridge(options: IframeBridgeOptions) {
     },
     reset(): void {
       initialized = false;
+      domains = BASE_DOMAINS;
       debug("bridge reset");
     },
   };

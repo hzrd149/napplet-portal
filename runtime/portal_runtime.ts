@@ -30,6 +30,7 @@ import type {
   DispatcherMessage,
   NapDispatcher,
   NapOwner,
+  WindowCapabilityContext,
 } from "./nap_dispatcher.ts";
 
 const debug = rootDebug.extend("runtime");
@@ -299,6 +300,7 @@ export function createPortalRuntime(
   let destroyed = false;
   let catalog: CatalogService | undefined;
   let dispatcher: NapDispatcher | undefined;
+  const windowAuthorities = new Map<string, WindowCapabilityContext>();
   const transferSends = new Map<
     string,
     (
@@ -316,6 +318,10 @@ export function createPortalRuntime(
     },
     configureTransfers(service: NapDispatcher): void {
       dispatcher = service;
+      service.setAuthorityValidator((candidate) =>
+        windowAuthorities.get(candidate.windowId) === candidate &&
+        accounts.active?.pubkey === candidate.accountPubkey
+      );
     },
     deliverTransfer(
       owner: NapOwner,
@@ -326,6 +332,7 @@ export function createPortalRuntime(
     },
     destroyWindow(windowId: string): void {
       transferSends.delete(windowId);
+      windowAuthorities.delete(windowId);
       dispatcher?.abortWindow(windowId);
       connections.remove(windowId);
     },
@@ -337,6 +344,7 @@ export function createPortalRuntime(
       for (const windowId of transferSends.keys()) {
         dispatcher?.abortWindow(windowId);
       }
+      windowAuthorities.clear();
       return accounts.signOut();
     },
     loadEvent: (id: string) => {
@@ -427,15 +435,36 @@ export function createPortalRuntime(
       if (sendTransfer) transferSends.set(windowId, sendTransfer);
       let initialized = false;
       let verifiedNapplet: string | undefined;
+      let authority: WindowCapabilityContext | undefined;
       return {
         verifyNapplet(identity: { dTag: string; aggregateHash: string }) {
           verifiedNapplet = `${identity.dTag}@${identity.aggregateHash}`;
         },
         dispatchTransfer(message: DispatcherMessage): Promise<void> {
           const account = accounts.active?.pubkey;
-          if (!dispatcher || !verifiedNapplet || !account) {
+          if (!dispatcher || !account) {
             return Promise.resolve();
           }
+          if (
+            message.type.startsWith("common.") ||
+            message.type.startsWith("storage.")
+          ) {
+            if (!authority) {
+              const id = "id" in message && typeof message.id === "string"
+                ? message.id
+                : "invalid";
+              const type = `${message.type}.result`;
+              transferSends.get(windowId)?.({
+                type,
+                id,
+                error: "not-authorized",
+                ...(message.type === "storage.get" ? { value: null } : {}),
+              });
+              return Promise.resolve();
+            }
+            return dispatcher.dispatch(authority, message);
+          }
+          if (!verifiedNapplet) return Promise.resolve();
           return dispatcher.dispatch({
             connectionId,
             windowId,
@@ -450,7 +479,7 @@ export function createPortalRuntime(
               entries: [],
               status: "idle",
             }),
-        catalogCommand: (command: CatalogCommand) => {
+        catalogCommand: async (command: CatalogCommand) => {
           if (!catalog) throw new Error("catalog service unavailable");
           switch (command.type) {
             case "catalog.preview":
@@ -464,12 +493,36 @@ export function createPortalRuntime(
               );
             case "catalog.uninstall":
               return catalog.uninstallNapplet(command.id, command.coordinate);
-            case "catalog.launch":
-              return catalog.launch(
+            case "catalog.launch": {
+              const result = await catalog.launch(
                 command.catalogEventId,
                 command.coordinate,
                 command.manifestEventId,
               );
+              const accountPubkey = accounts.active?.pubkey;
+              if (result.ok && accountPubkey) {
+                const value = result.value;
+                authority = Object.freeze({
+                  connectionId,
+                  windowId,
+                  accountPubkey,
+                  coordinate: command.coordinate,
+                  manifestEventId: value.manifestEventId,
+                  dTag: value.launch.dTag,
+                  aggregateHash: value.launch.aggregateHash,
+                  grantedDomains: Object.freeze([
+                    ...new Set(
+                      value.capabilities.map((capability) =>
+                        capability.split(".")[0]
+                      ),
+                    ),
+                  ]),
+                  instanceId: crypto.randomUUID(),
+                });
+                windowAuthorities.set(windowId, authority);
+              }
+              return result;
+            }
           }
         },
         subscribeCatalog: (listener: () => void) =>
@@ -527,6 +580,7 @@ export function createPortalRuntime(
       if (destroyed) return;
       destroyed = true;
       dispatcher?.destroy();
+      windowAuthorities.clear();
       transferSends.clear();
       eventRuntime.destroy();
       settings?.destroy();

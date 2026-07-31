@@ -756,6 +756,13 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
       typeof launch.srcdoc !== "string"
     ) return;
     bridge.reset();
+    if (Array.isArray(artifact.capabilities)) {
+      bridge.grantDomains(
+        artifact.capabilities.filter((value): value is string =>
+          typeof value === "string"
+        ),
+      );
+    }
     setIdentity({ dTag: launch.dTag, aggregateHash: launch.aggregateHash });
     setSrcdoc(launch.srcdoc);
     navigate("napplet");

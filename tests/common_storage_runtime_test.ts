@@ -1,8 +1,12 @@
 import { nip19 } from "nostr-tools";
+import fixture from "./fixtures/supplied_napplet_contract.json" with {
+  type: "json",
+};
 import {
   NapDispatcher,
   type WindowCapabilityContext,
 } from "../runtime/nap_dispatcher.ts";
+import { createPortalRuntime } from "../runtime/portal_runtime.ts";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -53,7 +57,14 @@ function createHarness() {
         values.set(`${namespace}:${key}`, value);
       },
     },
-    isCurrent: (candidate) => candidate === current,
+    isCurrent: (candidate) =>
+      candidate.connectionId === current.connectionId &&
+      candidate.windowId === current.windowId &&
+      candidate.accountPubkey === current.accountPubkey &&
+      candidate.coordinate === current.coordinate &&
+      candidate.manifestEventId === current.manifestEventId &&
+      candidate.aggregateHash === current.aggregateHash &&
+      candidate.instanceId === current.instanceId,
     send: (_owner, message) => sent.push(message),
   });
   return {
@@ -72,7 +83,7 @@ Deno.test("verified authority completes canonical COMMON and STORAGE tracer roun
   await harness.dispatcher.dispatch(authority, {
     type: "common.encodeNip19",
     id: "encode",
-    input: { type: "npub", data: accountPubkey },
+    input: { type: "npub", hex: accountPubkey },
   });
   await harness.dispatcher.dispatch(authority, {
     type: "storage.set",
@@ -125,7 +136,7 @@ Deno.test("authority, exact keys, capabilities, and revocation fail closed", asy
   await harness.dispatcher.dispatch(authority, {
     type: "common.encodeNip19",
     id: "ambiguous",
-    input: { type: "nsec", data: accountPubkey },
+    input: { type: "nsec", hex: accountPubkey },
   } as never);
   harness.replace(context({ manifestEventId: "5".repeat(64) }));
   await harness.dispatcher.dispatch(authority, {
@@ -177,9 +188,105 @@ Deno.test("instance authority survives reconnect identity and revokes on expiry"
     scope: "instance",
   });
 
-  assert(harness.sent[1].value === "retained", "reconnect retains instance state");
+  assert(
+    harness.sent[1].value === "retained",
+    "reconnect retains instance state",
+  );
   assert(
     harness.sent[2].error === "not-authorized",
     "expiry revokes authority without exposing stored state",
   );
+});
+
+Deno.test("catalog launch binds backend authority before full proxy forwarding", async () => {
+  const runtime = createPortalRuntime({ fixture });
+  const sent: Record<string, unknown>[] = [];
+  const values = new Map<string, string>();
+  const dispatcher = new NapDispatcher({
+    resource: {
+      bytes: () => Promise.reject(new Error("unused")),
+      bytesMany: () => Promise.resolve([]),
+    },
+    transfer: {
+      upload: () => Promise.reject(new Error("unused")),
+      status: () => undefined,
+    },
+    settings: () => ({ blossomServers: [] }),
+    storage: {
+      get: (namespace, key) => values.get(`${namespace}:${key}`) ?? null,
+      set: (namespace, key, value) => {
+        values.set(`${namespace}:${key}`, value);
+      },
+    },
+    send: (owner, message) => runtime.deliverTransfer(owner, message),
+  });
+  runtime.configureTransfers(dispatcher);
+  runtime.configureCatalog({
+    project: () =>
+      Promise.resolve({
+        catalogEventId: "catalog",
+        entries: [],
+        status: "ready",
+      }),
+    subscribe: () => () => undefined,
+    launch: () =>
+      Promise.resolve({
+        ok: true as const,
+        value: {
+          manifestEventId,
+          title: "Tracer",
+          version: "1",
+          capabilities: ["common.encodeNip19", "storage"],
+          launch: {
+            dTag: "tracer",
+            aggregateHash: "4".repeat(64),
+            srcdoc: "<main>verified</main>",
+          },
+        },
+      }),
+  } as never);
+  runtime.signIn(accountPubkey);
+  const source = {};
+  const bridge = runtime.openWindow(
+    "connection-a",
+    "window-a",
+    source,
+    (message) => sent.push(message),
+  );
+
+  await bridge.dispatchTransfer({
+    type: "storage.get",
+    id: "before",
+    key: "key",
+  });
+  await bridge.catalogCommand({
+    type: "catalog.launch",
+    id: "launch",
+    catalogEventId: "catalog",
+    coordinate: context().coordinate,
+    manifestEventId,
+  });
+  await bridge.dispatchTransfer({
+    type: "storage.set",
+    id: "set",
+    key: "key",
+    value: "value",
+  });
+  await bridge.dispatchTransfer({
+    type: "storage.get",
+    id: "after",
+    key: "key",
+  });
+
+  assert(sent[0].error === "not-authorized", "unbound forwarding fails closed");
+  assert(sent[1].type === "storage.set.result", "verified launch enables set");
+  assert(sent[2].value === "value", "verified launch enables correlated get");
+  runtime.destroyWindow("window-a");
+  await bridge.dispatchTransfer({
+    type: "storage.get",
+    id: "expired",
+    key: "key",
+  });
+  assert(sent.length === 3, "expired windows cannot emit or dispatch results");
+  runtime.destroy();
 });

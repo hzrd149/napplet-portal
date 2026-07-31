@@ -143,6 +143,7 @@ const blossomTransfer = new BlossomTransferService({
     localCacheUrl: localBlossom,
   }),
 });
+const tracerStorage = new Map<string, string>();
 export const napDispatcher = new NapDispatcher({
   resource: resourceService,
   transfer: blossomTransfer,
@@ -150,6 +151,12 @@ export const napDispatcher = new NapDispatcher({
     blossomServers: runtimeSettings.settings.blossomServers,
     localBlossom,
   }),
+  storage: {
+    get: (namespace, key) => tracerStorage.get(`${namespace}:${key}`) ?? null,
+    set: (namespace, key, value) => {
+      tracerStorage.set(`${namespace}:${key}`, value);
+    },
+  },
   send: (owner, message, bytes) =>
     processRuntime.deliverTransfer(owner, message, bytes),
 });
