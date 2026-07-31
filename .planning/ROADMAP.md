@@ -122,17 +122,18 @@ Plans:
 
 **Goal:** The full v1.1 expansion is contract-compatible, secure at every proxy boundary, and verified on mobile devices.
 **Requirements:** QLT-01, QLT-02, QLT-03, QLT-04
-**Plans:** 8 plans
+**Plans:** 9 plans
 
 Plans:
 - [ ] 09-01-PLAN.md — Generate exhaustive ten-domain codec/action parity and traceability evidence.
 - [ ] 09-02-PLAN.md — Close hostile transport, URL, redirect, and RESOURCE/UPLOAD transfer boundaries.
-- [ ] 09-03-PLAN.md — Close capability, catalog, identity, signer, common, and storage isolation boundaries.
-- [ ] 09-04-PLAN.md — Close iframe sandbox, source/origin, CSP, and Permissions-Policy boundaries.
-- [ ] 09-05-PLAN.md — Close intent, media, reconnect, replacement, and shutdown lifecycle boundaries.
-- [ ] 09-06-PLAN.md — Prove deterministic lifecycle behavior and production multi-client transport after all adversarial rows are green.
-- [ ] 09-07-PLAN.md — Automate mobile viewport, accessibility, reconnect, intent, and media browser flows.
-- [ ] 09-08-PLAN.md — Reconcile canonical ledgers and publish honest UAT and release evidence.
+- [ ] 09-03-PLAN.md — Close capability, catalog, identity, and signer authority boundaries.
+- [ ] 09-04-PLAN.md — Close COMMON stream and STORAGE namespace isolation boundaries.
+- [ ] 09-05-PLAN.md — Close iframe sandbox, source/origin, CSP, and Permissions-Policy boundaries.
+- [ ] 09-06-PLAN.md — Close intent, media, reconnect, replacement, and shutdown lifecycle boundaries.
+- [ ] 09-07-PLAN.md — Prove deterministic lifecycle behavior and production multi-client transport after all adversarial rows are green.
+- [ ] 09-08-PLAN.md — Automate mobile viewport, accessibility, reconnect, intent, and media browser flows.
+- [ ] 09-09-PLAN.md — Reconcile canonical ledgers and publish honest UAT and release evidence.
 
 **Success Criteria:**
 
