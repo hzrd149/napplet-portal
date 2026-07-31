@@ -39,13 +39,13 @@ Milestone v1.1 expands the proven backend runtime into a resilient mobile napple
 
 **Goal:** Users can build and navigate a trusted installed-napplet catalog from the portal home page.
 **Requirements:** CAT-01, CAT-02, CAT-03, CAT-04
-**Plans:** 2/4 plans executed
+**Plans:** 3/4 plans executed
 
 Plans:
 
 - [x] 04-01-PLAN.md — Establish partial catalog truth, stale-bound install approval, and exact launch authority.
 - [x] 04-02-PLAN.md — Construct arbitrary-coordinate production resolution and catalog synchronization lifecycle.
-- [ ] 04-03-PLAN.md — Carry install, synchronization, and launch safely across the runtime WebSocket.
+- [x] 04-03-PLAN.md — Carry install, synchronization, and launch safely across the runtime WebSocket.
 - [ ] 04-04-PLAN.md — Complete accessible mobile install, partial catalog, local search, and API coverage UX.
 
 **Success Criteria:**

@@ -5,15 +5,15 @@ milestone_name: Runtime & UX Expansion
 current_phase: 4
 current_phase_name: Installed Napplet Discovery
 status: executing
-stopped_at: Completed 04-02-PLAN.md
-last_updated: "2026-07-31T01:23:56.098Z"
+stopped_at: Completed 04-03-PLAN.md
+last_updated: "2026-07-31T01:31:19.483Z"
 last_activity: 2026-07-31
 last_activity_desc: Completed Phase 4 Plan 01 backend catalog authority
 progress:
   total_phases: 7
   completed_phases: 1
   total_plans: 9
-  completed_plans: 7
+  completed_plans: 8
   percent: 14
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-07-30)
 ## Current Position
 
 Phase: 4 — Installed Napplet Discovery
-Plan: 2 of 4 complete
+Plan: 3 of 4 complete
 Status: Ready to execute
 Last activity: 2026-07-31 — Completed Phase 4 Plan 01 backend catalog authority
 
@@ -80,6 +80,7 @@ Last activity: 2026-07-31 — Completed Phase 4 Plan 01 backend catalog authorit
 | Phase 03 P05 | 3min | 2 tasks | 6 files |
 | Phase 04 P01 | 14min | 2 tasks | 4 files |
 | Phase 04 P02 | 7min | 2 tasks | 5 files |
+| Phase 04 P03 | 12min | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -133,6 +134,9 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase ?]: [Phase 04]: Install approval is source-catalog-bound and launch releases bytes only for the latest exact accepted triple.
 - [Phase ?]: [Phase 04]: Load preview manifests by coordinate, but require exact accepted event IDs for approval and launch verification.
 - [Phase ?]: [Phase 04]: One generation-guarded owner replaces catalog subscriptions on account, settings, and reconnect signals while preserving last-good truth on transient errors.
+- [Phase ?]: [Phase 04]: Catalog projections contain display metadata only; executable bytes cross the WebSocket solely in a correlated successful launch result.
+- [Phase ?]: [Phase 04]: Every socket generation uses a bounded 32-entry command registry settled on result, timeout, replacement, closure, or teardown.
+- [Phase ?]: [Phase 04]: Catalog status travels independently from optional projection data so transient errors preserve last-good cards.
 
 ### Pending Todos
 
@@ -161,6 +165,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-07-31T01:23:56.086Z
-Stopped at: Completed 04-02-PLAN.md
+Last session: 2026-07-31T01:31:19.470Z
+Stopped at: Completed 04-03-PLAN.md
 Resume file: None
