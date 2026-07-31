@@ -33,6 +33,7 @@ export interface ConnectionControllerOptions {
   readonly isOnline?: () => boolean;
   readonly onSnapshot?: (snapshot: ConnectionSnapshot) => void;
   readonly onMessage?: (message: Record<string, unknown>) => void;
+  readonly onSocketTerminal?: () => void;
   readonly connectTimeoutMs?: number;
 }
 
@@ -64,6 +65,7 @@ export class ConnectionController {
         | "isOnline"
         | "onSnapshot"
         | "onMessage"
+        | "onSocketTerminal"
         | "connectTimeoutMs"
       >
     >
@@ -90,6 +92,7 @@ export class ConnectionController {
       isOnline: options.isOnline ?? (() => navigator.onLine),
       onSnapshot: options.onSnapshot ?? (() => {}),
       onMessage: options.onMessage ?? (() => {}),
+      onSocketTerminal: options.onSocketTerminal ?? (() => {}),
       connectTimeoutMs: options.connectTimeoutMs ?? 10_000,
     };
     this.#snapshot = {
@@ -128,6 +131,7 @@ export class ConnectionController {
     this.#attemptTerminal = false;
     this.#runtimeStarted = false;
     this.#socket = null;
+    if (previous) this.#options.onSocketTerminal();
     previous?.close(1000, "superseded");
     const reconnect = this.#token !== null || this.#snapshot.failures > 0;
     this.#emit({
@@ -196,6 +200,7 @@ export class ConnectionController {
     const socket = this.#socket;
     this.#socket = null;
     this.#attemptTerminal = true;
+    this.#options.onSocketTerminal();
     socket?.close(1000, "shell unmounted");
   }
 
@@ -243,6 +248,7 @@ export class ConnectionController {
     this.#attemptTerminal = true;
     this.#clearTimer();
     this.#socket = null;
+    this.#options.onSocketTerminal();
     socket.close();
     const failures = this.#snapshot.failures + 1;
     const canRetry = failures >= MANUAL_RETRY_FAILURES;

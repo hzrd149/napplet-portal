@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import {
+  type CatalogCommandOutcome,
   type CatalogMutationCommand,
   type CatalogStreamStatus,
   type CatalogViewEntry,
@@ -49,6 +50,119 @@ const CONNECT_FAILED =
   "Napplet Portal could not connect. Check the server and try again.";
 const RITUAL_READY_CEILING_MS = 1_000;
 const SLOW_START_ESCAPE_MS = 3_000;
+export const MAX_PENDING_CATALOG_COMMANDS = 32;
+const CATALOG_COMMAND_TIMEOUT_MS = 15_000;
+
+interface CatalogResult extends CatalogCommandOutcome {
+  readonly value?: unknown;
+  readonly retryable?: boolean;
+}
+
+interface PendingCatalogCommand {
+  readonly resolve: (result: CatalogResult) => void;
+  readonly timeout: number;
+}
+
+export class CatalogCommandRegistry {
+  readonly #pending = new Map<string, PendingCatalogCommand>();
+  readonly #setTimer: typeof setTimeout;
+  readonly #clearTimer: typeof clearTimeout;
+
+  constructor(
+    readonly send: (message: Record<string, unknown>) => boolean,
+    timers: { setTimer?: typeof setTimeout; clearTimer?: typeof clearTimeout } =
+      {},
+  ) {
+    this.#setTimer = timers.setTimer ?? setTimeout;
+    this.#clearTimer = timers.clearTimer ?? clearTimeout;
+  }
+
+  request(command: Record<string, unknown>): Promise<CatalogResult> {
+    if (this.#pending.size >= MAX_PENDING_CATALOG_COMMANDS) {
+      return Promise.resolve({
+        ok: false,
+        error: "catalog-command-capacity",
+        retryable: true,
+      });
+    }
+    const id = crypto.randomUUID();
+    return new Promise((resolve) => {
+      const timeout = this.#setTimer(() => {
+        this.#settle(id, {
+          ok: false,
+          error: "catalog-command-timeout",
+          retryable: true,
+        });
+      }, CATALOG_COMMAND_TIMEOUT_MS);
+      this.#pending.set(id, { resolve, timeout });
+      if (!this.send({ ...command, id })) {
+        this.#settle(id, {
+          ok: false,
+          error: "catalog-command-disconnected",
+          retryable: true,
+        });
+      }
+    });
+  }
+
+  receive(message: Record<string, unknown>): boolean {
+    if (
+      message.type !== "runtime.catalog.result" ||
+      typeof message.id !== "string"
+    ) return false;
+    const result: CatalogResult = message.ok === true
+      ? { ok: true, value: message.value }
+      : {
+        ok: false,
+        error: typeof message.error === "string"
+          ? message.error
+          : "catalog-command-failed",
+        retryable: message.retryable === true,
+      };
+    return this.#settle(message.id, result);
+  }
+
+  clear(error = "catalog-command-disconnected"): void {
+    for (const id of [...this.#pending.keys()]) {
+      this.#settle(id, { ok: false, error, retryable: true });
+    }
+  }
+
+  get size(): number {
+    return this.#pending.size;
+  }
+
+  #settle(id: string, result: CatalogResult): boolean {
+    const pending = this.#pending.get(id);
+    if (!pending) return false;
+    this.#pending.delete(id);
+    this.#clearTimer(pending.timeout);
+    pending.resolve(result);
+    return true;
+  }
+}
+
+function validCatalogProjection(
+  value: unknown,
+): value is CatalogViewProjection {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const projection = value as Record<string, unknown>;
+  if (
+    !(projection.catalogEventId === null ||
+      typeof projection.catalogEventId === "string") ||
+    !Array.isArray(projection.entries)
+  ) return false;
+  return projection.entries.every((candidate) => {
+    if (
+      !candidate || typeof candidate !== "object" || Array.isArray(candidate)
+    ) return false;
+    const entry = candidate as Record<string, unknown>;
+    return typeof entry.coordinate === "string" &&
+      typeof entry.acceptedManifestEventId === "string" &&
+      (entry.resolution === "pending" || entry.resolution === "ready" ||
+        entry.resolution === "unavailable");
+  });
+}
 
 export default function NappletShell({ coordinate }: NappletShellProps) {
   const [srcdoc, setSrcdoc] = useState("");
@@ -90,9 +204,11 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
       identity: VerifiedNappletIdentity;
     } | null
   >(null);
-  const catalogCommands = useRef(
-    new Map<string, (accepted: boolean) => void>(),
-  );
+  const catalogCommands = useRef<CatalogCommandRegistry | null>(null);
+  const catalogGeneration = useRef<
+    { current: string | null; retired: Set<string> }
+  >({ current: null, retired: new Set() });
+  const catalogAccount = useRef<string | null>(null);
   const mountedAt = useRef(Date.now());
 
   const registry = useMemo<FrameIdentityRegistry>(() => ({
@@ -167,6 +283,7 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
         coordinate,
         socketBaseUrl: `${protocol}//${location.host}/api/runtime`,
         createSocket: (url) => new WebSocket(url),
+        onSocketTerminal: () => catalogCommands.current?.clear(),
         onSnapshot: (snapshot) => {
           setConnection(snapshot);
           setConnecting(
@@ -189,6 +306,9 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
         },
         onMessage: receiveRuntimeMessage,
       });
+      catalogCommands.current = new CatalogCommandRegistry((message) =>
+        controller.current?.send(message) ?? false
+      );
       const visibility = () => controller.current?.visibilityChanged();
       const online = () => controller.current?.onlineChanged();
       document.addEventListener("visibilitychange", visibility);
@@ -207,6 +327,8 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
         globalThis.removeEventListener("online", online);
         globalThis.removeEventListener("offline", online);
         controller.current?.stop();
+        catalogCommands.current?.clear("catalog-command-cancelled");
+        catalogCommands.current = null;
         controller.current = null;
         clearTimeout(escapeTimer);
       };
@@ -256,6 +378,12 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
         const pubkey = typeof projected?.pubkey === "string"
           ? projected.pubkey
           : "";
+        if (catalogAccount.current !== pubkey) {
+          catalogAccount.current = pubkey;
+          catalogGeneration.current = { current: null, retired: new Set() };
+          setCatalog({ catalogEventId: null, entries: [] });
+          setCatalogStatus("loading");
+        }
         const source = iframe.current?.contentWindow;
         if (source) {
           publishIdentity(source, {
@@ -282,9 +410,20 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
         message.status === "loading" || message.status === "ready" ||
         message.status === "stale" || message.status === "error"
       ) setCatalogStatus(message.status);
-      if (message.catalog && typeof message.catalog === "object") {
-        const next = message.catalog as CatalogViewProjection;
-        if (Array.isArray(next.entries)) setCatalog(next);
+      if (validCatalogProjection(message.catalog)) {
+        const next = message.catalog;
+        const generations = catalogGeneration.current;
+        const nextId = next.catalogEventId;
+        if (
+          nextId === generations.current || !nextId ||
+          !generations.retired.has(nextId)
+        ) {
+          if (generations.current && nextId !== generations.current) {
+            generations.retired.add(generations.current);
+          }
+          generations.current = nextId;
+          setCatalog(next);
+        }
       }
       return;
     }
@@ -292,9 +431,7 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
       message.type === "runtime.catalog.result" &&
       typeof message.id === "string"
     ) {
-      const resolve = catalogCommands.current.get(message.id);
-      catalogCommands.current.delete(message.id);
-      resolve?.(message.ok === true);
+      catalogCommands.current?.receive(message);
       return;
     }
     if (message.type === "runtime.auth.required") {
@@ -362,14 +499,34 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
     setTimeout(() => setSignedOutNotice(false), 2_000);
   }
 
-  function openCatalogEntry(entry: CatalogViewEntry): void {
-    if (!entry.launch) return;
-    bridge.reset();
-    setIdentity({
-      dTag: entry.launch.dTag,
-      aggregateHash: entry.launch.aggregateHash,
+  async function openCatalogEntry(entry: CatalogViewEntry): Promise<void> {
+    const catalogEventId = catalog.catalogEventId;
+    if (!catalogEventId || entry.resolution !== "ready") return;
+    const result = await catalogCommands.current?.request({
+      type: "catalog.launch",
+      catalogEventId,
+      coordinate: entry.coordinate,
+      manifestEventId: entry.acceptedManifestEventId,
     });
-    setSrcdoc(entry.launch.srcdoc);
+    if (!result?.ok || !result.value || typeof result.value !== "object") {
+      setRuntimeError(
+        result?.error === "catalog-command-capacity"
+          ? "Please wait for a current action to finish, then try again."
+          : "This napplet changed or is unavailable. Refreshing the catalog; try again.",
+      );
+      setCatalogStatus("stale");
+      return;
+    }
+    const artifact = result.value as Record<string, unknown>;
+    const launch = artifact.launch as Record<string, unknown> | undefined;
+    if (
+      !launch || typeof launch.dTag !== "string" ||
+      typeof launch.aggregateHash !== "string" ||
+      typeof launch.srcdoc !== "string"
+    ) return;
+    bridge.reset();
+    setIdentity({ dTag: launch.dTag, aggregateHash: launch.aggregateHash });
+    setSrcdoc(launch.srcdoc);
     navigate("napplet");
   }
 
@@ -379,27 +536,27 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
 
   function sendCatalogCommand(
     command: CatalogMutationCommand,
-  ): Promise<boolean> {
-    const ws = controller.current;
-    if (!ws) return Promise.resolve(false);
-    const id = crypto.randomUUID();
-    return new Promise((resolve) => {
-      catalogCommands.current.set(id, resolve);
-      ws.send(
-        command.type === "catalog.approve"
-          ? {
-            type: "catalog.approve",
-            id,
-            coordinate: command.coordinate,
-            manifestEventId: command.manifestEventId,
-          }
-          : {
-            type: "catalog.uninstall",
-            id,
-            coordinate: command.coordinate,
-          },
-      );
-    });
+  ): Promise<CatalogCommandOutcome> {
+    const registry = catalogCommands.current;
+    if (!registry) {
+      return Promise.resolve({
+        ok: false,
+        error: "catalog-command-disconnected",
+      });
+    }
+    return registry.request(
+      command.type === "catalog.approve"
+        ? {
+          type: "catalog.approve",
+          coordinate: command.coordinate,
+          manifestEventId: command.manifestEventId,
+          sourceCatalogEventId: command.sourceCatalogEventId,
+        }
+        : {
+          type: "catalog.uninstall",
+          coordinate: command.coordinate,
+        },
+    );
   }
 
   const signedIn = profile !== null;

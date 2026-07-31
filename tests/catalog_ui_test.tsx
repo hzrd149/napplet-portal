@@ -7,6 +7,11 @@ import {
   UninstallDialog,
   UpdateReviewDialog,
 } from "../components/HomeView.tsx";
+import { decodeCatalogCommand } from "../runtime/transport.ts";
+import {
+  CatalogCommandRegistry,
+  MAX_PENDING_CATALOG_COMMANDS,
+} from "../islands/NappletShell.tsx";
 
 const coordinate = `30078:${"a".repeat(64)}:security-lab`;
 const acceptedManifestEventId = "b".repeat(64);
@@ -20,11 +25,7 @@ function entry(
     title: "Security Lab",
     version: "1.0.0",
     capabilities: ["relay.query"],
-    launch: {
-      dTag: "security-lab",
-      aggregateHash: "c".repeat(64),
-      srcdoc: "<h1>verified</h1>",
-    },
+    resolution: "ready",
     ...overrides,
   };
 }
@@ -39,7 +40,7 @@ function render(
       status={status}
       signedIn
       onOpen={() => undefined}
-      onCommand={() => Promise.resolve(true)}
+      onCommand={() => Promise.resolve({ ok: true })}
     />,
   );
 }
@@ -63,7 +64,7 @@ Deno.test("installed catalog covers empty, loading, stale, error, populated, and
   assertStringIncludes(populated, "Accepted version 1.0.0");
   assertStringIncludes(populated, acceptedManifestEventId);
   const partial = render([
-    entry({ title: "", version: "", launch: undefined }),
+    entry({ title: "", version: "", resolution: "unavailable" }),
   ]);
   assertStringIncludes(partial, "security-lab");
   assertStringIncludes(partial, "Manifest details unavailable");
@@ -97,7 +98,7 @@ Deno.test("accepted manifest identity is the only launch authority", () => {
       status="ready"
       signedIn
       onOpen={(candidate) => launched = candidate}
-      onCommand={() => Promise.resolve(true)}
+      onCommand={() => Promise.resolve({ ok: true })}
     />,
   );
   assertStringIncludes(html, `data-manifest-id="${acceptedManifestEventId}"`);
@@ -228,6 +229,63 @@ Deno.test("production runtime emits projections and dispatches correlated catalo
   ) assertStringIncludes(endpoint, required);
   assertStringIncludes(main, "new CatalogService(");
   assertStringIncludes(main, "processRuntime.configureCatalog(catalogService)");
-  assertStringIncludes(main, "relayPool.request(");
-  assertStringIncludes(main, "catalogService.load([event])");
+  assertStringIncludes(main, "new CatalogSyncOwner(");
+});
+
+Deno.test("catalog command codecs reject extra keys and accept exact authority selectors", () => {
+  const id = "command-1";
+  const command = {
+    type: "catalog.launch",
+    id,
+    catalogEventId: "d".repeat(64),
+    coordinate,
+    manifestEventId: acceptedManifestEventId,
+  } as const;
+  assertEquals(decodeCatalogCommand(command), command);
+  assertEquals(decodeCatalogCommand({ ...command, srcdoc: "untrusted" }), null);
+  assertEquals(decodeCatalogCommand({ ...command, id: "" }), null);
+  assertEquals(
+    decodeCatalogCommand({
+      type: "catalog.approve",
+      id,
+      coordinate,
+      manifestEventId: acceptedManifestEventId,
+      sourceCatalogEventId: null,
+    })?.type,
+    "catalog.approve",
+  );
+});
+
+Deno.test("catalog command registry caps each socket at 32 and recovers a slot", async () => {
+  const sent: Array<Record<string, unknown>> = [];
+  const registry = new CatalogCommandRegistry((message) => {
+    sent.push(message);
+    return true;
+  });
+  const pending = Array.from(
+    { length: MAX_PENDING_CATALOG_COMMANDS },
+    () => registry.request({ type: "catalog.uninstall", coordinate }),
+  );
+  const rejected = await registry.request({
+    type: "catalog.uninstall",
+    coordinate,
+  });
+  assertEquals(rejected, {
+    ok: false,
+    error: "catalog-command-capacity",
+    retryable: true,
+  });
+  assertEquals(sent.length, MAX_PENDING_CATALOG_COMMANDS);
+  registry.receive({
+    type: "runtime.catalog.result",
+    id: sent[0].id,
+    ok: true,
+  });
+  assertEquals(await pending[0], { ok: true, value: undefined });
+  const recovery = registry.request({ type: "catalog.uninstall", coordinate });
+  assertEquals(sent.length, MAX_PENDING_CATALOG_COMMANDS + 1);
+  registry.clear();
+  assertEquals((await recovery).error, "catalog-command-disconnected");
+  await Promise.all(pending.slice(1));
+  assertEquals(registry.size, 0);
 });

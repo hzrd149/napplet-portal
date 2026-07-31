@@ -129,16 +129,35 @@ export class RuntimeServiceHub {
     return {
       catalog: (): Promise<CatalogProjection> =>
         this.#catalog?.project() ??
-          Promise.resolve({ catalogEventId: null, entries: [] }),
+          Promise.resolve({
+            catalogEventId: null,
+            entries: [],
+            status: "idle",
+          }),
       catalogCommand: (command: CatalogCommand) => {
         if (!this.#catalog) throw new Error("catalog service unavailable");
-        return command.type === "catalog.approve"
-          ? this.#catalog.approveManifestUpdate(
-            command.id,
-            command.coordinate,
-            command.manifestEventId,
-          )
-          : this.#catalog.uninstallNapplet(command.id, command.coordinate);
+        switch (command.type) {
+          case "catalog.preview":
+            return this.#catalog.previewInstall(command.naddr);
+          case "catalog.approve":
+            return this.#catalog.approveManifestUpdate(
+              command.id,
+              command.coordinate,
+              command.manifestEventId,
+              command.sourceCatalogEventId,
+            );
+          case "catalog.uninstall":
+            return this.#catalog.uninstallNapplet(
+              command.id,
+              command.coordinate,
+            );
+          case "catalog.launch":
+            return this.#catalog.launch(
+              command.catalogEventId,
+              command.coordinate,
+              command.manifestEventId,
+            );
+        }
       },
       subscribeRelay: (request: RelaySubscribeRequest) => {
         if (!this.#relay) throw new Error("relay service unavailable");
@@ -368,16 +387,32 @@ export function createPortalRuntime(
       return {
         catalog: () =>
           catalog?.project() ??
-            Promise.resolve({ catalogEventId: null, entries: [] }),
+            Promise.resolve({
+              catalogEventId: null,
+              entries: [],
+              status: "idle",
+            }),
         catalogCommand: (command: CatalogCommand) => {
           if (!catalog) throw new Error("catalog service unavailable");
-          return command.type === "catalog.approve"
-            ? catalog.approveManifestUpdate(
-              command.id,
-              command.coordinate,
-              command.manifestEventId,
-            )
-            : catalog.uninstallNapplet(command.id, command.coordinate);
+          switch (command.type) {
+            case "catalog.preview":
+              return catalog.previewInstall(command.naddr);
+            case "catalog.approve":
+              return catalog.approveManifestUpdate(
+                command.id,
+                command.coordinate,
+                command.manifestEventId,
+                command.sourceCatalogEventId,
+              );
+            case "catalog.uninstall":
+              return catalog.uninstallNapplet(command.id, command.coordinate);
+            case "catalog.launch":
+              return catalog.launch(
+                command.catalogEventId,
+                command.coordinate,
+                command.manifestEventId,
+              );
+          }
         },
         subscribeCatalog: (listener: () => void) =>
           catalog?.subscribe(listener) ?? (() => undefined),

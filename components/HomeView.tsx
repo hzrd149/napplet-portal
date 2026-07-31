@@ -15,11 +15,7 @@ export interface CatalogViewEntry {
   readonly title?: string;
   readonly version?: string;
   readonly capabilities?: readonly string[];
-  readonly launch?: {
-    readonly dTag: string;
-    readonly aggregateHash: string;
-    readonly srcdoc: string;
-  };
+  readonly resolution?: "pending" | "ready" | "unavailable";
   readonly update?: CatalogUpdateCandidate;
 }
 
@@ -36,7 +32,9 @@ interface HomeViewProps {
   readonly status: CatalogStreamStatus;
   readonly signedIn: boolean;
   readonly onOpen: (entry: CatalogViewEntry) => void;
-  readonly onCommand: (command: CatalogMutationCommand) => Promise<boolean>;
+  readonly onCommand: (
+    command: CatalogMutationCommand,
+  ) => Promise<CatalogCommandOutcome>;
 }
 
 export type CatalogCardCommand =
@@ -48,8 +46,14 @@ export type CatalogMutationCommand =
     readonly type: "catalog.approve";
     readonly coordinate: string;
     readonly manifestEventId: string;
+    readonly sourceCatalogEventId: string | null;
   }
   | { readonly type: "catalog.uninstall"; readonly coordinate: string };
+
+export interface CatalogCommandOutcome {
+  readonly ok: boolean;
+  readonly error?: string;
+}
 
 export function HomeView({
   catalog,
@@ -103,12 +107,14 @@ export function HomeView({
   async function mutate(command: CatalogMutationCommand): Promise<void> {
     setPending(true);
     setError("");
-    const ok = await onCommand(command);
+    const result = await onCommand(command);
     setPending(false);
-    if (ok) closeDialog();
+    if (result.ok) closeDialog();
     else {
       setError(
-        command.type === "catalog.approve"
+        result.error === "catalog-command-capacity"
+          ? "Please wait for a current action to finish, then try again."
+          : command.type === "catalog.approve"
           ? "The update could not be approved. Try again."
           : "The napplet could not be uninstalled. Try again.",
       );
@@ -151,6 +157,7 @@ export function HomeView({
             type: "catalog.approve",
             coordinate: entry.coordinate,
             manifestEventId: entry.update.manifestEventId,
+            sourceCatalogEventId: openedCatalogId.current,
           });
         }}
       />
@@ -441,7 +448,8 @@ function NappletCard({
 }) {
   const fallback = entry.coordinate.split(":").at(-1) || "Installed napplet";
   const title = entry.title?.trim() || fallback;
-  const resolved = Boolean(entry.launch);
+  const resolved = entry.resolution === "ready" ||
+    (entry.resolution === undefined && Boolean(entry.title));
   return (
     <article
       class="catalog-card"

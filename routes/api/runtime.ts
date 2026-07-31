@@ -90,18 +90,20 @@ export const handler = define.handlers({
       );
     }
     const { windowId, bridge } = session;
-    const sendCatalog = async (status: "ready" | "error" = "ready") => {
+    const sendCatalog = async () => {
       try {
+        const catalog = await bridge.catalog();
         socket.send(JSON.stringify({
           type: "runtime.catalog",
-          status,
-          catalog: await bridge.catalog(),
+          status: catalog.status === "refreshing" || catalog.status === "idle"
+            ? "loading"
+            : catalog.status ?? "ready",
+          catalog,
         }));
       } catch {
         socket.send(JSON.stringify({
           type: "runtime.catalog",
           status: "error",
-          catalog: { catalogEventId: null, entries: [] },
         }));
       }
     };
@@ -209,8 +211,14 @@ export const handler = define.handlers({
           const result = await bridge.catalogCommand(catalogCommand);
           socket.send(JSON.stringify({
             type: "runtime.catalog.result",
-            id: result.id,
+            id: catalogCommand.id,
             ok: result.ok,
+            ...(result.ok
+              ? { value: "value" in result ? result.value : undefined }
+              : {
+                error: result.error,
+                retryable: "retryable" in result ? result.retryable : true,
+              }),
           }));
           if (result.ok) await sendCatalog();
           return;
