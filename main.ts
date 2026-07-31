@@ -35,13 +35,14 @@ const debug = rootDebug.extend("backend");
 
 export const runtimeConfig = loadRuntimeConfig();
 debug(
-  "loaded runtime config bind=%s coordinate=%s relays=%d signerRelays=%d blossom=%d reconnectGraceMs=%d",
+  "loaded runtime config bind=%s coordinate=%s relays=%d signerRelays=%d blossom=%d reconnectGraceMs=%d verification=%s",
   runtimeConfig.bind,
   runtimeConfig.coordinate ? "configured" : "empty",
   runtimeConfig.relays.length,
   runtimeConfig.remoteSignerRelays.length,
   runtimeConfig.blossomServers.length,
   runtimeConfig.reconnectGraceMs,
+  runtimeConfig.unsafeSkipVerification ? "unsafe-local" : "verified",
 );
 export const runtimeSettings = await RuntimeSettingsService.create(
   new SettingsStore(".data/settings.json"),
@@ -50,6 +51,7 @@ export const runtimeSettings = await RuntimeSettingsService.create(
 export const processRuntime = createPortalRuntime({
   fixture,
   settings: runtimeSettings,
+  unsafeLocalArtifactPath: runtimeConfig.unsafeLocalArtifactPath,
 });
 let cacheHealthState: CacheHealthState = {
   relay: runtimeSettings.settings.localRelay ? "checking" : "degraded",
@@ -239,6 +241,9 @@ export function startupSummary(
     `coordinate=${coordinate}`,
     `relays=${config.relays.length}`,
     `blossom=${config.blossomServers.length}`,
+    `verification=${
+      config.unsafeSkipVerification ? "unsafe-local" : "verified"
+    }`,
     `account=${accountRestoration}`,
   ].join(" ");
 }

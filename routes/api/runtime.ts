@@ -25,8 +25,52 @@ import {
 } from "../../runtime/binary_transport.ts";
 import { define } from "../../utils.ts";
 import { debug as rootDebug, shortId } from "../../debug.ts";
+import {
+  ArtifactResolutionError,
+  type ArtifactResolutionErrorCode,
+} from "../../runtime/artifacts.ts";
 
 const debug = rootDebug.extend("runtime-endpoint");
+
+export interface RuntimeArtifactFailureMessage {
+  readonly type: "runtime.artifact.error";
+  readonly category: "unavailable" | "invalid" | "unsupported";
+  readonly code: ArtifactResolutionErrorCode | "artifact-unavailable";
+  readonly error: string;
+}
+
+export function artifactFailureMessage(
+  cause: unknown,
+): RuntimeArtifactFailureMessage {
+  const code = cause instanceof ArtifactResolutionError
+    ? cause.code
+    : "artifact-unavailable";
+  if (
+    code === "manifest-unavailable" || code === "blob-unavailable" ||
+    code === "artifact-unavailable"
+  ) {
+    return Object.freeze({
+      type: "runtime.artifact.error",
+      category: "unavailable",
+      code,
+      error: "Napplet artifact bytes are unavailable. Check sources and retry.",
+    });
+  }
+  if (code === "missing-capability") {
+    return Object.freeze({
+      type: "runtime.artifact.error",
+      category: "unsupported",
+      code,
+      error: "Napplet requires capabilities this portal does not support.",
+    });
+  }
+  return Object.freeze({
+    type: "runtime.artifact.error",
+    category: "invalid",
+    code,
+    error: "Napplet artifact bytes failed verification and were not opened.",
+  });
+}
 
 export { FIXED_RESOURCE_ID };
 export const FIXED_RESOURCE_BYTES = new TextEncoder().encode(
@@ -728,6 +772,7 @@ export const handler = define.handlers({
         });
         socket.send(JSON.stringify({
           type: "runtime.artifact",
+          verification: artifact.verification,
           srcdoc: artifact.indexHtml,
           identity: {
             dTag: artifact.dTag,
@@ -740,16 +785,16 @@ export const handler = define.handlers({
           shortId(connection.connectionId),
           shortId(artifact.aggregateHash),
         );
-      } catch {
+      } catch (error) {
         if (socket.readyState !== WebSocket.OPEN) return;
+        const failure = artifactFailureMessage(error);
         debug(
-          "send active signer failed connection=%s",
+          "send active signer failed connection=%s category=%s code=%s",
           shortId(connection.connectionId),
+          failure.category,
+          failure.code,
         );
-        socket.send(JSON.stringify({
-          type: "runtime.signer.error",
-          error: "Verified napplet could not be opened",
-        }));
+        socket.send(JSON.stringify(failure));
       }
     }
     return response;

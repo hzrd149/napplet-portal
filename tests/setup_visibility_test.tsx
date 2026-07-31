@@ -43,6 +43,22 @@ Deno.test("configured portal links to sign-in and keeps Home independent", () =>
   );
 });
 
+Deno.test("unsafe local artifact mode is visibly distinct from verified production", () => {
+  const unsafe = renderToString(
+    <NappletShell coordinate="naddr1example" unsafeLocalMode />,
+  );
+  const normal = renderToString(<NappletShell coordinate="naddr1example" />);
+  assert(
+    unsafe.includes("Unsafe local artifact mode") &&
+      unsafe.includes("verification is disabled"),
+    "unsafe local mode must render an unmistakable warning",
+  );
+  assert(
+    !normal.includes("Unsafe local artifact mode"),
+    "verified production must not render the unsafe marker",
+  );
+});
+
 Deno.test("runtime transport upgrades through Fresh and cannot hang silently", async () => {
   const route = await Deno.readTextFile("routes/api/runtime.ts");
   const shell = await Deno.readTextFile("islands/NappletShell.tsx");

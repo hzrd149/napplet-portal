@@ -5,6 +5,8 @@ export interface RuntimeConfig {
   readonly remoteSignerRelays: readonly string[];
   readonly blossomServers: readonly string[];
   readonly reconnectGraceMs: number;
+  readonly unsafeSkipVerification: boolean;
+  readonly unsafeLocalArtifactPath?: string;
 }
 
 export const DEFAULT_RELAYS = Object.freeze([
@@ -54,10 +56,42 @@ function endpoints(
  * configuration warning is duplicated ahead of the startup summary.
  */
 export function loadBindAddress(
-  environment: Environment = { PORTAL_BIND: Deno.env.get("PORTAL_BIND") },
+  environment: Environment = {
+    PORTAL_BIND: Deno.env.get("PORTAL_BIND"),
+    NAPPLET_UNSAFE_SKIP_VERIFICATION: Deno.env.get(
+      "NAPPLET_UNSAFE_SKIP_VERIFICATION",
+    ),
+    NAPPLET_UNSAFE_LOCAL_ARTIFACT_PATH: Deno.env.get(
+      "NAPPLET_UNSAFE_LOCAL_ARTIFACT_PATH",
+    ),
+  },
   warn: (message: string) => void = console.warn,
 ): RuntimeConfig["bind"] {
-  return loadRuntimeConfig({ PORTAL_BIND: environment.PORTAL_BIND }, warn).bind;
+  return loadRuntimeConfig({
+    PORTAL_BIND: environment.PORTAL_BIND,
+    NAPPLET_UNSAFE_SKIP_VERIFICATION:
+      environment.NAPPLET_UNSAFE_SKIP_VERIFICATION,
+    NAPPLET_UNSAFE_LOCAL_ARTIFACT_PATH:
+      environment.NAPPLET_UNSAFE_LOCAL_ARTIFACT_PATH,
+  }, warn).bind;
+}
+
+function isLoopbackBind(value: string): boolean {
+  if (value === "::1") return true;
+  const octets = value.split(".").map(Number);
+  return octets.length === 4 && octets[0] === 127 &&
+    octets.every((octet) =>
+      Number.isInteger(octet) && octet >= 0 && octet <= 255
+    );
+}
+
+function unsafeFlag(value: string | undefined): boolean {
+  const normalized = value?.trim().toLowerCase();
+  if (!normalized || normalized === "false") return false;
+  if (normalized === "true") return true;
+  throw new Error(
+    "NAPPLET_UNSAFE_SKIP_VERIFICATION must be exactly true or false",
+  );
 }
 
 function validBindAddress(value: string): string | undefined {
@@ -88,6 +122,31 @@ export function loadRuntimeConfig(
   const bind = requestedBind ? validBindAddress(requestedBind) : DEFAULT_BIND;
   if (!bind) {
     warn(`Rejected invalid bind address: ${requestedBind}`);
+  }
+
+  const unsafeSkipVerification = unsafeFlag(
+    environment.NAPPLET_UNSAFE_SKIP_VERIFICATION,
+  );
+  const unsafeLocalArtifactPath =
+    environment.NAPPLET_UNSAFE_LOCAL_ARTIFACT_PATH?.trim() || undefined;
+  if (unsafeSkipVerification) {
+    if (!bind || !isLoopbackBind(bind)) {
+      throw new Error(
+        "Unsafe local artifact mode requires a validated loopback PORTAL_BIND",
+      );
+    }
+    if (!unsafeLocalArtifactPath) {
+      throw new Error(
+        "Unsafe local artifact mode requires NAPPLET_UNSAFE_LOCAL_ARTIFACT_PATH",
+      );
+    }
+    warn(
+      "UNSAFE local artifact mode enabled: napplet verification is disabled for loopback testing",
+    );
+  } else if (unsafeLocalArtifactPath) {
+    warn(
+      "Ignored NAPPLET_UNSAFE_LOCAL_ARTIFACT_PATH because unsafe mode is disabled",
+    );
   }
 
   const reconnectCandidate = Number(environment.PORTAL_RECONNECT_GRACE_MS);
@@ -122,5 +181,9 @@ export function loadRuntimeConfig(
       warn,
     ),
     reconnectGraceMs,
+    unsafeSkipVerification,
+    unsafeLocalArtifactPath: unsafeSkipVerification
+      ? unsafeLocalArtifactPath
+      : undefined,
   });
 }

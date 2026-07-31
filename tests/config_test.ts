@@ -12,6 +12,15 @@ function assertEquals(
   }
 }
 
+function assertThrows(action: () => unknown, message: string): void {
+  try {
+    action();
+  } catch {
+    return;
+  }
+  throw new Error(message);
+}
+
 Deno.test("runtime config is immutable, normalized, deduplicated, and bind-aware", () => {
   const warnings: string[] = [];
   const config = loadRuntimeConfig({
@@ -41,4 +50,67 @@ Deno.test("runtime config is immutable, normalized, deduplicated, and bind-aware
   );
   assertEquals(Object.isFrozen(config), true, "config should be frozen");
   assertEquals(warnings.length, 1, "invalid endpoint should warn");
+});
+
+Deno.test("unsafe local artifacts are explicit, loopback-only, and noisy", () => {
+  const warnings: string[] = [];
+  const config = loadRuntimeConfig({
+    PORTAL_BIND: "127.0.0.1",
+    NAPPLET_UNSAFE_SKIP_VERIFICATION: "true",
+    NAPPLET_UNSAFE_LOCAL_ARTIFACT_PATH: "/tmp/local-napplet.html",
+  }, (warning) => warnings.push(warning));
+
+  assertEquals(config.unsafeSkipVerification, true, "unsafe mode is explicit");
+  assertEquals(
+    config.unsafeLocalArtifactPath,
+    "/tmp/local-napplet.html",
+    "explicit local bytes path must be retained",
+  );
+  assertEquals(warnings.length, 1, "unsafe mode must emit one startup warning");
+  assertEquals(
+    warnings[0]?.includes("UNSAFE"),
+    true,
+    "warning must be unmistakable",
+  );
+
+  for (const bind of ["0.0.0.0", "192.168.1.20", "localhost"]) {
+    assertThrows(
+      () =>
+        loadRuntimeConfig({
+          PORTAL_BIND: bind,
+          NAPPLET_UNSAFE_SKIP_VERIFICATION: "true",
+          NAPPLET_UNSAFE_LOCAL_ARTIFACT_PATH: "/tmp/local-napplet.html",
+        }),
+      `unsafe mode must reject non-loopback bind ${bind}`,
+    );
+  }
+});
+
+Deno.test("unsafe local artifact configuration fails closed", () => {
+  const defaults = loadRuntimeConfig({}, () => undefined);
+  assertEquals(
+    defaults.unsafeSkipVerification,
+    false,
+    "unsafe mode must be off by default",
+  );
+  assertEquals(
+    defaults.unsafeLocalArtifactPath,
+    undefined,
+    "default mode must own no local byte source",
+  );
+  assertThrows(
+    () =>
+      loadRuntimeConfig({
+        NAPPLET_UNSAFE_SKIP_VERIFICATION: "true",
+      }),
+    "unsafe mode requires an explicit byte path",
+  );
+  assertThrows(
+    () =>
+      loadRuntimeConfig({
+        NAPPLET_UNSAFE_SKIP_VERIFICATION: "yes",
+        NAPPLET_UNSAFE_LOCAL_ARTIFACT_PATH: "/tmp/local-napplet.html",
+      }),
+    "ambiguous boolean values must be rejected",
+  );
 });

@@ -83,14 +83,16 @@ payloads.
 
 Configuration is read once when the process starts. Restart after changing it.
 
-| Variable                    | Meaning                                             | Default                                  |
-| --------------------------- | --------------------------------------------------- | ---------------------------------------- |
-| `NAPPLET_COORDINATE`        | Required NIP-5D `naddr` for the one active napplet  | Empty; Home explains how to configure it |
-| `NOSTR_RELAYS`              | Comma-separated `ws:`/`wss:` relay URLs             | Small built-in public fallback list      |
-| `REMOTE_SIGNER_RELAYS`      | NIP-46 signer transport relays                      | `wss://bucket.coracle.social`            |
-| `BLOSSOM_SERVERS`           | Comma-separated `http:`/`https:` Blossom bases      | Small built-in public fallback list      |
-| `PORTAL_RECONNECT_GRACE_MS` | Detached-tab retention, from 1000 through 120000 ms | `10000`                                  |
-| `PORTAL_BIND`               | Server bind host, without a port or URL scheme      | `127.0.0.1`                              |
+| Variable                             | Meaning                                              | Default                                  |
+| ------------------------------------ | ---------------------------------------------------- | ---------------------------------------- |
+| `NAPPLET_COORDINATE`                 | Required NIP-5D `naddr` for the one active napplet   | Empty; Home explains how to configure it |
+| `NOSTR_RELAYS`                       | Comma-separated `ws:`/`wss:` relay URLs              | Small built-in public fallback list      |
+| `REMOTE_SIGNER_RELAYS`               | NIP-46 signer transport relays                       | `wss://bucket.coracle.social`            |
+| `BLOSSOM_SERVERS`                    | Comma-separated `http:`/`https:` Blossom bases       | Small built-in public fallback list      |
+| `PORTAL_RECONNECT_GRACE_MS`          | Detached-tab retention, from 1000 through 120000 ms  | `10000`                                  |
+| `PORTAL_BIND`                        | Server bind host, without a port or URL scheme       | `127.0.0.1`                              |
+| `NAPPLET_UNSAFE_SKIP_VERIFICATION`   | Unsafe local HTML mode; exactly `true` or `false`    | `false`                                  |
+| `NAPPLET_UNSAFE_LOCAL_ARTIFACT_PATH` | Explicit local `.html`/`.htm` source for unsafe mode | Empty                                    |
 
 Setting `NOSTR_RELAYS` or `BLOSSOM_SERVERS` overrides its built-in fallback
 list. Local endpoints are ordinary list entries: include local and public URLs
@@ -99,15 +101,28 @@ invalid schemes are rejected with a sanitized warning while other valid entries
 continue. Manifest-provided Blossom hints are merged with the configured list,
 and every returned blob is verified rather than trusted.
 
+For local testing during a Blossom outage, set
+`NAPPLET_UNSAFE_SKIP_VERIFICATION=true`, set
+`NAPPLET_UNSAFE_LOCAL_ARTIFACT_PATH` to an explicit UTF-8 HTML file, and leave
+`PORTAL_BIND` on a numeric loopback address such as `127.0.0.1` or `::1`.
+Startup fails if unsafe mode has no local byte source or uses a non-loopback
+bind. The portal displays a persistent unsafe-mode banner, the runtime labels
+the artifact `unsafe-local`, and the local bytes receive a fresh SHA-256
+identity; they are never represented as verified. The normal size and HTML input
+boundaries still apply, and WebSocket origin, iframe sandbox, signer,
+capability, storage, URL, and message authority remain unchanged. Never enable
+this mode for production, LAN, or public access.
+
 No credentials belong in endpoint URLs. Environment files are gitignored, but
 operators should still apply host-level secret controls. `.env.example` is
 committed and must keep placeholder values only.
 
 ## Security and sensitive state
 
-- Napplet HTML executes only after its manifest signature, aggregate, and every
-  referenced blob pass verification. The iframe uses exactly
-  `sandbox="allow-scripts"`, leaving it at an opaque origin.
+- Outside the explicitly unsafe loopback-only local testing mode, napplet HTML
+  executes only after its manifest signature, aggregate, and every referenced
+  blob pass verification. The iframe uses exactly `sandbox="allow-scripts"`,
+  leaving it at an opaque origin.
 - The account snapshot contains complete Applesauce signer serialization and the
   active account ID. This may include an `nsec` or Nostr Connect client
   material. Treat the snapshot as sensitive at-rest data. Atomic writes request

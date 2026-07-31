@@ -176,7 +176,7 @@ Deno.test("repeated failure exposes Retry and continues quiet recovery", () => {
   );
 });
 
-Deno.test("only a verified artifact resets failure count; stop cannot reopen", () => {
+Deno.test("only an explicitly classified artifact resets failure count; stop cannot reopen", () => {
   const h = harness();
   h.controller.start();
   h.sockets[0].fail();
@@ -195,6 +195,7 @@ Deno.test("only a verified artifact resets failure count; stop cannot reopen", (
   );
   active.message({
     type: "runtime.artifact",
+    verification: "verified",
     srcdoc: "<p>ok</p>",
     identity: { dTag: "test", aggregateHash: "hash" },
   });
@@ -209,6 +210,12 @@ Deno.test("only a verified artifact resets failure count; stop cannot reopen", (
 for (
   const message of [
     { type: "runtime.signer.error", error: "artifact unavailable" },
+    {
+      type: "runtime.artifact.error",
+      category: "unavailable",
+      code: "blob-unavailable",
+      error: "Napplet artifact bytes are unavailable. Check sources and retry.",
+    },
     { type: "runtime.error", error: "unsupported coordinate" },
     { type: "runtime.auth.required", error: "sign in required" },
   ]
@@ -241,3 +248,23 @@ for (
     );
   });
 }
+
+Deno.test("unsafe local artifact is launchable but remains logically distinct", () => {
+  const h = harness();
+  h.controller.start();
+  const socket = h.sockets[0];
+  socket.open();
+  socket.message({
+    type: "runtime.connected",
+    connectionId: "connection-a",
+    windowId: "window-a",
+    reconnectToken: "secret",
+  });
+  socket.message({
+    type: "runtime.artifact",
+    verification: "unsafe-local",
+    srcdoc: "<!doctype html><p>local</p>",
+    identity: { dTag: "local", aggregateHash: "hash" },
+  });
+  assert(h.controller.snapshot.phase === "ready", "unsafe local mode can run");
+});

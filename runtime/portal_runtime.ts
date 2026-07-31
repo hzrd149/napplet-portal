@@ -12,6 +12,7 @@ import { debug as rootDebug, shortId } from "../debug.ts";
 import { MediaSessionCoordinator } from "./media_sessions.ts";
 import { AccountRuntime, type IdentitySnapshot } from "./accounts.ts";
 import {
+  loadUnsafeLocalArtifact,
   PortalArtifactResolver,
   resolveVerifiedArtifact,
 } from "./artifacts.ts";
@@ -301,6 +302,7 @@ interface PortalRuntimeOptions {
   readonly fixture: Fixture;
   readonly settings?: RuntimeSettingsService;
   readonly eventRuntime?: EventRuntime;
+  readonly unsafeLocalArtifactPath?: string;
 }
 
 export interface ProductionCatalogResolverOptions {
@@ -363,8 +365,12 @@ export function createProductionCatalogResolver(
 }
 
 export function createPortalRuntime(
-  { fixture, settings, eventRuntime = createEventRuntime() }:
-    PortalRuntimeOptions,
+  {
+    fixture,
+    settings,
+    eventRuntime = createEventRuntime(),
+    unsafeLocalArtifactPath,
+  }: PortalRuntimeOptions,
 ) {
   debug(
     "create portal runtime fixture=%s",
@@ -496,13 +502,21 @@ export function createPortalRuntime(
       return eventRuntime.loadEvent(id, settings.settings.relays);
     },
     resolveArtifact: async () => {
-      debug("resolve artifact started");
-      const resolved = await resolveVerifiedArtifact(
-        fixture,
-        fetch,
-        settings?.settings.blossomServers ?? fixture.artifact.servers,
-        blossomCache,
+      debug(
+        "resolve artifact started verification=%s",
+        unsafeLocalArtifactPath ? "unsafe-local" : "verified",
       );
+      const resolved = unsafeLocalArtifactPath
+        ? await loadUnsafeLocalArtifact(fixture, unsafeLocalArtifactPath)
+        : {
+          ...await resolveVerifiedArtifact(
+            fixture,
+            fetch,
+            settings?.settings.blossomServers ?? fixture.artifact.servers,
+            blossomCache,
+          ),
+          verification: "verified" as const,
+        };
       debug(
         "resolve artifact complete dTag=%s aggregate=%s",
         resolved.dTag,

@@ -1,6 +1,8 @@
 import {
   type NappletArtifactCache,
+  type NappletManifest,
   NappletResolutionError,
+  parseNappletManifest,
   type ResolvedNapplet,
   resolveNapplet,
   type WriteVerifiedResolutionInput,
@@ -8,6 +10,7 @@ import {
 import type { NostrEvent } from "@napplet/core";
 import { debug as rootDebug, shortId } from "../debug.ts";
 import { BlossomCache } from "./blossom_cache.ts";
+import { MAX_BINARY_PAYLOAD_BYTES } from "./binary_transport.ts";
 
 const debug = rootDebug.extend("artifacts");
 
@@ -19,7 +22,9 @@ export type ArtifactResolutionErrorCode =
   | "aggregate-mismatch"
   | "blob-hash-mismatch"
   | "blob-unavailable"
-  | "missing-index";
+  | "missing-index"
+  | "invalid-mime"
+  | "artifact-too-large";
 
 export class ArtifactResolutionError extends Error {
   readonly executableHtml = undefined;
@@ -79,6 +84,110 @@ export class InMemoryNappletArtifactCache implements NappletArtifactCache {
   prune(): Promise<void> {
     return Promise.resolve();
   }
+}
+
+export interface UnsafeLocalArtifact {
+  readonly verification: "unsafe-local";
+  readonly dTag: string;
+  readonly aggregateHash: string;
+  readonly files: Map<string, Uint8Array>;
+  readonly indexHtml: string;
+  readonly manifest: NappletManifest;
+}
+
+function hex(bytes: Uint8Array): string {
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join(
+    "",
+  );
+}
+
+/** Loads an explicitly configured local HTML file without claiming verification. */
+export async function loadUnsafeLocalArtifact(
+  fixture: { readonly manifestEvent: NostrEvent },
+  path: string,
+): Promise<UnsafeLocalArtifact> {
+  let bytes: Uint8Array<ArrayBuffer>;
+  try {
+    bytes = await Deno.readFile(path);
+  } catch (cause) {
+    throw new ArtifactResolutionError(
+      "blob-unavailable",
+      "unsafe local napplet artifact is unavailable",
+      { cause },
+    );
+  }
+  if (bytes.byteLength > MAX_BINARY_PAYLOAD_BYTES) {
+    throw new ArtifactResolutionError(
+      "artifact-too-large",
+      "unsafe local napplet artifact exceeds the byte limit",
+    );
+  }
+  if (!/\.html?$/i.test(path)) {
+    throw new ArtifactResolutionError(
+      "invalid-mime",
+      "unsafe local napplet artifact must use an HTML filename",
+    );
+  }
+  let indexHtml: string;
+  try {
+    indexHtml = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+  } catch (cause) {
+    throw new ArtifactResolutionError(
+      "invalid-mime",
+      "unsafe local napplet artifact must be UTF-8 HTML",
+      { cause },
+    );
+  }
+  const start = indexHtml.trimStart().toLowerCase();
+  const hasForbiddenControl = [...indexHtml].some((character) => {
+    const code = character.codePointAt(0) ?? 0;
+    return code < 32 && code !== 9 && code !== 10 && code !== 13;
+  });
+  if (
+    !indexHtml || hasForbiddenControl ||
+    (!start.startsWith("<!doctype html") && !start.startsWith("<html"))
+  ) {
+    throw new ArtifactResolutionError(
+      "invalid-mime",
+      "unsafe local napplet artifact must be HTML",
+    );
+  }
+
+  let declared: NappletManifest;
+  try {
+    declared = parseNappletManifest(fixture.manifestEvent);
+  } catch (cause) {
+    throw new ArtifactResolutionError(
+      "invalid-manifest",
+      "unsafe local napplet metadata is invalid",
+      { cause },
+    );
+  }
+  const aggregateHash = hex(
+    new Uint8Array(await crypto.subtle.digest("SHA-256", bytes)),
+  );
+  const pathEntry = Object.freeze({
+    path: "/index.html",
+    sha256: aggregateHash,
+  });
+  const manifest: NappletManifest = Object.freeze({
+    ...declared,
+    paths: Object.freeze([pathEntry]) as unknown as NappletManifest["paths"],
+    aggregateHash,
+    servers: Object.freeze([]) as unknown as string[],
+    requires: Object.freeze([...declared.requires]) as unknown as string[],
+    archetypes: Object.freeze([
+      ...declared.archetypes,
+    ]) as unknown as NappletManifest["archetypes"],
+  });
+  return Object.freeze({
+    verification: "unsafe-local" as const,
+    dTag: declared.dTag,
+    aggregateHash,
+    files: new Map([["/index.html", bytes.slice()]]),
+    indexHtml,
+    manifest,
+  });
 }
 
 export interface ArtifactAdapterOptions {

@@ -227,6 +227,8 @@ export class ConnectionController {
       this.#emit({ phase: "bootstrapping" });
     } else if (
       message.type === "runtime.artifact" &&
+      (message.verification === "verified" ||
+        message.verification === "unsafe-local") &&
       typeof message.srcdoc === "string" &&
       message.identity && typeof message.identity === "object" &&
       typeof (message.identity as Record<string, unknown>).dTag === "string" &&
@@ -241,6 +243,7 @@ export class ConnectionController {
       });
     } else if (
       message.type === "runtime.signer.error" ||
+      message.type === "runtime.artifact.error" ||
       message.type === "runtime.error" ||
       message.type === "runtime.auth.required"
     ) {
