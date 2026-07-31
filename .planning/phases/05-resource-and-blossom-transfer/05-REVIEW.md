@@ -30,7 +30,7 @@ findings:
   warning: 3
   info: 0
   total: 7
-status: issues_found
+status: resolved
 ---
 
 # Phase 5: Code Review Report
@@ -38,7 +38,7 @@ status: issues_found
 **Reviewed:** 2026-07-31T00:00:00Z
 **Depth:** deep
 **Files Reviewed:** 21
-**Status:** issues_found
+**Status:** resolved
 
 ## Summary
 
