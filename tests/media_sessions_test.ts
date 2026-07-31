@@ -56,3 +56,38 @@ Deno.test("media create tracer rejects invalid input without effects", () => {
   assert(!outcome.accepted, "invalid create should fail closed");
   assert(deliveries === 0, "invalid input must produce no effects");
 });
+
+Deno.test("replacement stops old owner before result and all projections", () => {
+  const deliveries: Array<{ recipient: MediaActorRef; message: unknown }> = [];
+  const coordinator = new MediaSessionCoordinator({
+    createId: () => "replacement",
+    deliver: (recipient, message) => {
+      deliveries.push({ recipient, message });
+      return false;
+    },
+  });
+  coordinator.connect("account", origin);
+  coordinator.connect("account", { connectionId: "c2", windowId: "w2" });
+  coordinator.receive("account", origin, {
+    type: "media.session.create",
+    id: "first",
+    owner: "napplet",
+    sessionId: "first",
+  });
+  deliveries.length = 0;
+  const result = coordinator.receive("account", origin, {
+    type: "media.session.create",
+    id: "second",
+    owner: "napplet",
+  });
+  assert(result.accepted, "replacement remains committed despite failed sends");
+  assert(
+    (deliveries[0].message as { type: string }).type === "media.command",
+    "old owner stop is first",
+  );
+  assert(
+    (deliveries[1].message as { type: string }).type ===
+      "media.session.create.result",
+    "replacement result follows revoke",
+  );
+});
