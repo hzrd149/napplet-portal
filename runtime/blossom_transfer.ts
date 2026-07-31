@@ -10,11 +10,45 @@ import {
   computeBlobSha256,
   createUploadAuth,
   encodeAuthorizationHeader,
+  parseBlossomURI,
   type SignedEvent,
 } from "blossom-client-sdk";
 
 const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
 const AUTH_LIFETIME_SECONDS = 60;
+
+export function parseBlossomReference(value: string): Readonly<{
+  sha256: string;
+  size?: number;
+  servers: readonly string[];
+}> {
+  const parsed = parseBlossomURI(value);
+  if (!/^[0-9a-f]{64}$/i.test(parsed.sha256)) {
+    throw new Error("Invalid Blossom hash");
+  }
+  if (
+    parsed.size !== undefined &&
+    (!Number.isSafeInteger(parsed.size) || parsed.size < 0 ||
+      parsed.size > MAX_UPLOAD_BYTES)
+  ) {
+    throw new Error("Invalid Blossom size");
+  }
+  const servers = parsed.servers.map((candidate) => {
+    const server = new URL(candidate);
+    if (
+      !/^https?:$/.test(server.protocol) || server.username ||
+      server.password || server.hash
+    ) {
+      throw new Error("Invalid Blossom server hint");
+    }
+    return server.href;
+  });
+  return Object.freeze({
+    sha256: parsed.sha256.toLowerCase(),
+    size: parsed.size,
+    servers: Object.freeze(servers),
+  });
+}
 
 export interface PortalBlobDescriptor {
   readonly sha256: string;
