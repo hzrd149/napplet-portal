@@ -153,7 +153,7 @@ Deno.test("intent registry deterministically selects current verified candidates
 
 Deno.test("intent registry revokes stale authority while retaining last-good display", async () => {
   const pending = deferred<VerifiedCatalogArtifact>();
-  const h = harness((coordinate, id) =>
+  const h = harness((_coordinate, id) =>
     id === idA ? Promise.resolve(artifact("z-handler", id)) : pending.promise
   );
   h.catalogService.load([catalog([{ coordinate: coordinateA, id: idA }], 1)]);
