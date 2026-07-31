@@ -157,7 +157,7 @@ Deno.test("valid executable HTML can traverse local Blossom without bypassing ve
     "manifest signer must attest the author hint",
   );
 
-  await expectCode("blob-hash-mismatch", () =>
+  await expectCode("blob-unavailable", () =>
     new PortalArtifactResolver({
       coordinate: fixture.coordinate,
       relays: [],

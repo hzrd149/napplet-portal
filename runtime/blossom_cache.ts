@@ -18,6 +18,7 @@ interface BlossomDependencies {
   readonly setTimeout?: typeof globalThis.setTimeout;
   readonly clearTimeout?: typeof globalThis.clearTimeout;
   readonly now?: () => number;
+  readonly resolveDns?: ResolveDns;
 }
 
 function upstreamServers(servers: readonly string[]): readonly string[] {
@@ -80,44 +81,32 @@ interface FetchWithBlossomCacheOptions extends BlossomDependencies {
   readonly localUrl?: typeof LOCAL_BLOSSOM_URL;
 }
 
-async function responseBytes(response: Response): Promise<Uint8Array> {
-  if (!response.ok) throw new Error(`HTTP ${response.status}`);
-  return new Uint8Array(await response.arrayBuffer());
-}
-
-function blobUrl(server: string, hash: string): URL {
-  return new URL(`${server.replace(/\/$/, "")}/${encodeURIComponent(hash)}`);
-}
-
 export async function fetchWithBlossomCache(
   options: FetchWithBlossomCacheOptions,
 ): Promise<Uint8Array> {
   const eligible = upstreamServers(options.upstreamServers);
-  const fetcher = options.fetch ?? fetch;
-  let lastError: unknown;
-
-  if (options.localUrl === LOCAL_BLOSSOM_URL) {
-    const local = new URL(encodeURIComponent(options.hash), LOCAL_BLOSSOM_URL);
-    for (const server of eligible) local.searchParams.append("xs", server);
-    if (options.authorPubkey) {
-      local.searchParams.set("as", options.authorPubkey);
-    }
-    try {
-      return await responseBytes(await boundedFetch(local, {}, options));
-    } catch (error) {
-      lastError = error;
-    }
+  const localCacheUrl = options.localUrl === LOCAL_BLOSSOM_URL
+    ? LOCAL_BLOSSOM_URL
+    : undefined;
+  const policy = new ResourceDestinationPolicy({
+    resolveDns: options.resolveDns,
+    localCacheUrl,
+  });
+  const service = new ResourceService({
+    policy,
+    fetch: options.fetch,
+    deadlineMs: options.timeoutMs ?? LOCAL_BLOSSOM_TIMEOUT_MS,
+    localCacheUrl,
+  });
+  try {
+    return await service.blossomBytes(
+      options.hash,
+      eligible,
+      options.authorPubkey,
+    );
+  } catch (cause) {
+    throw new Error("Blossom artifact unavailable", { cause });
   }
-
-  for (const server of eligible) {
-    const url = blobUrl(server, options.hash);
-    try {
-      return await responseBytes(await fetcher(url));
-    } catch (error) {
-      lastError = error;
-    }
-  }
-  throw new Error("Blossom artifact unavailable", { cause: lastError });
 }
 
 export class BlossomCache {
@@ -165,3 +154,8 @@ export class BlossomCache {
     }
   }
 }
+import {
+  type ResolveDns,
+  ResourceDestinationPolicy,
+} from "./resource_policy.ts";
+import { ResourceService } from "./resource_service.ts";

@@ -9,6 +9,10 @@ function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
 }
 
+const HASH = "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad";
+const publicDns = (_hostname: string, recordType: "A" | "AAAA") =>
+  Promise.resolve(recordType === "A" ? ["93.184.216.34"] : []);
+
 Deno.test("discovers the fixed loopback endpoint with a bounded HEAD", async () => {
   const calls: Array<{ url: string; init?: RequestInit }> = [];
   const discovered = await discoverLocalBlossom({
@@ -29,18 +33,19 @@ Deno.test("discovers the fixed loopback endpoint with a bounded HEAD", async () 
 Deno.test("local proxy receives repeated xs and attested as hints", async () => {
   const calls: string[] = [];
   const bytes = await fetchWithBlossomCache({
-    hash: "abc",
+    hash: HASH,
     upstreamServers: ["https://one.example/", "https://two.example/cache"],
     authorPubkey: "author",
     localUrl: LOCAL_BLOSSOM_URL,
     fetch: (input) => {
       calls.push(String(input));
-      return Promise.resolve(new Response("cached"));
+      return Promise.resolve(new Response("abc"));
     },
+    resolveDns: publicDns,
   });
 
   assert(
-    new TextDecoder().decode(bytes) === "cached",
+    new TextDecoder().decode(bytes) === "abc",
     "cache hit must return bytes",
   );
   const url = new URL(calls[0]);
@@ -48,7 +53,7 @@ Deno.test("local proxy receives repeated xs and attested as hints", async () => 
     url.origin === "http://127.0.0.1:24242",
     "only fixed local origin is used",
   );
-  assert(url.pathname === "/abc", "hash must be the local path");
+  assert(url.pathname === `/${HASH}`, "hash must be the local path");
   assert(
     url.searchParams.getAll("xs").join(",") ===
       "https://one.example/,https://two.example/cache",
@@ -64,6 +69,15 @@ Deno.test("unhealthy, timeout, miss, and proxy failure fall through upstream", a
   for (
     const localResult of ["unhealthy", "timeout", "miss", "failure"] as const
   ) {
+    const hash = Array.from(
+      new Uint8Array(
+        await crypto.subtle.digest(
+          "SHA-256",
+          new TextEncoder().encode(localResult),
+        ),
+      ),
+      (byte) => byte.toString(16).padStart(2, "0"),
+    ).join("");
     const calls: string[] = [];
     const cache = new BlossomCache({
       timeoutMs: 5,
@@ -92,15 +106,16 @@ Deno.test("unhealthy, timeout, miss, and proxy failure fall through upstream", a
         }
         return Promise.resolve(new Response(localResult));
       },
+      resolveDns: publicDns,
     });
 
-    const bytes = await cache.fetch("abc", ["https://upstream.example/"]);
+    const bytes = await cache.fetch(hash, ["https://upstream.example/"]);
     assert(
       new TextDecoder().decode(bytes) === localResult,
       `${localResult} must use upstream`,
     );
     assert(
-      calls.at(-1) === "GET https://upstream.example/abc",
+      calls.at(-1) === `GET https://upstream.example/${hash}`,
       `${localResult} must reach upstream`,
     );
   }
@@ -116,10 +131,11 @@ Deno.test("invalid upstream schemes are never requested", async () => {
       }
       return Promise.resolve(new Response("unexpected"));
     },
+    resolveDns: publicDns,
   });
 
   try {
-    await cache.fetch("abc", ["file:///secret", "javascript:alert(1)"]);
+    await cache.fetch(HASH, ["file:///secret", "javascript:alert(1)"]);
     throw new Error("expected unavailable error");
   } catch (error) {
     assert(
