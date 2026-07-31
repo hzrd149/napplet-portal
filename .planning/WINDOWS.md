@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 3
+open_count: 2
 waived_count: 0
-fixed_count: 6
+fixed_count: 7
 total_count: 9
-last_updated: 2026-07-31T01:23:55.401Z
+last_updated: 2026-07-31T01:24:28.480Z
 ---
 
 # Broken Windows Ledger
@@ -23,7 +23,7 @@ last_updated: 2026-07-31T01:23:55.401Z
 | 6 | 03 | deviation | tests/shell_architecture_test.ts |  | Aligned legacy transport assertions with controller-owned recovery | fixed |  | 2026-07-31T00:16:42.072Z | 2026-07-31T00:17:08.965Z |
 | 7 | 04 | unrun-verify | tests/runtime_reconnect_smoke_test.ts |  | Production reconnect smoke could not reach its spawned loopback server; focused Phase 04-01 verification passed | open |  | 2026-07-31T01:16:43.974Z |  |
 | 8 | 04 | deviation | runtime/catalog.ts |  | Corrected redundant async and mutable in-flight task binding during static verification | fixed |  | 2026-07-31T01:16:44.087Z | 2026-07-31T01:17:17.220Z |
-| 9 | 04 | deviation | runtime/catalog.ts |  | Normalized absent catalog generation from undefined to null for first-install approval | open |  | 2026-07-31T01:23:55.401Z |  |
+| 9 | 04 | deviation | runtime/catalog.ts |  | Normalized absent catalog generation from undefined to null for first-install approval | fixed |  | 2026-07-31T01:23:55.401Z | 2026-07-31T01:24:28.480Z |
 
 ````json
 [
@@ -130,10 +130,10 @@ last_updated: 2026-07-31T01:23:55.401Z
     "file": "runtime/catalog.ts",
     "line": null,
     "description": "Normalized absent catalog generation from undefined to null for first-install approval",
-    "status": "open",
+    "status": "fixed",
     "reason": "",
     "recorded_at": "2026-07-31T01:23:55.401Z",
-    "resolved_at": null
+    "resolved_at": "2026-07-31T01:24:28.480Z"
   }
 ]
 ````
