@@ -361,7 +361,7 @@ export class ResourceService {
     inputs: readonly (string | URL)[],
     options: ResourceReadOptions = {},
   ): Promise<readonly ResourceBatchItem[]> {
-    if (inputs.length > this.#maxUrls) {
+    if (!inputs.length || inputs.length > this.#maxUrls) {
       throw new ResourceServiceError("blocked-by-policy");
     }
     return await this.#withDeadline(

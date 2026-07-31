@@ -80,7 +80,11 @@ export class ExpiringCorrelationRegistry<T> {
 
 export function handleFixedResourceFrame(
   bytes: Uint8Array,
-  owner: { readonly connectionId: string; readonly windowId: string },
+  owner: {
+    readonly connectionId: string;
+    readonly windowId: string;
+    readonly generation?: number;
+  },
   _dependencies: { readonly fetch?: typeof fetch } = {},
 ): Uint8Array | null {
   const decoded = decodeBinaryFrames(bytes, owner);

@@ -224,12 +224,24 @@ function requestKey(owner: MessageOwner, id: string): string {
   return `${owner.connectionId.length}:${owner.connectionId}${owner.windowId.length}:${owner.windowId}${generation.length}:${generation}${id}`;
 }
 
+function validRequestIdentity(owner: MessageOwner, id: string): boolean {
+  const idBytes = encoder.encode(id);
+  return idBytes.length > 0 && idBytes.length <= MAX_BINARY_ID_BYTES &&
+    ![...id].some((character) => {
+      const code = character.codePointAt(0) ?? 0;
+      return code < 32 || code === 127;
+    }) &&
+    (owner.generation === undefined ||
+      (Number.isSafeInteger(owner.generation) && owner.generation >= 0));
+}
+
 export class ActiveBinaryRequests {
   readonly #active = new Set<string>();
 
   constructor(readonly limit: number) {}
 
   open(owner: MessageOwner, id: string): boolean {
+    if (!validRequestIdentity(owner, id)) return false;
     const key = requestKey(owner, id);
     if (this.#active.has(key) || this.#active.size >= this.limit) return false;
     this.#active.add(key);
@@ -237,6 +249,7 @@ export class ActiveBinaryRequests {
   }
 
   settle(owner: MessageOwner, id: string): boolean {
+    if (!validRequestIdentity(owner, id)) return false;
     return this.#active.delete(requestKey(owner, id));
   }
 

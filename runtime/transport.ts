@@ -558,6 +558,12 @@ export function decodeClientMessage(
     const value = JSON.parse(raw) as Record<string, unknown>;
     const message = value.message as Record<string, unknown> | undefined;
     if (
+      !exactKeys(
+        value,
+        value.generation === undefined
+          ? ["type", "connectionId", "windowId", "message"]
+          : ["type", "connectionId", "windowId", "generation", "message"],
+      ) ||
       value.type !== "runtime.forward" ||
       value.connectionId !== owner.connectionId ||
       value.windowId !== owner.windowId ||
