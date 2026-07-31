@@ -5,16 +5,16 @@ milestone_name: Runtime & UX Expansion
 current_phase: 7
 current_phase_name: Intent Navigation
 status: verifying
-stopped_at: Completed 09-03-PLAN.md
-last_updated: "2026-07-31T06:22:40.892Z"
+stopped_at: Completed 09-04-PLAN.md
+last_updated: "2026-07-31T06:30:17.009Z"
 last_activity: 2026-07-31
 last_activity_desc: Completed Phase 7 production intent navigation integration
 progress:
   total_phases: 7
   completed_phases: 6
   total_plans: 32
-  completed_plans: 26
-  percent: 81
+  completed_plans: 27
+  percent: 84
 ---
 
 # Project State
@@ -95,6 +95,7 @@ Last activity: 2026-07-31 — Completed Phase 7 production intent navigation int
 | Phase 08-cross-tab-media-sessions P03 | 35min | 2 tasks | 5 files |
 | Phase 09-runtime-expansion-hardening P02 | 6min | 2 tasks | 5 files |
 | Phase 09-runtime-expansion-hardening P03 | 8min | 2 tasks | 6 files |
+| Phase 09-runtime-expansion-hardening P04 | 10min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -178,6 +179,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase ?]: [Phase 09]: Runtime forward envelopes are closed and resource batches must be non-empty.
 - [Phase ?]: [Phase 09]: Preserve exact manifest action grants; only explicit whole-domain grants authorize sibling actions.
 - [Phase ?]: [Phase 09]: Revalidate active account and accepted catalog identity before async launch, signer, publication, and commit effects.
+- [Phase ?]: [Phase 09]: Revalidate STORAGE authority inside the serialized owner and immediately before atomic rename.
+- [Phase ?]: [Phase 09]: Leave QLT ledger completion to Plan 09-09 final reconciliation.
 
 ### Pending Todos
 
@@ -206,6 +209,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-07-31T06:22:40.877Z
-Stopped at: Completed 09-03-PLAN.md
+Last session: 2026-07-31T06:30:16.993Z
+Stopped at: Completed 09-04-PLAN.md
 Resume file: None

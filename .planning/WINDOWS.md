@@ -2,9 +2,9 @@
 schema_version: 1
 open_count: 5
 waived_count: 0
-fixed_count: 13
-total_count: 18
-last_updated: 2026-07-31T06:22:40.172Z
+fixed_count: 14
+total_count: 19
+last_updated: 2026-07-31T06:30:40.280Z
 ---
 
 # Broken Windows Ledger
@@ -33,6 +33,7 @@ last_updated: 2026-07-31T06:22:40.172Z
 | 16 | 08 | deviation | runtime/connections.ts |  | Stale attachment close fencing added for reconnect correctness | fixed |  | 2026-07-31T05:13:48.670Z | 2026-07-31T05:14:14.508Z |
 | 17 | 08 | deviation | tests/media_lifecycle_test.ts |  | Lifecycle fixture adjusted to satisfy prefer-const lint | fixed |  | 2026-07-31T05:13:48.785Z | 2026-07-31T05:14:14.644Z |
 | 18 | 09 | deviation | tests/requirement_traceability_test.ts |  | Full-suite traceability expectation still lists concurrently advanced QLT-02 and QLT-03 as pending | open |  | 2026-07-31T06:22:40.172Z |  |
+| 19 | 09 | deviation | runtime/storage_store.ts |  | Added commit-time authority fencing discovered by the adversarial state-isolation matrix | fixed |  | 2026-07-31T06:30:16.295Z | 2026-07-31T06:30:40.280Z |
 
 ````json
 [
@@ -251,6 +252,18 @@ last_updated: 2026-07-31T06:22:40.172Z
     "reason": "",
     "recorded_at": "2026-07-31T06:22:40.172Z",
     "resolved_at": null
+  },
+  {
+    "id": 19,
+    "kind": "deviation",
+    "phase": "09",
+    "file": "runtime/storage_store.ts",
+    "line": null,
+    "description": "Added commit-time authority fencing discovered by the adversarial state-isolation matrix",
+    "status": "fixed",
+    "reason": "",
+    "recorded_at": "2026-07-31T06:30:16.295Z",
+    "resolved_at": "2026-07-31T06:30:40.280Z"
   }
 ]
 ````
