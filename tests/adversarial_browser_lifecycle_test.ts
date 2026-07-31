@@ -8,6 +8,9 @@ import {
   type VerifiedCatalogArtifact,
 } from "../runtime/catalog.ts";
 import { type IntentReply, IntentService } from "../runtime/intent.ts";
+import { ConnectionRegistry } from "../runtime/connections.ts";
+import type { MediaActorRef } from "../runtime/media_reducer.ts";
+import { MediaSessionCoordinator } from "../runtime/media_sessions.ts";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -190,4 +193,114 @@ Deno.test("intent lifecycle tracer revokes replacement before late completion", 
     "late caller completion is inert",
   );
   assert(results.length === 1, "replacement leaves no live correlation");
+});
+
+Deno.test("reconnect replacement fences stale attachment generations", () => {
+  const timers = new Map<number, () => void>();
+  let timerId = 0;
+  let id = 0;
+  const registry = new ConnectionRegistry({
+    createId: () => `id-${++id}`,
+    setTimeout: (callback) => {
+      const next = ++timerId;
+      timers.set(next, callback);
+      return next;
+    },
+    clearTimeout: (target) => timers.delete(target),
+  });
+  const initial = registry.attach(() => {});
+  registry.createWindow(initial.connectionId);
+  registry.detach(initial.connectionId, initial.generation);
+  const resumed = registry.attach(() => {}, initial.reconnectToken);
+  assert(resumed.generation > initial.generation, "resume advances generation");
+  const current = registry as ConnectionRegistry & {
+    isCurrentAttachment(connectionId: string, generation: number): boolean;
+  };
+  assert(
+    typeof current.isCurrentAttachment === "function",
+    "registry exposes an exact attachment-generation fence",
+  );
+  assert(
+    !current.isCurrentAttachment(initial.connectionId, initial.generation),
+    "replaced socket generation is stale",
+  );
+  assert(
+    current.isCurrentAttachment(resumed.connectionId, resumed.generation),
+    "resumed socket generation is current",
+  );
+  registry.detach(initial.connectionId, initial.generation);
+  assert(timers.size === 0, "late close cannot schedule successor expiry");
+});
+
+Deno.test("media lifecycle revokes before grant and terminalizes duplicate work", () => {
+  const effects: Array<
+    { recipient: MediaActorRef; message: { type: string } }
+  > = [];
+  const origin = { connectionId: "origin", windowId: "origin-window" };
+  const target = { connectionId: "target", windowId: "target-window" };
+  const coordinator = new MediaSessionCoordinator({
+    createId: () => "media-session",
+    deliver: (recipient, message) => {
+      effects.push({ recipient, message });
+      return true;
+    },
+  });
+  coordinator.connect("account", origin);
+  coordinator.connect("account", target);
+  const created = coordinator.receive("account", origin, {
+    type: "media.session.create",
+    id: "create",
+    owner: "napplet",
+  });
+  effects.length = 0;
+  const transferred = coordinator.transfer(
+    "account",
+    target,
+    "media-session",
+    created.session!.generation,
+    "transfer-correlation",
+  );
+  assert(transferred.accepted, "current transfer is accepted");
+  assert(effects[0]?.message.type === "media.command", "old owner stops first");
+  assert(
+    effects[1]?.message.type === "runtime.media.grant",
+    "new grant follows revoke",
+  );
+  const generation = transferred.session!.generation;
+  effects.length = 0;
+  const replay = coordinator.transfer(
+    "account",
+    target,
+    "media-session",
+    created.session!.generation,
+    "transfer-correlation",
+  );
+  assert(replay.accepted && effects.length === 0, "exact duplicate is inert");
+  const conflict = coordinator.stop(
+    "account",
+    target,
+    "media-session",
+    generation,
+    "transfer-correlation",
+  );
+  assert(
+    !conflict.accepted && conflict.reason === "request-id-conflict",
+    "conflict denied",
+  );
+  coordinator.destroy();
+  const stale = coordinator.stop(
+    "account",
+    target,
+    "media-session",
+    generation,
+    "late-stop",
+  );
+  assert(
+    !stale.accepted && stale.reason === "unknown-session",
+    "shutdown is terminal",
+  );
+  assert(
+    coordinator.current("account") === null,
+    "terminal state is immediately observable",
+  );
 });
