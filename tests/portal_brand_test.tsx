@@ -27,11 +27,13 @@ Deno.test("portal mark is the canonical ready constellation geometry", () => {
     <ConnectionConstellation state={ready} compact={false} />,
   );
 
-  for (const identifier of [
-    PORTAL_GATE_GEOMETRY_ID,
-    PORTAL_GATE_LINK_ID,
-    PORTAL_GATE_NODE_ID,
-  ]) {
+  for (
+    const identifier of [
+      PORTAL_GATE_GEOMETRY_ID,
+      PORTAL_GATE_LINK_ID,
+      PORTAL_GATE_NODE_ID,
+    ]
+  ) {
     assert(mark.includes(identifier), `inline mark contains ${identifier}`);
     assert(
       readyRitual.includes(identifier),
@@ -48,11 +50,13 @@ Deno.test("canonical logo matches component geometry and supports both themes", 
   const logo = await Deno.readTextFile("static/logo.svg");
   const styles = await Deno.readTextFile("assets/styles.css");
 
-  for (const identifier of [
-    PORTAL_GATE_GEOMETRY_ID,
-    PORTAL_GATE_LINK_ID,
-    PORTAL_GATE_NODE_ID,
-  ]) {
+  for (
+    const identifier of [
+      PORTAL_GATE_GEOMETRY_ID,
+      PORTAL_GATE_LINK_ID,
+      PORTAL_GATE_NODE_ID,
+    ]
+  ) {
     assert(logo.includes(identifier), `logo contains ${identifier}`);
   }
   assert(
@@ -64,7 +68,7 @@ Deno.test("canonical logo matches component geometry and supports both themes", 
     "logo remains palette-compatible without fixed starter colors",
   );
   assert(
-    styles.includes("html[data-theme=\"dark\"]") &&
+    styles.includes('html[data-theme="dark"]') &&
       styles.includes("--shell-accent"),
     "both themes provide the mark's semantic accent",
   );

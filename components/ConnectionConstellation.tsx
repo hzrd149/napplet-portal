@@ -1,4 +1,5 @@
 import type { ConnectionSnapshot } from "../shell/connection.ts";
+import { PortalMark } from "./PortalMark.tsx";
 
 interface ConnectionConstellationProps {
   readonly state: ConnectionSnapshot;
@@ -29,13 +30,23 @@ export function connectionCopy(state: ConnectionSnapshot): string {
 export function ConnectionConstellation(
   { state, compact }: ConnectionConstellationProps,
 ) {
+  const className = `connection-constellation ${
+    compact ? "constellation-compact" : ""
+  }`;
+  if (state.phase === "ready") {
+    return (
+      <PortalMark
+        class={`portal-mark ${className}`}
+        dataState={state.phase}
+        dataRitual={state.mode}
+      />
+    );
+  }
   const fractured = state.phase === "retrying" || state.phase === "dormant" ||
     state.phase === "failed";
   return (
     <svg
-      class={`connection-constellation ${
-        compact ? "constellation-compact" : ""
-      }`}
+      class={className}
       viewBox="0 0 120 120"
       aria-hidden="true"
       data-state={state.phase}
