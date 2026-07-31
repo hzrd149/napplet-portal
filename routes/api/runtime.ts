@@ -650,7 +650,7 @@ export const handler = define.handlers({
             shortId(windowId),
             (napMessage as RelaySubscribeMessage).subId,
           );
-          bridge.subscribeRelay(
+          const subscription = bridge.subscribeRelay(
             napMessage as RelaySubscribeMessage,
             (relayMessage) => {
               debug(
@@ -659,13 +659,22 @@ export const handler = define.handlers({
                 shortId(windowId),
                 relayMessage.type,
               );
-              socket.send(JSON.stringify({
-                type: "runtime.event",
-                connectionId: connection.connectionId,
-                windowId,
-                message: relayMessage,
-              }));
+              connections.send(
+                connection.connectionId,
+                JSON.stringify({
+                  type: "runtime.event",
+                  connectionId: connection.connectionId,
+                  windowId,
+                  message: relayMessage,
+                }),
+              );
             },
+          );
+          connections.trackSubscription(
+            connection.connectionId,
+            windowId,
+            (napMessage as RelaySubscribeMessage).subId,
+            { unsubscribe: () => subscription.close() },
           );
           queueMicrotask(() => runtime.relay.emitLive(fixture.events.live));
         }

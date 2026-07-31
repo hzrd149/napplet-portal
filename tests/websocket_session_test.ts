@@ -47,13 +47,14 @@ Deno.test("reconnect reattaches namespace without duplicating subscriptions", ()
     if (typeof message === "string") firstMessages.push(message);
   });
   const window = registry.createWindow(first.connectionId);
-  let unsubscribeCount = 0;
+  const subscriptionState = { unsubscribeCount: 0 };
+  const unsubscribeCount = () => subscriptionState.unsubscribeCount;
   registry.trackSubscription(
     first.connectionId,
     window.windowId,
     "shared-sub",
     {
-      unsubscribe: () => unsubscribeCount++,
+      unsubscribe: () => subscriptionState.unsubscribeCount++,
     },
   );
 
@@ -77,7 +78,42 @@ Deno.test("reconnect reattaches namespace without duplicating subscriptions", ()
   assert(firstMessages.length === 0, "detached socket must not receive data");
   assert(secondMessages[0] === "live", "replacement socket must receive data");
   clock.flush();
-  assert(unsubscribeCount === 0, "cancelled grace timer must not clean up");
+  assert(
+    unsubscribeCount() === 0,
+    "cancelled grace timer must not clean up",
+  );
+
+  registry.detach(resumed.connectionId, resumed.generation);
+  clock.flush();
+  assert(
+    unsubscribeCount() === 1,
+    "subscription handle must be released when resumed session grace expires",
+  );
+});
+
+Deno.test("runtime relay delivery uses rebound connection and tracks its handle", async () => {
+  const endpoint = await Deno.readTextFile("routes/api/runtime.ts");
+  const relayBranch = endpoint.slice(
+    endpoint.indexOf('if (napMessage.type === "relay.subscribe")'),
+    endpoint.indexOf(
+      "queueMicrotask",
+      endpoint.indexOf(
+        'if (napMessage.type === "relay.subscribe")',
+      ),
+    ),
+  );
+  assert(
+    relayBranch.includes("connections.send("),
+    "relay callbacks must resolve the current connection attachment",
+  );
+  assert(
+    relayBranch.includes("connections.trackSubscription("),
+    "relay subscription handle must be owned by the reconnect registry",
+  );
+  assert(
+    !relayBranch.includes("socket.send("),
+    "relay callbacks must not retain the attachment-local socket",
+  );
 });
 
 Deno.test("reconnect rebinds connection output to the resumed sender", () => {
