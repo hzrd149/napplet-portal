@@ -29,9 +29,11 @@ class FakeSocket extends EventTarget implements SocketLike {
   }
 
   message(value: unknown): void {
-    this.dispatchEvent(new MessageEvent("message", {
-      data: JSON.stringify(value),
-    }));
+    this.dispatchEvent(
+      new MessageEvent("message", {
+        data: JSON.stringify(value),
+      }),
+    );
   }
 
   fail(): void {
@@ -154,7 +156,7 @@ Deno.test("hidden and offline states cancel timers then resume promptly", () => 
   h.setOnline(false);
   assert(h.timers.size === 0, "offline tab owns no timer");
   h.setOnline(true);
-  assert(h.sockets.length === 3, "online resumes one prompt attempt");
+  assert(Number(h.sockets.length) === 3, "online resumes one prompt attempt");
 });
 
 Deno.test("repeated failure exposes Retry and continues quiet recovery", () => {
@@ -187,10 +189,17 @@ Deno.test("only a verified artifact resets failure count; stop cannot reopen", (
     windowId: "w",
     reconnectToken: "secret",
   });
-  assert(h.controller.snapshot.failures === 1, "connected does not reset failures");
-  active.message({ type: "runtime.artifact", srcdoc: "<p>ok</p>", identity: {} });
+  assert(
+    h.controller.snapshot.failures === 1,
+    "connected does not reset failures",
+  );
+  active.message({
+    type: "runtime.artifact",
+    srcdoc: "<p>ok</p>",
+    identity: {},
+  });
   assert(h.controller.snapshot.phase === "ready", "artifact proves ready");
-  assert(h.controller.snapshot.failures === 0, "ready resets failures");
+  assert(Number(h.controller.snapshot.failures) === 0, "ready resets failures");
   h.controller.stop();
   active.dispatchEvent(new CloseEvent("close"));
   h.controller.retryNow();

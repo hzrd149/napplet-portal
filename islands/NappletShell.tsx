@@ -18,6 +18,10 @@ import {
   UserIcon,
 } from "../components/ProfileView.tsx";
 import { debug as rootDebug, shortId } from "../debug.ts";
+import {
+  ConnectionController,
+  type ConnectionSnapshot,
+} from "../shell/connection.ts";
 
 const debug = rootDebug.extend("shell");
 
@@ -33,8 +37,6 @@ type Notice = "connection" | "handshake" | "integrity" | null;
  * serve WebSocket upgrades under the Vite dev server before 2.4, where the
  * request hangs without an open, error, or close event.
  */
-const CONNECT_TIMEOUT_MS = 10_000;
-
 const CONNECT_FAILED =
   "Napplet Portal could not connect. Check the server and try again.";
 
@@ -48,6 +50,14 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
   const [notice, setNotice] = useState<Notice>(null);
   const [connecting, setConnecting] = useState(false);
   const [runtimeError, setRuntimeError] = useState("");
+  const [connection, setConnection] = useState<ConnectionSnapshot>({
+    phase: "pending",
+    mode: "cold",
+    failures: 0,
+    canRetry: false,
+    nextRetryMs: null,
+    online: true,
+  });
   const [catalog, setCatalog] = useState<CatalogViewProjection>({
     catalogEventId: null,
     entries: [],
@@ -55,11 +65,9 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
   const [catalogStatus, setCatalogStatus] = useState<CatalogStreamStatus>(
     "loading",
   );
-  const socket = useRef<WebSocket | null>(null);
+  const controller = useRef<ConnectionController | null>(null);
   const iframe = useRef<HTMLIFrameElement | null>(null);
   const owner = useRef<{ connectionId: string; windowId: string } | null>(null);
-  const reconnectToken = useRef<string | null>(null);
-  const connectTimer = useRef<number | null>(null);
   const signOutDialog = useRef<HTMLDialogElement | null>(null);
   const hasMountedNapplet = useRef(false);
   const registered = useRef<
@@ -91,7 +99,7 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
         iframe.current?.contentWindow?.postMessage(message, "*");
       },
       forward: (message) => {
-        const ws = socket.current;
+        const ws = controller.current?.socket;
         const currentOwner = owner.current;
         if (ws?.readyState !== WebSocket.OPEN || !currentOwner) {
           debug(
@@ -130,13 +138,50 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
       );
     };
     globalThis.addEventListener("popstate", back);
-    openSocket();
+    if (coordinate) {
+      const protocol = location.protocol === "https:" ? "wss:" : "ws:";
+      controller.current = new ConnectionController({
+        coordinate,
+        socketBaseUrl: `${protocol}//${location.host}/api/runtime`,
+        createSocket: (url) => new WebSocket(url),
+        onSnapshot: (snapshot) => {
+          setConnection(snapshot);
+          setConnecting(
+            snapshot.phase === "pending" || snapshot.phase === "connected" ||
+              snapshot.phase === "bootstrapping" ||
+              snapshot.phase === "retrying",
+          );
+          if (snapshot.phase === "ready") {
+            setRuntimeError("");
+            setNotice(null);
+          } else if (snapshot.phase === "failed") {
+            setRuntimeError(CONNECT_FAILED);
+            if (hasMountedNapplet.current) setNotice("connection");
+          }
+        },
+        onMessage: receiveRuntimeMessage,
+      });
+      const visibility = () => controller.current?.visibilityChanged();
+      const online = () => controller.current?.onlineChanged();
+      document.addEventListener("visibilitychange", visibility);
+      globalThis.addEventListener("online", online);
+      globalThis.addEventListener("offline", online);
+      controller.current.start();
+      return () => {
+        debug("shell unmounting");
+        globalThis.removeEventListener("message", receive);
+        globalThis.removeEventListener("popstate", back);
+        document.removeEventListener("visibilitychange", visibility);
+        globalThis.removeEventListener("online", online);
+        globalThis.removeEventListener("offline", online);
+        controller.current?.stop();
+        controller.current = null;
+      };
+    }
     return () => {
       debug("shell unmounting");
       globalThis.removeEventListener("message", receive);
       globalThis.removeEventListener("popstate", back);
-      if (connectTimer.current !== null) clearTimeout(connectTimer.current);
-      socket.current?.close();
     };
   }, []);
 
@@ -144,69 +189,7 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
     hasMountedNapplet.current = Boolean(srcdoc);
   }, [srcdoc]);
 
-  function openSocket(): void {
-    if (!coordinate) {
-      debug("open socket skipped empty coordinate");
-      return;
-    }
-    debug(
-      "open socket started reconnect=%s",
-      Boolean(reconnectToken.current),
-    );
-    setConnecting(true);
-    setRuntimeError("");
-    setNotice(null);
-    socket.current?.close();
-    const protocol = location.protocol === "https:" ? "wss:" : "ws:";
-    const token = reconnectToken.current
-      ? `?reconnect=${encodeURIComponent(reconnectToken.current)}`
-      : "";
-    const ws = new WebSocket(
-      `${protocol}//${location.host}/api/runtime${token}`,
-    );
-    socket.current = ws;
-    if (connectTimer.current !== null) clearTimeout(connectTimer.current);
-    connectTimer.current = setTimeout(() => {
-      if (socket.current !== ws || ws.readyState === WebSocket.OPEN) return;
-      debug("socket connect timeout");
-      ws.close();
-      setConnecting(false);
-      setRuntimeError(CONNECT_FAILED);
-    }, CONNECT_TIMEOUT_MS);
-    ws.addEventListener("open", () => {
-      debug("socket open");
-      if (connectTimer.current !== null) clearTimeout(connectTimer.current);
-      connectTimer.current = null;
-    });
-    ws.addEventListener("message", (event) => receiveRuntimeMessage(event));
-    ws.addEventListener("error", () => {
-      // A superseded socket must not report failure for its replacement.
-      if (socket.current !== ws) return;
-      debug("socket error");
-      setConnecting(false);
-      setRuntimeError(CONNECT_FAILED);
-    });
-    ws.addEventListener("close", () => {
-      if (socket.current !== ws) return;
-      debug("socket close");
-      if (connectTimer.current !== null) clearTimeout(connectTimer.current);
-      connectTimer.current = null;
-      setConnecting(false);
-      setProfile((current) =>
-        current ? { ...current, status: "offline" } : null
-      );
-      if (hasMountedNapplet.current) setNotice("connection");
-    });
-  }
-
-  function receiveRuntimeMessage(event: MessageEvent): void {
-    let message: Record<string, unknown>;
-    try {
-      message = JSON.parse(String(event.data)) as Record<string, unknown>;
-    } catch {
-      debug("ignored invalid runtime JSON");
-      return;
-    }
+  function receiveRuntimeMessage(message: Record<string, unknown>): void {
     debug("received runtime message type=%s", String(message.type));
     if (
       message.type === "runtime.connected" &&
@@ -218,17 +201,12 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
         connectionId: message.connectionId,
         windowId: message.windowId,
       };
-      reconnectToken.current = message.reconnectToken;
       debug(
         "runtime connected connection=%s window=%s resumed=%s",
         shortId(message.connectionId),
         shortId(message.windowId),
         Boolean(message.resumed),
       );
-      socket.current?.send(JSON.stringify({
-        type: "runtime.start",
-        coordinate,
-      }));
       return;
     }
     if (message.type === "runtime.event" && message.message) {
@@ -314,7 +292,7 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
 
   function signOut(): void {
     debug("signout requested");
-    socket.current?.send(JSON.stringify({ type: "runtime.signout" }));
+    controller.current?.send({ type: "runtime.signout" });
     setProfile(null);
     signOutDialog.current?.close();
     navigate("home");
@@ -338,12 +316,12 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
   function sendCatalogCommand(
     command: CatalogMutationCommand,
   ): Promise<boolean> {
-    const ws = socket.current;
-    if (ws?.readyState !== WebSocket.OPEN) return Promise.resolve(false);
+    const ws = controller.current;
+    if (!ws) return Promise.resolve(false);
     const id = crypto.randomUUID();
     return new Promise((resolve) => {
       catalogCommands.current.set(id, resolve);
-      ws.send(JSON.stringify(
+      ws.send(
         command.type === "catalog.approve"
           ? {
             type: "catalog.approve",
@@ -356,7 +334,7 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
             id,
             coordinate: command.coordinate,
           },
-      ));
+      );
     });
   }
 
@@ -414,7 +392,7 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
           {notice && (
             <ShellNotice
               notice={notice}
-              onRetry={() => openSocket()}
+              onRetry={() => controller.current?.retryNow()}
             />
           )}
           <NappletFrame

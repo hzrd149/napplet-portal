@@ -7,7 +7,7 @@
     "dev:server": "vite",
     "build": "vite build",
     "start": "deno task --env-file start:server",
-    "start:server": "deno serve -A --host=$(deno run --allow-env=PORTAL_BIND runtime/bind.ts) _fresh/server.js",
+    "start:server": "deno serve -A --host=$(deno run --allow-env=PORTAL_BIND runtime/bind.ts) --port=$(deno run --allow-env=PORTAL_PORT runtime/port.ts) _fresh/server.js",
     "update": "deno run -A -r jsr:@fresh/update ."
   },
   "lint": {
