@@ -129,3 +129,97 @@ Deno.test("dispatcher rejects duplicate IDs and a third byte operation before wo
   );
   await Promise.all([a, b]);
 });
+
+Deno.test("dispatcher exposes closed actions, snapshots settings, and scopes upload status", async () => {
+  let settings = { blossomServers: ["https://first.example/"] };
+  const observedServers: string[][] = [];
+  const statuses = new Map<string, Record<string, unknown>>();
+  const sent: Array<{ owner: NapOwner; message: Record<string, unknown> }> = [];
+  const dispatcher = new NapDispatcher({
+    resource: {
+      bytes: () =>
+        Promise.resolve({
+          bytes: new Uint8Array([1]),
+          blob: new Blob([new Uint8Array([1])]),
+          mime: "image/png",
+        }),
+      bytesMany: () => Promise.resolve([]),
+    },
+    transfer: {
+      upload: (request) => {
+        observedServers.push(request.requiredServers.map(String));
+        const result = {
+          ok: true,
+          uploadId: `upload-${observedServers.length}`,
+          status: "complete" as const,
+          rail: "blossom" as const,
+        };
+        statuses.set(`${request.owner}:${result.uploadId}`, {
+          ...result,
+          updatedAt: 1,
+        });
+        return Promise.resolve(result);
+      },
+      status: (key, uploadId) => statuses.get(`${key}:${uploadId}`) as never,
+      clearOwner: (key) => {
+        for (const statusKey of statuses.keys()) {
+          if (statusKey.startsWith(`${key}:`)) statuses.delete(statusKey);
+        }
+      },
+    },
+    settings: () => settings,
+    send: (target, message) => sent.push({ owner: target, message }),
+  });
+  await dispatcher.dispatch(owner, { type: "resource.info", id: "ri" });
+  await dispatcher.dispatch(owner, { type: "upload.info", id: "ui" });
+  await dispatcher.dispatch(owner, {
+    type: "upload.upload",
+    id: "up-1",
+    request: { data: new Blob(["first"]), rail: "blossom" },
+  });
+  settings = { blossomServers: ["https://second.example/"] };
+  await dispatcher.dispatch(owner, {
+    type: "upload.upload",
+    id: "up-2",
+    request: { data: new Blob(["second"]), rail: "blossom" },
+  });
+  await dispatcher.dispatch(owner, {
+    type: "upload.status",
+    id: "status-own",
+    uploadId: "upload-1",
+  });
+  await dispatcher.dispatch({ ...owner, account: "account-b" }, {
+    type: "upload.status",
+    id: "status-foreign",
+    uploadId: "upload-1",
+  });
+  assert(
+    observedServers[0][0] === "https://first.example/",
+    "first operation snapshots first settings",
+  );
+  assert(
+    observedServers[1][0] === "https://second.example/",
+    "later operation sees changed settings",
+  );
+  assert(
+    sent.some(({ message }) => message.type === "resource.info.result"),
+    "resource info is wired",
+  );
+  assert(
+    sent.some(({ message }) => message.type === "upload.info.result"),
+    "upload info is wired",
+  );
+  const own = sent.find(({ message }) => message.id === "status-own")?.message;
+  const foreign = sent.find(({ message }) => message.id === "status-foreign")
+    ?.message;
+  assert(Boolean(own?.status), "exact owner can inspect retained status");
+  assert(
+    foreign?.error === "unavailable" && !foreign.status,
+    "foreign owner receives generic unavailable",
+  );
+  assert(
+    sent.filter(({ message }) => message.type === "upload.status.changed")
+      .every(({ owner: target }) => target.account === "account-a"),
+    "status changes push only to owner",
+  );
+});

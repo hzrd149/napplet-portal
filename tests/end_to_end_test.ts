@@ -168,3 +168,38 @@ Deno.test("runtime sign-out emits only the canonical identity transition", async
     "sign-out must retain one frame node",
   );
 });
+
+Deno.test("production runtime wires the complete RESOURCE and UPLOAD seam", async () => {
+  const endpoint = await Deno.readTextFile("routes/api/runtime.ts");
+  const shell = await Deno.readTextFile("islands/NappletShell.tsx");
+  const main = await Deno.readTextFile("main.ts");
+  for (
+    const action of [
+      "resource.info",
+      "resource.bytes",
+      "resource.bytesMany",
+      "resource.cancel",
+      "upload.info",
+      "upload.upload",
+      "upload.status",
+      "upload.status.changed",
+    ]
+  ) {
+    assert(
+      endpoint.includes(action) || shell.includes(action),
+      `${action} crosses production transport`,
+    );
+  }
+  assert(
+    main.includes("new NapDispatcher"),
+    "one process-owned dispatcher is constructed",
+  );
+  assert(
+    main.includes("new ResourceService"),
+    "one process-owned resource service is constructed",
+  );
+  assert(
+    main.includes("new BlossomTransferService"),
+    "one process-owned upload service is constructed",
+  );
+});
