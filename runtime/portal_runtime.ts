@@ -1,5 +1,6 @@
 import { injectNappletNamespacePrelude } from "@kehto/shell";
 import type { NostrEvent } from "@napplet/core";
+import { verifyEvent } from "nostr-tools";
 import type { RelaySubscribeMessage } from "@napplet/nap/relay";
 import type {
   IntentAvailableResultMessage,
@@ -304,7 +305,8 @@ export function createProductionCatalogResolver(
     if (
       event.kind !== 35129 || event.pubkey !== match[1] ||
       dTags.length !== 1 || dTags[0].length !== 2 || dTags[0][1] !== match[2] ||
-      (manifestEventId !== undefined && event.id !== manifestEventId)
+      (manifestEventId !== undefined && event.id !== manifestEventId) ||
+      !verifyEvent(event)
     ) throw new Error("manifest identity mismatch");
     const resolver = new PortalArtifactResolver({
       coordinate,

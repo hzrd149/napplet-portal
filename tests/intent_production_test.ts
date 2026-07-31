@@ -7,6 +7,7 @@ import {
 } from "../runtime/catalog.ts";
 import { createEventRuntime } from "../runtime/event_runtime.ts";
 import { createPortalRuntime } from "../runtime/portal_runtime.ts";
+import { createProductionCatalogResolver } from "../runtime/portal_runtime.ts";
 import { RelayPolicy } from "../runtime/relay_policy.ts";
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -34,6 +35,28 @@ Deno.test("production intent tracer uses one process-owned exact service", async
     endpoint.includes("runtime.intent.ticket"),
     "claim must be correlated",
   );
+});
+
+Deno.test("production intent authority rejects invalid manifest signatures", async () => {
+  const invalid = structuredClone(fixture.manifestEvent);
+  invalid.sig = "0".repeat(128);
+  const resolver = createProductionCatalogResolver({
+    eventRuntime: {
+      loadManifest: () => Promise.resolve(invalid),
+    } as never,
+    blossomServers: () => [],
+  });
+  let rejected = false;
+  try {
+    await resolver(
+      `35129:${invalid.pubkey}:security-lab`,
+      invalid.id,
+      [],
+    );
+  } catch (error) {
+    rejected = String(error).includes("manifest identity mismatch");
+  }
+  assert(rejected, "invalid signature must fail at the authority boundary");
 });
 
 Deno.test("signed archetype declarations reach verified intent authority", async () => {
