@@ -1,5 +1,6 @@
 import {
   type IntentSurface,
+  PopupReservationController,
   SurfaceStackController,
 } from "../islands/NappletShell.tsx";
 
@@ -85,4 +86,94 @@ Deno.test("stacked frame source binding and sandbox remain exact", async () => {
     shell.includes("Back") && shell.includes("Close"),
     "stack controls required",
   );
+});
+
+Deno.test("new-tab reservation opens synchronously and settles exactly once", () => {
+  const sent: Record<string, unknown>[] = [];
+  const navigated: string[] = [];
+  let closed = false;
+  const handle = {
+    get closed() {
+      return closed;
+    },
+    close: () => closed = true,
+    focus: () => undefined,
+    location: { replace: (path: string) => navigated.push(path) },
+  } as unknown as Window;
+  const popup = new PopupReservationController({
+    open: (path, name, features) => {
+      assert(path.startsWith("/intent/reserved#"), "route must be fixed");
+      assert(
+        /^_napplet_intent_[a-f0-9-]+$/.test(name),
+        "name must be shell-owned",
+      );
+      assert(
+        features === undefined,
+        "noopener must not sever the retained handle",
+      );
+      return handle;
+    },
+    send: (message) => sent.push(message),
+  });
+  const source = {} as Window;
+  const reserved = popup.reserve(source, {
+    invocationId: "invoke-1",
+    callerWindowId: "caller-1",
+    owner: { connectionId: "connection-1", windowId: "caller-1" },
+  });
+  assert(
+    reserved !== null && sent.length === 1,
+    "reserve must forward immediately",
+  );
+  assert(
+    popup.authorize(source, {
+      type: "intent.navigation.authorized",
+      reservationId: reserved,
+      invocationId: "invoke-1",
+      targetWindowId: "target-1",
+      ticket: "ticket-1",
+      launchPath: "/napplet?ticket=ticket-1",
+      generation: 1,
+    }),
+    "matching authorization must commit",
+  );
+  assert(
+    navigated.join("") === "/napplet?ticket=ticket-1",
+    "commit path must be backend-issued",
+  );
+  assert(!popup.fail(reserved, "failed"), "terminal replay must fail");
+  assert(
+    sent.filter((message) => message.type === "intent.navigation.ack")
+      .length === 1,
+    "terminal ack must be exact-once",
+  );
+});
+
+Deno.test("new-tab blocked and stale authorization fail closed", () => {
+  const sent: Record<string, unknown>[] = [];
+  const blocked = new PopupReservationController({
+    open: () => null,
+    send: (message) => sent.push(message),
+  });
+  const source = {} as Window;
+  assert(
+    blocked.reserve(source, {
+      invocationId: "invoke-blocked",
+      callerWindowId: "caller",
+      owner: { connectionId: "connection", windowId: "caller" },
+    }) === null,
+    "null handle must report blocked",
+  );
+  assert(sent.at(-1)?.state === "blocked", "blocked popup needs terminal ack");
+});
+
+Deno.test("reservation route severs opener before runtime or ticket claim", async () => {
+  const route = await Deno.readTextFile("routes/intent/reserved.tsx");
+  const sever = route.indexOf("window.opener = null");
+  assert(sever >= 0, "reservation page must sever opener");
+  assert(
+    sever < route.indexOf("WebSocket"),
+    "opener must be severed before transport",
+  );
+  assert(!route.includes("dangerouslySetInnerHTML"), "route must remain inert");
 });
