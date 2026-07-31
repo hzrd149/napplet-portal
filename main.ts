@@ -11,11 +11,10 @@ import { RuntimeSettingsService } from "./runtime/settings.ts";
 import { SettingsStore } from "./runtime/settings_store.ts";
 import { discoverLocalBlossom } from "./runtime/blossom_cache.ts";
 import type { CacheHealthState } from "./utils.ts";
-import {
-  CATALOG_IDENTIFIER,
-  CATALOG_KIND,
-  CatalogService,
-} from "./runtime/catalog.ts";
+import { CatalogSyncOwner } from "./runtime/event_runtime.ts";
+import { CatalogService } from "./runtime/catalog.ts";
+import { RelayPolicy } from "./runtime/relay_policy.ts";
+import { map } from "npm:rxjs@7.8.2";
 
 const debug = rootDebug.extend("backend");
 
@@ -111,6 +110,13 @@ const catalogService = new CatalogService({
   identity: () => signerAccounts.identity,
   resolveVerifiedArtifact: (coordinate, manifestEventId) =>
     processRuntime.resolveCatalogArtifact(coordinate, manifestEventId),
+  relayPolicy: new RelayPolicy({
+    defaults: runtimeSettings.settings.relays,
+    blocked: runtimeSettings.settings.blockedRelays,
+  }),
+  configuredReadRelays: () => runtimeSettings.settings.relays,
+  resolvePreviewArtifact: (coordinate, relays) =>
+    processRuntime.resolveCatalogPreview(coordinate, relays),
   signEvent: (template) => signerAccounts.signEvent(template),
   publish: async (event) => {
     const relays = runtimeSettings.settings.relays;
@@ -125,19 +131,18 @@ const catalogService = new CatalogService({
   },
 });
 processRuntime.configureCatalog(catalogService);
-let catalogSync: { unsubscribe(): void } | undefined;
-signerAccounts.identity$.subscribe((identity) => {
-  catalogSync?.unsubscribe();
-  catalogSync = undefined;
-  if (!identity.pubkey) return;
-  catalogSync = processRuntime.eventRuntime.relayPool.request(
-    [...runtimeSettings.settings.relays],
-    [{
-      kinds: [CATALOG_KIND],
-      authors: [identity.pubkey],
-      "#d": [CATALOG_IDENTIFIER],
-    }],
-  ).subscribe((event) => catalogService.load([event]));
+export const catalogSync = new CatalogSyncOwner({
+  eventRuntime: processRuntime.eventRuntime,
+  catalog: catalogService,
+  identity$: signerAccounts.identity$,
+  configuredReads$: runtimeSettings.settings$.pipe(
+    map((value) => value.relays),
+  ),
+  relayPolicy: (relays) =>
+    new RelayPolicy({
+      defaults: relays,
+      blocked: runtimeSettings.settings.blockedRelays,
+    }),
 });
 void signerService.restore().catch((error) => {
   debug(
