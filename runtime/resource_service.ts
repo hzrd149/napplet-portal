@@ -26,6 +26,7 @@ export interface ResourceReadOptions {
   readonly signal?: AbortSignal;
   readonly blossomServers?: readonly string[];
   readonly authorPubkey?: string;
+  readonly deadlineSignal?: AbortSignal;
 }
 
 export type ResourceErrorCode =
@@ -330,20 +331,23 @@ export class ResourceService {
     const readOptions = options instanceof AbortSignal
       ? { signal: options }
       : options;
-    const source = String(input);
-    const hash = blossomHash(source);
-    if (hash) return this.#release(await this.#blossomRead(hash, readOptions));
-    let parsed: URL;
-    try {
-      parsed = new URL(source);
-    } catch {
-      throw new ResourceServiceError("blocked-by-policy");
-    }
-    if (parsed.protocol !== "https:") {
-      throw new ResourceServiceError("blocked-by-policy");
-    }
-    const read = await this.#fetchBytes(parsed, "public", readOptions.signal);
-    return this.#release(read);
+    return await this.#withDeadline(readOptions, async (bounded) => {
+      const source = String(input);
+      const hash = blossomHash(source);
+      if (hash) return this.#release(await this.#blossomRead(hash, bounded));
+      let parsed: URL;
+      try {
+        parsed = new URL(source);
+      } catch {
+        throw new ResourceServiceError("blocked-by-policy");
+      }
+      if (parsed.protocol !== "https:") {
+        throw new ResourceServiceError("blocked-by-policy");
+      }
+      return this.#release(
+        await this.#fetchBytes(parsed, "public", bounded.deadlineSignal!),
+      );
+    });
   }
 
   async bytesMany(
@@ -353,14 +357,18 @@ export class ResourceService {
     if (inputs.length > this.#maxUrls) {
       throw new ResourceServiceError("blocked-by-policy");
     }
-    return await Promise.all(
-      inputs.map(async (input): Promise<ResourceBatchItem> => {
-        try {
-          return { ok: true, value: await this.bytes(input, options) };
-        } catch (cause) {
-          return { ok: false, error: errorFrom(cause) };
-        }
-      }),
+    return await this.#withDeadline(
+      options,
+      async (bounded) =>
+        await Promise.all(
+          inputs.map(async (input): Promise<ResourceBatchItem> => {
+            try {
+              return { ok: true, value: await this.bytes(input, bounded) };
+            } catch (cause) {
+              return { ok: false, error: errorFrom(cause) };
+            }
+          }),
+        ),
     );
   }
 
@@ -373,13 +381,14 @@ export class ResourceService {
     if (!/^[0-9a-f]{64}$/.test(hash)) {
       throw new ResourceServiceError("blocked-by-policy");
     }
-    return this.#release(
-      await this.#blossomRead(hash, {
-        blossomServers: servers,
-        authorPubkey,
-        signal,
-      }),
-    );
+    return await this.#withDeadline({
+      blossomServers: servers,
+      authorPubkey,
+      signal,
+    }, async (bounded) =>
+      this.#release(
+        await this.#blossomRead(hash, bounded),
+      ));
   }
 
   async blossomBytes(
@@ -391,11 +400,11 @@ export class ResourceService {
     if (!/^[0-9a-f]{64}$/.test(hash)) {
       throw new ResourceServiceError("blocked-by-policy");
     }
-    return (await this.#blossomRead(hash, {
+    return await this.#withDeadline({
       blossomServers: servers,
       authorPubkey,
       signal,
-    })).bytes;
+    }, async (bounded) => (await this.#blossomRead(hash, bounded)).bytes);
   }
 
   async #blossomRead(
@@ -430,7 +439,8 @@ export class ResourceService {
         const read = await this.#fetchBytes(
           candidate.url,
           candidate.destinationClass,
-          options.signal,
+          options.deadlineSignal ?? options.signal ??
+            new AbortController().signal,
         );
         if (read.sha256 !== hash) {
           lastError = new ResourceServiceError("decode-failed");
@@ -459,14 +469,9 @@ export class ResourceService {
   async #fetchBytes(
     input: string | URL,
     destinationClass: ResourceDestinationClass,
-    externalSignal?: AbortSignal,
+    signal: AbortSignal,
   ): Promise<ReadResponse> {
-    const timeout = new AbortController();
-    const timer = setTimeout(() => timeout.abort(), this.#deadlineMs);
-    const signal = externalSignal
-      ? AbortSignal.any([externalSignal, timeout.signal])
-      : timeout.signal;
-    try {
+    {
       let next = String(input);
       for (let redirects = 0;; redirects++) {
         let url: URL;
@@ -527,6 +532,21 @@ export class ResourceService {
         }
         return await this.#read(response, signal);
       }
+    }
+  }
+
+  async #withDeadline<T>(
+    options: ResourceReadOptions,
+    run: (bounded: ResourceReadOptions) => Promise<T>,
+  ): Promise<T> {
+    if (options.deadlineSignal) return await run(options);
+    const deadline = new AbortController();
+    const timer = setTimeout(() => deadline.abort(), this.#deadlineMs);
+    const signal = options.signal
+      ? AbortSignal.any([options.signal, deadline.signal])
+      : deadline.signal;
+    try {
+      return await run({ ...options, deadlineSignal: signal });
     } finally {
       clearTimeout(timer);
     }
