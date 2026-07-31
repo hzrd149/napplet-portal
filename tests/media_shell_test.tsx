@@ -125,6 +125,55 @@ Deno.test("authoritative media shell tracer exposes truthful autoplay retry", as
   assert(shell.retryRequired, "rejection exposes gesture retry");
 });
 
+Deno.test("authoritative media shell enacts only current grants", () => {
+  const posted: Record<string, unknown>[] = [];
+  const shell = new MediaShellController({
+    send: () => undefined,
+    post: (message) => posted.push(message),
+    stopLocal: () => undefined,
+  });
+  shell.connect(B);
+  assert(shell.snapshot(1, projection(4, A, "playing")), "baseline accepted");
+  assert(
+    !shell.grant({
+      type: "runtime.media.grant",
+      sessionId: "session-1",
+      generation: 5,
+      owner: A,
+    }),
+    "foreign grant is rejected",
+  );
+  assert(
+    shell.grant({
+      type: "runtime.media.grant",
+      sessionId: "session-1",
+      generation: 5,
+      owner: B,
+    }),
+    "current-window grant is queued",
+  );
+  assert(posted.length === 0, "grant waits for matching projection");
+  assert(
+    shell.snapshot(1, projection(5, B, "stopped")),
+    "grant snapshot accepted",
+  );
+  assert(
+    JSON.stringify(posted) ===
+      '[{"type":"media.command","sessionId":"session-1","action":"play"}]',
+    "matching grant enacts one canonical play command",
+  );
+  assert(shell.retryRequired, "non-playing acknowledgement exposes retry");
+  assert(
+    !shell.grant({
+      type: "runtime.media.grant",
+      sessionId: "session-1",
+      generation: 4,
+      owner: B,
+    }),
+    "stale grant is rejected",
+  );
+});
+
 Deno.test("authoritative media shell tracer renders bounded accessible controls", () => {
   const html = renderToString(
     <MediaControls

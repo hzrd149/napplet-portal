@@ -97,6 +97,8 @@ const MEDIA_ACTIONS = new Set([
   "seek",
   "volume",
 ]);
+const sameActor = (left: MediaActorRef, right: MediaActorRef) =>
+  left.connectionId === right.connectionId && left.windowId === right.windowId;
 const actor = (value: unknown): value is MediaActorRef => {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   const item = value as Record<string, unknown>;
@@ -132,6 +134,7 @@ export class MediaShellController {
   #ready = false;
   #hiddenReported = false;
   #retryRequired = false;
+  #pendingGrant: { sessionId: string; generation: number } | null = null;
   #pending = new Set<string>();
 
   constructor(readonly options: MediaShellOptions) {}
@@ -161,6 +164,7 @@ export class MediaShellController {
     this.#ready = false;
     this.#hiddenReported = false;
     this.#retryRequired = false;
+    this.#pendingGrant = null;
     this.#pending.clear();
     this.options.changed?.();
   }
@@ -187,7 +191,24 @@ export class MediaShellController {
       this.#retryRequired = false;
     }
     if (projection?.status !== "playing") this.#hiddenReported = false;
+    this.#enactGrant();
     this.options.changed?.();
+    return true;
+  }
+  grant(message: Record<string, unknown>): boolean {
+    if (
+      message.type !== "runtime.media.grant" ||
+      typeof message.sessionId !== "string" ||
+      !Number.isSafeInteger(message.generation) || !actor(message.owner) ||
+      !this.#owner || !sameActor(message.owner, this.#owner) ||
+      (this.#projection !== null &&
+        Number(message.generation) < this.#projection.generation)
+    ) return false;
+    this.#pendingGrant = {
+      sessionId: message.sessionId,
+      generation: Number(message.generation),
+    };
+    this.#enactGrant();
     return true;
   }
   request(action: "transfer" | "stop"): boolean {
@@ -254,6 +275,21 @@ export class MediaShellController {
     });
     this.options.changed?.();
     return true;
+  }
+  #enactGrant(): void {
+    const grant = this.#pendingGrant;
+    if (
+      !grant || !this.isOwner || !this.#projection ||
+      grant.sessionId !== this.#projection.sessionId ||
+      grant.generation !== this.#projection.generation
+    ) return;
+    this.#pendingGrant = null;
+    this.#retryRequired = true;
+    this.options.post({
+      type: "media.command",
+      sessionId: grant.sessionId,
+      action: "play",
+    });
   }
   async play(enact: () => Promise<void>): Promise<boolean> {
     if (!this.isOwner || !this.#projection) return false;
@@ -831,8 +867,9 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
   const [, renderMedia] = useState(0);
   const stopLocalMedia = () => {
     const sessionId = media.current?.projection?.sessionId;
-    if (!sessionId) return;
-    iframe.current?.contentWindow?.postMessage({
+    const target = iframe.current?.contentWindow;
+    if (!sessionId || !target || registered.current?.source !== target) return;
+    target.postMessage({
       type: "media.command",
       sessionId,
       action: "stop",
@@ -842,8 +879,12 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
   if (!media.current) {
     media.current = new MediaShellController({
       send: (message) => controller.current?.send(message),
-      post: (message) =>
-        iframe.current?.contentWindow?.postMessage(message, "*"),
+      post: (message) => {
+        const target = iframe.current?.contentWindow;
+        if (target && registered.current?.source === target) {
+          target.postMessage(message, "*");
+        }
+      },
       stopLocal: stopLocalMedia,
       changed: () => renderMedia((value) => value + 1),
     });
@@ -1382,6 +1423,10 @@ export default function NappletShell({ coordinate }: NappletShellProps) {
         : decodeShellMediaProjection(message.session);
       if (message.session !== null && !projection) return;
       media.current?.snapshot(Number(message.accountEpoch), projection);
+      return;
+    }
+    if (message.type === "runtime.media.grant") {
+      media.current?.grant(message);
       return;
     }
     if (message.type === "runtime.media.result") {
