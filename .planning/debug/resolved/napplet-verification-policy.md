@@ -2,7 +2,7 @@
 status: resolved
 trigger: "The runtime repeatedly returns runtime.signer.error / Verified napplet could not be opened; determine whether napplet verification requirements should be loosened."
 created: 2026-07-31
-updated: 2026-07-31T15:07:51Z
+updated: 2026-07-31T15:08:52Z
 ---
 
 # Debug Session: Napplet Verification Policy
@@ -18,9 +18,9 @@ updated: 2026-07-31T15:07:51Z
 ## Current Focus
 
 - **hypothesis:** Confirmed: the prior implementation added an unsafe-only loopback authorization rule that was not part of the requested one-flag local testing bypass, so the otherwise-valid private bind is rejected only when the bypass is enabled.
-- **test:** Commit the corrected debug and knowledge-base records, then push both commits to `origin/master`.
-- **expecting:** Only the intentional code commit plus resolved-session/KB commit reach the remote; unrelated research cache files remain untracked.
-- **next_action:** Commit `.planning/debug/resolved/napplet-verification-policy.md` and `.planning/debug/knowledge-base.md`, then push `master`.
+- **test:** Delivery confirmed on `origin/master`.
+- **expecting:** Satisfied: the minimal code correction and corrected durable debug records are present on the remote, with unrelated cache files excluded.
+- **next_action:** None — corrected session is resolved, verified, committed, and pushed.
 - **bug_class:** bohrbug (the same explicit unsafe configuration deterministically fails on every non-loopback bind)
 - **reasoning_checkpoint:**
   hypothesis: "The unsafe-only `isLoopbackBind` authorization check causes the valid `100.77.91.59` bind to fail because it imposes a loopback requirement beyond the requested explicit one-flag local testing contract."
@@ -88,6 +88,10 @@ updated: 2026-07-31T15:07:51Z
   checked: Final implementation diff and code commit
   found: `git diff --check` passed; commit `b43510e` contains only `.env.example`, `README.md`, `runtime/config.ts`, `tests/config_test.ts`, and `tests/env_test.ts`. Unrelated `.planning/research/.cache` files were not staged.
   implication: The minimal correction is committed atomically and the resolved records can be updated without incorporating unrelated worktree state.
+- timestamp: 2026-07-31T15:08:52Z
+  checked: Resolved-record commit and remote delivery
+  found: Debug/knowledge records committed as `ee928f0`; `git push origin master` advanced the remote from `86f4542` through code commit `b43510e` and record commit `ee928f0`. Unrelated research cache files remained untracked.
+  implication: The corrected implementation and its durable diagnosis/prevention records are delivered to the configured remote.
 
 - timestamp: 2026-07-31T13:44:31Z
   checked: Phase 0 semantic/keyword knowledge-base recall
