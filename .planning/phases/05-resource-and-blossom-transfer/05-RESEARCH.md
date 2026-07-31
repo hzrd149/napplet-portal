@@ -152,7 +152,7 @@ Canonical resource error codes are `invalid-request`, `not-found`, `blocked-by-p
 | `upload.status { id, uploadId }` | `upload.status.result { id, status?, error? }` | Scope `uploadId` to the verified napplet/window/account; never allow cross-tenant probing. [VERIFIED: pinned package typings; project security constraints] |
 | server push | `upload.status.changed { status }` | No correlation ID; only push statuses owned by that window. [VERIFIED: pinned package typings] |
 
-`UploadResult` has no partial state or per-server settlement property. Preserve canonical compatibility by using `url` for the primary accepted required server, ordered `fallbackUrls` for other accepted required servers, `ok: true`/`status: "complete"` only when every required server passes, and `ok: false`/`status: "failed"` with deterministic sanitized ordinal outcomes in the allowed `error` string for partial required settlement (for example `required[0]=accepted;required[1]=network-error`). Keep full structured settlement and the optional-local-copy outcome in bounded backend diagnostics. Optional-local success cannot be represented canonically in 0.31.0 without inventing a field; this irreducible UPL-03 mismatch is asserted in Phase 5 codec tests and scheduled for Phase 9 contract-parity review. [VERIFIED: exact pinned typings and shim source]
+`UploadResult` has no partial state or per-server settlement property, but its optional `error` is valid even for `ok: true`/`status: "complete"`. Canonical settlement therefore uses `url` for the first accepted required server, ordered `fallbackUrls` for subsequent accepted required servers and then the accepted optional-local URL, plus deterministic sanitized tokens for every terminal outcome. The closed grammar is at most eight required tokens followed by one local token: `required[N]=accepted|network-error|timeout|rejected|descriptor-mismatch|cancelled` and `local=accepted|unavailable|network-error|timeout|rejected|descriptor-mismatch|cancelled|not-attempted`. Tokens are semicolon-delimited in configured ordinal order and the entire ASCII string is capped at 512 characters. Complete required success with local failure remains `ok: true`/`complete` and carries the local failure token; partial/full required failure is `ok: false`/`failed` and carries every required token plus `local=not-attempted`. This exposes every required and optional-local outcome canonically without hostnames, response bodies, exceptions, or extension fields. Backend diagnostics may retain richer structured detail, while Phase 9 only audits parity. [VERIFIED: exact pinned typings and shim source]
 
 ## Architecture Patterns
 
@@ -339,7 +339,7 @@ const signal = AbortSignal.any([
 
 1. **RESOLVED — Required servers:** Every configured non-loopback Blossom server is required, matching existing OUTBOX all-required semantics. Optional exact-loopback copying starts only after every required server accepts. [USER-AUTHORIZED DEFAULT]
 
-2. **RESOLVED — Per-server representation:** Add no fields. Successful required servers use `url` and ordered `fallbackUrls`; partial/failed statuses use deterministic sanitized ordinal outcomes in canonical `error`; full required and optional-local settlement remains backend diagnostics. Optional-local success has no 0.31.0 wire representation, so Phase 5 proves the omission and Phase 9 rechecks contract parity. [VERIFIED: exact pinned typings/shim]
+2. **RESOLVED — Per-server representation:** Add no fields. Accepted required destinations use `url` and ordered `fallbackUrls`; an accepted optional-local destination is appended last. The optional canonical `error` field carries the bounded stable required/local token grammar for mixed outcomes and may accompany `ok: true`/`complete`. Thus Phase 5 exposes every required and optional-local outcome; Phase 9 only audits parity. [VERIFIED: exact pinned typings/shim]
 
 3. **RESOLVED — MIME set:** Support PNG, JPEG, GIF, WebP, AVIF, plain text, JSON, and PDF by observed bytes; reject HTML, SVG, script, unknown, and conflicting types. [USER-AUTHORIZED DEFAULT]
 
@@ -408,7 +408,7 @@ Suggested quick commands are individual files such as `deno test -A tests/resour
 
 ### Tertiary (LOW confidence)
 
-- None; planning resolved the former policy questions with the user's authorized conservative defaults. The only retained limitation is the explicit 0.31.0 optional-local settlement representation mismatch.
+- None; planning resolved the former policy questions with the user's authorized conservative defaults and the exact canonical `error` token representation.
 
 ## Metadata
 
