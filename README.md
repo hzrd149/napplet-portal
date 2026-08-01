@@ -109,9 +109,9 @@ mobile access over a trusted private network. Startup fails if unsafe mode has
 no local byte source. The portal displays a persistent unsafe-mode banner, the
 runtime labels the artifact `unsafe-local`, and the local bytes receive a fresh
 SHA-256 identity; they are never represented as verified. The normal size and
-HTML input boundaries still apply, and WebSocket origin, iframe sandbox,
-signer, capability, storage, URL, and message authority remain unchanged.
-Never enable this mode on an untrusted or publicly exposed interface.
+HTML input boundaries still apply, and WebSocket origin, iframe sandbox, signer,
+capability, storage, URL, and message authority remain unchanged. Never enable
+this mode on an untrusted or publicly exposed interface.
 
 No credentials belong in endpoint URLs. Environment files are gitignored, but
 operators should still apply host-level secret controls. `.env.example` is
