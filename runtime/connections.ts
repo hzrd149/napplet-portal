@@ -1,4 +1,5 @@
 import { debug as rootDebug, shortId } from "../debug.ts";
+import { ExpiringRegistry } from "./expiring_registry.ts";
 
 const debug = rootDebug.extend("connections");
 
@@ -319,50 +320,47 @@ export interface PendingCorrelationsOptions {
 }
 
 export class PendingCorrelations {
-  readonly #timers = new Map<string, number>();
-  readonly #options: PendingCorrelationsOptions;
+  readonly #registry: ExpiringRegistry<undefined>;
+  readonly #timeoutMs: number;
 
   constructor(options: PendingCorrelationsOptions) {
-    this.#options = options;
+    this.#timeoutMs = options.timeoutMs;
+    this.#registry = new ExpiringRegistry<undefined>({
+      ttlMs: options.timeoutMs,
+      setTimer: options.setTimeout,
+      clearTimer: options.clearTimeout,
+      onExpire: options.onTimeout,
+    });
   }
 
   get pendingCount(): number {
-    return this.#timers.size;
+    return this.#registry.size;
   }
 
   register(id: string): void {
-    this.resolve(id);
-    const schedule = this.#options.setTimeout ??
-      ((callback, delay) => setTimeout(callback, delay));
-    const timer = schedule(() => {
-      this.#timers.delete(id);
-      this.#options.onTimeout(id);
-    }, this.#options.timeoutMs);
-    this.#timers.set(id, timer);
+    // set() replaces any existing pending entry for this id; the shared
+    // registry's replace path does not itself emit a "resolved" debug
+    // line, unlike the previous inline implementation.
+    this.#registry.set(id, undefined);
     debug(
       "registered pending correlation id=%s timeoutMs=%d count=%d",
       shortId(id),
-      this.#options.timeoutMs,
-      this.#timers.size,
+      this.#timeoutMs,
+      this.#registry.size,
     );
   }
 
   resolve(id: string): void {
-    const timer = this.#timers.get(id);
-    if (timer === undefined) return;
-    (this.#options.clearTimeout ?? clearTimeout)(timer);
-    this.#timers.delete(id);
+    if (!this.#registry.delete(id)) return;
     debug(
       "resolved pending correlation id=%s count=%d",
       shortId(id),
-      this.#timers.size,
+      this.#registry.size,
     );
   }
 
   destroy(): void {
-    const clear = this.#options.clearTimeout ?? clearTimeout;
-    for (const timer of this.#timers.values()) clear(timer);
-    this.#timers.clear();
+    this.#registry.clear();
     debug("destroyed pending correlations");
   }
 }

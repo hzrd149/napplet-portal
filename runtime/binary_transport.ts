@@ -235,6 +235,14 @@ function validRequestIdentity(owner: MessageOwner, id: string): boolean {
       (Number.isSafeInteger(owner.generation) && owner.generation >= 0));
 }
 
+// Not folded into runtime/expiring_registry.ts's ExpiringRegistry: this is
+// a bounded-concurrency admission guard backed by a plain Set<string> with
+// a hard limit and no TTL, no timers, and no stored value. Entries are
+// settled explicitly by their owner rather than expiring, its key is a
+// length-prefixed owner+generation composite validated by
+// validRequestIdentity, and it is additionally consumed by browser code in
+// islands/NappletShell.tsx. It shares the words "keyed" and "limit" with
+// the expiring registry and nothing else.
 export class ActiveBinaryRequests {
   readonly #active = new Set<string>();
 

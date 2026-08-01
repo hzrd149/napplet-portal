@@ -2,9 +2,9 @@ import {
   ConnectionRegistry,
   PendingCorrelations,
 } from "../runtime/connections.ts";
+import { ExpiringRegistry } from "../runtime/expiring_registry.ts";
 import {
   artifactFailureMessage,
-  ExpiringCorrelationRegistry,
   isSameOriginRuntimeRequest,
 } from "../routes/api/runtime.ts";
 import { ArtifactResolutionError } from "../runtime/artifacts.ts";
@@ -140,16 +140,16 @@ Deno.test("reconnect rebinds connection output to the resumed sender", () => {
 Deno.test("intent correlations are bounded, expiring, and reject duplicates", () => {
   const timers = new Map<number, () => void>();
   let sequence = 0;
-  const registry = new ExpiringCorrelationRegistry<string>(
-    2,
-    10,
-    (callback) => {
+  const registry = new ExpiringRegistry<string>({
+    max: 2,
+    ttlMs: 10,
+    setTimer: (callback) => {
       const id = ++sequence;
       timers.set(id, callback);
       return id;
     },
-    (id) => timers.delete(id),
-  );
+    clearTimer: (id) => timers.delete(id),
+  });
   assert(registry.add("a", "first"), "first correlation accepted");
   assert(!registry.add("a", "duplicate"), "duplicate rejected");
   assert(registry.add("b", "second"), "capacity accepts second");

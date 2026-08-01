@@ -6,6 +6,7 @@ import type {
   RelaySubscribeMessage,
 } from "@napplet/nap/relay";
 import { ConnectionRegistry } from "../../runtime/connections.ts";
+import { ExpiringRegistry } from "../../runtime/expiring_registry.ts";
 import type { createPortalRuntime } from "../../runtime/portal_runtime.ts";
 import {
   decodeCatalogCommand,
@@ -70,49 +71,6 @@ export const FIXED_RESOURCE_BYTES = new TextEncoder().encode(
 );
 export const MAX_PENDING_INTENT_CORRELATIONS = 32;
 const INTENT_CORRELATION_TTL_MS = 15_000;
-
-export class ExpiringCorrelationRegistry<T> {
-  readonly #entries = new Map<string, { value: T; timer: number }>();
-
-  constructor(
-    readonly max = MAX_PENDING_INTENT_CORRELATIONS,
-    readonly ttlMs = INTENT_CORRELATION_TTL_MS,
-    readonly setTimer: (callback: () => void, delay: number) => number =
-      setTimeout,
-    readonly clearTimer: (id: number) => void = clearTimeout,
-  ) {}
-
-  add(key: string, value: T): boolean {
-    if (this.#entries.has(key) || this.#entries.size >= this.max) return false;
-    const timer = this.setTimer(() => this.delete(key), this.ttlMs);
-    this.#entries.set(key, { value, timer });
-    return true;
-  }
-
-  take(key: string): T | undefined {
-    const entry = this.#entries.get(key);
-    if (!entry) return undefined;
-    this.#entries.delete(key);
-    this.clearTimer(entry.timer);
-    return entry.value;
-  }
-
-  delete(key: string): boolean {
-    const entry = this.#entries.get(key);
-    if (!entry) return false;
-    this.#entries.delete(key);
-    this.clearTimer(entry.timer);
-    return true;
-  }
-
-  clear(): void {
-    for (const key of [...this.#entries.keys()]) this.delete(key);
-  }
-
-  get size(): number {
-    return this.#entries.size;
-  }
-}
 
 export function handleFixedResourceFrame(
   bytes: Uint8Array,
@@ -314,15 +272,21 @@ export const handler = define.handlers({
     const unsubscribeCatalog = bridge.subscribeCatalog(() => {
       if (socket.readyState === WebSocket.OPEN) void sendCatalog();
     });
-    const pendingIntentReservations = new ExpiringCorrelationRegistry<
+    const pendingIntentReservations = new ExpiringRegistry<
       Extract<
         IntentNavigationMessage,
         { type: "intent.navigation.reserve" }
       >
-    >();
-    const pendingIntentAcks = new ExpiringCorrelationRegistry<
+    >({
+      ttlMs: INTENT_CORRELATION_TTL_MS,
+      max: MAX_PENDING_INTENT_CORRELATIONS,
+    });
+    const pendingIntentAcks = new ExpiringRegistry<
       Extract<IntentNavigationMessage, { type: "intent.navigation.ack" }>
-    >();
+    >({
+      ttlMs: INTENT_CORRELATION_TTL_MS,
+      max: MAX_PENDING_INTENT_CORRELATIONS,
+    });
     socket.addEventListener("open", () => {
       debug(
         "socket open connection=%s window=%s resumed=%s",
