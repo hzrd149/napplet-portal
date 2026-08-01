@@ -31,7 +31,7 @@ See: .planning/PROJECT.md (updated 2026-07-30)
 Phase: Milestone v1.1 complete
 Plan: —
 Status: Awaiting next milestone
-Last activity: 2026-07-31 — Milestone v1.1 completed and archived
+Last activity: 2026-08-01 — Completed quick task 260731-ph8: remove dead RuntimeServiceHub and dedupe runtime store and expiring-registry helpers
 
 ## Performance Metrics
 
@@ -207,6 +207,7 @@ None yet.
 | 260730-par | Fix napplet iframe element not filling the available height | 2026-07-30 | 3000f4d | [260730-par-fix-napplet-iframe-element-not-filling-t](./quick/260730-par-fix-napplet-iframe-element-not-filling-t/) |
 | 260730-phe | Restore Applesauce active account into signer runtime on startup | 2026-07-30 | 0fe5bd1 | [260730-phe-restore-applesauce-active-account-into-s](./quick/260730-phe-restore-applesauce-active-account-into-s/) |
 | 260730-pcm | Shorten RELAY and OUTBOX behavior reasons in Phase 01 COVERAGE.md to satisfy the verify-work preflight gate, then rerun Phase 01 verification | 2026-07-30 | 1f54bd0 | [260730-pcm-shorten-relay-and-outbox-behavior-reason](./quick/260730-pcm-shorten-relay-and-outbox-behavior-reason/) |
+| 260731-ph8 | Remove dead RuntimeServiceHub, remove the load-time napplet capability gate, and dedupe runtime store and expiring-registry helpers | 2026-08-01 | 1b99ef2 | [260731-ph8-remove-dead-runtimeservicehub-and-dedupe](./quick/260731-ph8-remove-dead-runtimeservicehub-and-dedupe/) |
 
 ## Deferred Items
 
